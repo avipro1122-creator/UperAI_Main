@@ -28,11 +28,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkSession = useCallback(async () => {
     setLoading(true)
+    const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1'
+    console.log('[AuthContext Debug] NEXT_PUBLIC_APPWRITE_ENDPOINT in bundle:', endpoint)
     try {
       const activeAccount = await account.get()
+      console.log('[AuthContext Debug] account.get() SUCCESS (HTTP 200):', activeAccount)
       setUser(activeAccount)
       localStorage.setItem('uperai_user', JSON.stringify(activeAccount))
-    } catch {
+    } catch (err: any) {
+      console.error('[AuthContext Debug] account.get() FAILED:', err)
       setUser(null)
       localStorage.removeItem('uperai_user')
     } finally {
@@ -41,11 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    console.log('[AuthContext Debug] AuthProvider mounted. URL:', window.location.href)
     checkSession()
     client.ping().catch((err) => console.log('Appwrite backend ping check:', err))
     const savedRole = localStorage.getItem('uperai_role') as Role
     if (savedRole) setActiveRole(savedRole)
   }, [checkSession])
+
+  useEffect(() => {
+    console.log('[AuthContext Debug] State updated -> user:', user, '| loading:', loading)
+  }, [user, loading])
 
   const loginWithGoogle = () => {
     account.createOAuth2Session(
