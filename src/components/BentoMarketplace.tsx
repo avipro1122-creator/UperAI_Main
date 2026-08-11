@@ -1,0 +1,850 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import Link from 'next/link'
+import {
+  ArrowUpRight,
+  Play,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  X,
+  Send,
+  Sliders,
+  Search,
+  Filter,
+  UserPlus,
+} from 'lucide-react'
+import VideoPlayerModal from '@/components/VideoPlayerModal'
+import { useOnboarding } from '@/context/OnboardingContext'
+
+export interface BentoEditorItem {
+  id: string
+  name: string
+  avatar: string
+  specialty: string
+  category: 'shorts' | 'long' | 'vfx'
+  headline: string
+  rate: number
+  rateLabel: string
+  turnaround: string
+  badgeText?: string
+  videoId: string
+  previewImg: string
+  softwareTags: string[]
+}
+
+interface BentoMarketplaceProps {
+  dbEditors?: BentoEditorItem[]
+}
+
+export default function BentoMarketplace({ dbEditors = [] }: BentoMarketplaceProps) {
+  // Global Filters State
+  const [selectedFormat, setSelectedFormat] = useState<'all' | 'shorts' | 'long' | 'vfx'>('all')
+  const [maxRate, setMaxRate] = useState<number>(15000)
+  const [searchQuery, setSearchQuery] = useState<string>('')
+
+  // Global Onboarding Modal
+  const { openModal, setIsOnboardingOpen } = useOnboarding()
+  // Preview & Audition Modal State
+  const [selectedEditor, setSelectedEditor] = useState<BentoEditorItem | null>(null)
+  const [selectedPortfolioItem, setSelectedPortfolioItem] = useState<{
+    title: string
+    video_url: string
+    role_explanation?: string
+  } | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+
+  const handleOpenPreview = (editor: BentoEditorItem) => {
+    setSelectedEditor(editor)
+    setSelectedPortfolioItem({
+      title: editor.headline || `${editor.name}'s Portfolio`,
+      video_url: `https://www.youtube.com/watch?v=${editor.videoId}`,
+      role_explanation: editor.specialty,
+    })
+    setIsPreviewOpen(true)
+    setVideoModalData({
+      isOpen: true,
+      videoId: editor.videoId,
+      title: editor.headline || `${editor.name}'s Edit Preview`,
+      editorName: editor.name,
+      specialty: editor.specialty,
+      rate: editor.rateLabel,
+    })
+  }
+
+  const [videoModalData, setVideoModalData] = useState<{
+    isOpen: boolean
+    videoId: string | null
+    title: string | null
+    editorName: string
+    specialty: string
+    rate: string
+  }>({
+    isOpen: false,
+    videoId: null,
+    title: null,
+    editorName: '',
+    specialty: '',
+    rate: '',
+  })
+
+  const [briefModalData, setBriefModalData] = useState<{
+    isOpen: boolean
+    editorName: string
+    specialty: string
+    rate: string
+  }>({
+    isOpen: false,
+    editorName: '',
+    specialty: '',
+    rate: '',
+  })
+
+  const [briefSubmitting, setBriefSubmitting] = useState(false)
+  const [briefSuccessMsg, setBriefSuccessMsg] = useState<string | null>(null)
+  const [briefErrorMsg, setBriefErrorMsg] = useState<string | null>(null)
+
+  // Brief Form Fields
+  const [briefChannelUrl, setBriefChannelUrl] = useState('')
+  const [briefNotes, setBriefNotes] = useState('')
+  const [briefFormat, setBriefFormat] = useState('Shorts / Reels (Vertical 9:16)')
+
+  // Filter Logic over dynamic database editors
+  const filteredEditors = useMemo(() => {
+    return dbEditors.filter((editor) => {
+      // Format Filter
+      if (selectedFormat !== 'all' && editor.category !== selectedFormat) {
+        return false
+      }
+      // Rate Filter
+      if (editor.rate > maxRate) {
+        return false
+      }
+      // Search Query Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim()
+        const matchName = editor.name.toLowerCase().includes(q)
+        const matchHeadline = editor.headline.toLowerCase().includes(q)
+        const matchSpecialty = editor.specialty.toLowerCase().includes(q)
+        const matchSoftware = (editor.softwareTags || []).some((tag) => tag.toLowerCase().includes(q))
+        if (!matchName && !matchHeadline && !matchSpecialty && !matchSoftware) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [dbEditors, selectedFormat, maxRate, searchQuery])
+
+  // Split into categories for Bento Display
+  const shortsEditors = filteredEditors.filter((e) => e.category === 'shorts')
+  const longEditors = filteredEditors.filter((e) => e.category === 'long')
+  const vfxEditors = filteredEditors.filter((e) => e.category === 'vfx')
+
+  const openBriefModal = (name: string, specialty: string, rate: string) => {
+    setBriefErrorMsg(null)
+    setBriefSuccessMsg(null)
+    setBriefChannelUrl('')
+    setBriefNotes('')
+    setBriefModalData({
+      isOpen: true,
+      editorName: name,
+      specialty,
+      rate,
+    })
+  }
+
+  const handleSendBriefSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setBriefErrorMsg(null)
+
+    if (!briefChannelUrl.trim()) {
+      return setBriefErrorMsg('Please enter a valid channel URL.')
+    }
+    try {
+      new URL(briefChannelUrl.trim())
+    } catch {
+      return setBriefErrorMsg('Please enter a valid URL (e.g. https://youtube.com/@yourchannel)')
+    }
+
+    if (briefNotes.trim().length < 20) {
+      return setBriefErrorMsg('Project notes must be at least 20 characters long.')
+    }
+
+    setBriefSubmitting(true)
+
+    try {
+      const res = await fetch('/api/send-brief', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          editorName: briefModalData.editorName,
+          channelUrl: briefChannelUrl.trim(),
+          format: briefFormat,
+          notes: briefNotes.trim(),
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send brief.')
+      }
+
+      setBriefSuccessMsg(data.message)
+    } catch (err: any) {
+      setBriefErrorMsg(err.message || 'Error submitting project brief.')
+    } finally {
+      setBriefSubmitting(false)
+    }
+  }
+
+  const featuredEditor = dbEditors.find((e) => e.videoId)
+
+  return (
+    <section id="marketplace-section" className="w-full bg-[#f8fafc] text-zinc-900 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-10">
+
+        {/* Section Header & Global Search Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-zinc-200">
+          <div className="space-y-1 text-center sm:text-left">
+            <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
+              Indian editors. Rates upfront.
+            </h2>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-96">
+            <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Search editors, skills (e.g. Gaming, Premiere Pro, VFX)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-2xl text-xs font-medium text-zinc-900 focus:outline-none focus:ring-2 focus:ring-lime-400 shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-600 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+
+        {/* HIDE ALL CARDS IF ZERO EDITORS */}
+        {filteredEditors.length === 0 ? (
+          /* EMPTY STATE WHEN NO EDITORS IN DB OR SEARCH */
+          <div className="p-12 rounded-3xl bg-white border border-zinc-200 text-center space-y-4 shadow-sm">
+            <h3 className="font-display text-2xl font-bold text-zinc-900">
+              {searchQuery ? `No editors match "${searchQuery}"` : 'No Listed Editors Yet'}
+            </h3>
+            <p className="text-sm text-zinc-600 max-w-md mx-auto leading-relaxed">
+              {searchQuery
+                ? 'Try searching for another skill, software tag (e.g. Premiere Pro, After Effects), or category.'
+                : 'Be the first editor to list your portfolio, YouTube videos, and rates on UperAI!'}
+            </p>
+            <button
+              onClick={() => setIsOnboardingOpen(true)}
+              className="px-6 py-3 rounded-2xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors inline-flex items-center gap-2 shadow-md"
+            >
+              <UserPlus className="w-4 h-4 text-lime-400" /> List Your Work & Be The First
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* ── TOP BANNER SECTION (ONLY RENDERED WHEN EDITORS EXIST) ────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              
+              {/* Card 1: Format Filter */}
+              <div className="p-6 rounded-3xl bg-[#E2F952] border border-lime-300 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  <span className="text-xs font-extrabold tracking-widest text-zinc-900 uppercase flex items-center justify-between">
+                    01. Filter by Format <Filter className="w-3.5 h-3.5" />
+                  </span>
+                  <h3 className="font-display text-xl font-extrabold text-zinc-950">
+                    Choose Niche
+                  </h3>
+                  <p className="text-xs text-zinc-800 leading-relaxed">
+                    Filter vertical 9:16 Shorts vs 16:9 Long-form or VFX edits.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  <button
+                    onClick={() => setSelectedFormat('all')}
+                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                      selectedFormat === 'all'
+                        ? 'bg-zinc-950 text-white shadow-sm'
+                        : 'bg-white/80 text-zinc-900 hover:bg-white'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setSelectedFormat('shorts')}
+                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                      selectedFormat === 'shorts'
+                        ? 'bg-zinc-950 text-white shadow-sm'
+                        : 'bg-white/80 text-zinc-900 hover:bg-white'
+                    }`}
+                  >
+                    Shorts (9:16)
+                  </button>
+                  <button
+                    onClick={() => setSelectedFormat('long')}
+                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                      selectedFormat === 'long'
+                        ? 'bg-zinc-950 text-white shadow-sm'
+                        : 'bg-white/80 text-zinc-900 hover:bg-white'
+                    }`}
+                  >
+                    Long-Form (16:9)
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Audition Player (ONLY SHOWN IF REAL VIDEO EXISTS) */}
+              {featuredEditor && featuredEditor.videoId ? (
+                <div className="p-6 rounded-3xl bg-[#D0E8FF] border border-sky-300 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="space-y-2">
+                    <span className="text-xs font-extrabold tracking-widest text-zinc-900 uppercase flex items-center justify-between">
+                      02. Audition Editors <Play className="w-3.5 h-3.5 fill-zinc-900" />
+                    </span>
+                    <h3 className="font-display text-xl font-extrabold text-zinc-950">
+                      Play Real Work
+                    </h3>
+                    <p className="text-xs text-zinc-800 leading-relaxed">
+                      Audition real video edits right in the player.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleOpenPreview(featuredEditor)}
+                    className="flex items-center gap-2 p-2.5 rounded-2xl bg-white/90 border border-sky-200 hover:bg-white transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center shrink-0">
+                      <Play className="w-4 h-4 fill-white ml-0.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-zinc-900 truncate">{featuredEditor.name}</p>
+                      <span className="text-[10px] text-sky-700 font-semibold">Click to play video</span>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-6 rounded-3xl bg-zinc-100 border border-zinc-200 flex flex-col justify-center text-center">
+                  <p className="text-xs text-zinc-500">Audition player active when videos are linked.</p>
+                </div>
+              )}
+
+              {/* Card 3: Lock Rates Slider */}
+              <div className="p-6 rounded-3xl bg-[#FFD6EC] border border-pink-300 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  <span className="text-xs font-extrabold tracking-widest text-zinc-900 uppercase flex items-center justify-between">
+                    03. Lock Rates <Sliders className="w-3.5 h-3.5" />
+                  </span>
+                  <h3 className="font-display text-xl font-extrabold text-zinc-950">
+                    Max Price Filter
+                  </h3>
+                  <p className="text-xs text-zinc-800 leading-relaxed">
+                    Filter editors under your budget.
+                  </p>
+                </div>
+                <div className="space-y-2 bg-white/90 p-3 rounded-2xl border border-pink-200">
+                  <div className="flex items-center justify-between text-xs font-extrabold text-zinc-900">
+                    <span>Max Budget:</span>
+                    <span className="text-pink-600 font-black">₹{maxRate.toLocaleString()}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1500"
+                    max="15000"
+                    step="500"
+                    value={maxRate}
+                    onChange={(e) => setMaxRate(Number(e.target.value))}
+                    className="w-full accent-pink-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Card 4: Featured Real Editor (ONLY RENDERED IF REAL EDITOR EXISTS) */}
+              {featuredEditor ? (
+                <div className="relative p-6 rounded-3xl bg-zinc-950 text-white overflow-hidden flex flex-col justify-between space-y-4 shadow-xl">
+                  {featuredEditor.previewImg && (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center opacity-45 mix-blend-overlay"
+                      style={{ backgroundImage: `url('${featuredEditor.previewImg}')` }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
+
+                  <div className="relative z-10 space-y-2">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-lime-400 text-zinc-950 uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3" /> Featured Editor
+                    </span>
+                    <h3 className="font-display text-lg font-bold text-white leading-tight">
+                      {featuredEditor.name}
+                    </h3>
+                  </div>
+
+                  <div className="relative z-10 pt-4 flex items-center justify-between">
+                    {featuredEditor.videoId && (
+                      <button
+                        onClick={() =>
+                          setVideoModalData({
+                            isOpen: true,
+                            videoId: featuredEditor.videoId,
+                            title: `${featuredEditor.name}'s Reel`,
+                            editorName: featuredEditor.name,
+                            specialty: featuredEditor.specialty,
+                            rate: featuredEditor.rateLabel,
+                          })
+                        }
+                        className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all"
+                      >
+                        <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setSelectedFormat('all')}
+                      className="px-4 py-2 rounded-full bg-white text-zinc-950 text-xs font-bold hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5 shadow-md ml-auto"
+                    >
+                      All Editors ({filteredEditors.length}) <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+            </div>
+
+            {/* ── 2. MAIN MARKETPLACE GRID (REAL DATABASE EDITORS) ────────────── */}
+            <div className="space-y-10">
+
+              {/* TOP BLOCK: GAMING & SHORTS EDITORS */}
+              {(selectedFormat === 'all' || selectedFormat === 'shorts') && (
+                <div className="p-6 sm:p-8 rounded-3xl bg-[#f7fee7] border-2 border-lime-300 shadow-sm space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-lime-200/80 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-8 bg-lime-500 rounded-full" />
+                      <div>
+                        <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
+                          GAMING & SHORTS EDITORS
+                        </h3>
+                        <p className="text-xs font-semibold text-lime-900 mt-0.5">
+                          Fast pacing, energetic sound design & high retention 9:16 vertical edits.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-lime-900 px-3 py-1 bg-lime-200/80 rounded-full">
+                      {shortsEditors.length} Editors Available
+                    </span>
+                  </div>
+
+                  {shortsEditors.length === 0 ? (
+                    <p className="text-xs text-zinc-500 py-4 italic">No shorts editors match the selected rate or search filter.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {shortsEditors.map((editor) => (
+                        <div
+                          key={editor.id}
+                          className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={editor.avatar}
+                                alt={editor.name}
+                                onError={(e) => {
+                                  e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editor.name)}`
+                                }}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-lime-400 shrink-0"
+                              />
+                              <div>
+                                <h4 className="font-display font-bold text-base text-zinc-950">
+                                  {editor.name}
+                                </h4>
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-lime-100 text-lime-800 text-[11px] font-bold">
+                                  {editor.specialty}
+                                </span>
+                              </div>
+                            </div>
+
+                            {editor.previewImg && (
+                              <div
+                                onClick={() => handleOpenPreview(editor)}
+                                className="relative aspect-video rounded-xl bg-zinc-900 overflow-hidden group cursor-pointer"
+                              >
+                                <img
+                                  src={editor.previewImg}
+                                  alt={editor.name}
+                                  onError={(e) => {
+                                    e.currentTarget.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
+                                  }}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 flex flex-col items-center justify-center transition-colors p-2">
+                                  {editor.badgeText && (
+                                    <span className="px-3 py-1 text-[11px] font-bold text-white bg-pink-500/90 rounded-full uppercase tracking-wider backdrop-blur-sm shadow-sm mb-2 text-center max-w-[90%] truncate">
+                                      {editor.badgeText}
+                                    </span>
+                                  )}
+                                  <div className="w-9 h-9 rounded-full bg-white/90 group-hover:scale-110 flex items-center justify-center transition-transform shadow-md">
+                                    <Play className="w-4 h-4 text-zinc-950 fill-zinc-950 ml-0.5" />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            <p className="text-xs text-zinc-600 leading-relaxed truncate">
+                              {editor.headline}
+                            </p>
+
+                            <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
+                              <span className="font-extrabold text-zinc-950 text-sm">
+                                {editor.rateLabel}
+                              </span>
+                              <span className="inline-flex items-center gap-1 font-semibold text-zinc-600 text-xs">
+                                <Clock className="w-3.5 h-3.5 text-lime-600" /> {editor.turnaround}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => openBriefModal(editor.name, editor.specialty, editor.rateLabel)}
+                            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 hover:from-lime-400 hover:to-emerald-500 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            Send Brief <ArrowUpRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+
+              {/* MIDDLE BLOCK: DOCUMENTARY & LONG-FORM */}
+              {(selectedFormat === 'all' || selectedFormat === 'long') && (
+                <div className="p-6 sm:p-8 rounded-3xl bg-[#f0f9ff] border-2 border-sky-300 shadow-sm space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sky-200/80 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-8 bg-sky-500 rounded-full" />
+                      <div>
+                        <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
+                          DOCUMENTARY & LONG-FORM
+                        </h3>
+                        <p className="text-xs font-semibold text-sky-900 mt-0.5">
+                          16:9 widescreen storytelling & narrative pacing.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-sky-900 px-3 py-1 bg-sky-200/80 rounded-full">
+                      {longEditors.length} Editors Available
+                    </span>
+                  </div>
+
+                  {longEditors.length === 0 ? (
+                    <p className="text-xs text-zinc-500 py-4 italic">No long-form editors match the selected rate or search filter.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {longEditors.map((editor) => (
+                        <div
+                          key={editor.id}
+                          className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={editor.avatar}
+                                alt={editor.name}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-sky-400 shrink-0"
+                              />
+                              <div>
+                                <h4 className="font-display font-bold text-base text-zinc-950">
+                                  {editor.name}
+                                </h4>
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 text-[11px] font-bold">
+                                  {editor.specialty}
+                                </span>
+                              </div>
+                            </div>
+
+                            {editor.previewImg && (
+                              <div
+                                onClick={() => handleOpenPreview(editor)}
+                                className="relative aspect-video rounded-xl bg-zinc-900 overflow-hidden group cursor-pointer"
+                              >
+                                <img
+                                  src={editor.previewImg}
+                                  alt={editor.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 flex items-center justify-center transition-colors">
+                                  <div className="w-9 h-9 rounded-full bg-white/90 group-hover:scale-110 flex items-center justify-center transition-transform shadow-md">
+                                    <Play className="w-4 h-4 text-zinc-950 fill-zinc-950 ml-0.5" />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
+                              <span className="font-extrabold text-zinc-950 text-sm">
+                                {editor.rateLabel}
+                              </span>
+                              <span className="inline-flex items-center gap-1 font-semibold text-zinc-600 text-xs">
+                                <Clock className="w-3.5 h-3.5 text-sky-600" /> {editor.turnaround}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => openBriefModal(editor.name, editor.specialty, editor.rateLabel)}
+                            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-sky-300 via-sky-400 to-indigo-400 hover:from-sky-400 hover:to-indigo-500 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            Send Brief <ArrowUpRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+
+              {/* BOTTOM BLOCK: RETENTION & VFX EDITORS */}
+              {(selectedFormat === 'all' || selectedFormat === 'vfx') && (
+                <div className="p-6 sm:p-8 rounded-3xl bg-[#fdf2f8] border-2 border-pink-300 shadow-sm space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-pink-200/80 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-8 bg-pink-500 rounded-full" />
+                      <div>
+                        <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
+                          RETENTION & VFX EDITORS
+                        </h3>
+                        <p className="text-xs font-semibold text-pink-900 mt-0.5">
+                          3D motion graphics, kinetic typography & hook rate optimization.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-pink-900 px-3 py-1 bg-pink-200/80 rounded-full">
+                      {vfxEditors.length} Editors Available
+                    </span>
+                  </div>
+
+                  {vfxEditors.length === 0 ? (
+                    <p className="text-xs text-zinc-500 py-4 italic">No VFX editors match the selected rate or search filter.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {vfxEditors.map((editor) => (
+                        <div
+                          key={editor.id}
+                          className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={editor.avatar}
+                                alt={editor.name}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-pink-400 shrink-0"
+                              />
+                              <div>
+                                <h4 className="font-display font-bold text-base text-zinc-950">
+                                  {editor.name}
+                                </h4>
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-pink-100 text-pink-800 text-[11px] font-bold">
+                                  {editor.specialty}
+                                </span>
+                              </div>
+                            </div>
+
+                            {editor.previewImg && (
+                              <div
+                                onClick={() => handleOpenPreview(editor)}
+                                className="relative aspect-video rounded-xl bg-zinc-900 overflow-hidden group cursor-pointer"
+                              >
+                                <img
+                                  src={editor.previewImg}
+                                  alt={editor.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 flex items-center justify-center transition-colors">
+                                  <span className="px-2.5 py-1 rounded-full bg-pink-500/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
+                                    3D Motion Graphics
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
+                              <span className="font-extrabold text-zinc-950 text-sm">
+                                {editor.rateLabel}
+                              </span>
+                              <span className="inline-flex items-center gap-1 font-semibold text-zinc-600 text-xs">
+                                <Clock className="w-3.5 h-3.5 text-pink-600" /> {editor.turnaround}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => openBriefModal(editor.name, editor.specialty, editor.rateLabel)}
+                            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-pink-300 via-pink-400 to-rose-400 hover:from-pink-400 hover:to-rose-500 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            Send Brief <ArrowUpRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── MODALS ───────────────────────────────────────────────────────────── */}
+      <VideoPlayerModal
+        isOpen={isPreviewOpen || videoModalData.isOpen}
+        videoId={videoModalData.videoId}
+        title={videoModalData.title}
+        editorName={selectedEditor?.name || videoModalData.editorName}
+        specialty={selectedEditor?.specialty || videoModalData.specialty}
+        rate={selectedEditor?.rateLabel || videoModalData.rate}
+        editor={
+          selectedEditor
+            ? {
+                full_name: selectedEditor.name,
+                specialty_tag: selectedEditor.specialty,
+                base_rate: selectedEditor.rate,
+                turnaround_time: selectedEditor.turnaround,
+              }
+            : undefined
+        }
+        portfolioItem={selectedPortfolioItem || undefined}
+        onClose={() => {
+          setIsPreviewOpen(false)
+          setVideoModalData({ ...videoModalData, isOpen: false })
+        }}
+        onOpenBrief={() =>
+          openBriefModal(
+            selectedEditor?.name || videoModalData.editorName,
+            selectedEditor?.specialty || videoModalData.specialty,
+            selectedEditor?.rateLabel || videoModalData.rate
+          )
+        }
+      />
+
+      {briefModalData.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white text-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-zinc-200">
+            <button
+              onClick={() => setBriefModalData({ ...briefModalData, isOpen: false })}
+              className="absolute top-5 right-5 p-2 text-zinc-400 hover:text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {briefSuccessMsg ? (
+              <div className="py-8 text-center space-y-4">
+                <div className="w-16 h-16 bg-lime-100 text-lime-700 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="font-display text-2xl font-bold text-zinc-900">
+                  Brief Sent to {briefModalData.editorName}!
+                </h3>
+                <p className="text-xs text-zinc-600 max-w-sm mx-auto leading-relaxed">
+                  {briefSuccessMsg}
+                </p>
+                <button
+                  onClick={() => setBriefModalData({ ...briefModalData, isOpen: false })}
+                  className="mt-4 px-6 py-3 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSendBriefSubmit} className="space-y-4">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-lime-100 text-lime-800 mb-2">
+                    Send Project Brief
+                  </span>
+                  <h3 className="font-display text-2xl font-extrabold text-zinc-900">
+                    Hire {briefModalData.editorName}
+                  </h3>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Specialty: <span className="font-semibold text-zinc-700">{briefModalData.specialty}</span> • Rate: <span className="font-semibold text-zinc-700">{briefModalData.rate}</span>
+                  </p>
+                </div>
+
+                {briefErrorMsg && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                    {briefErrorMsg}
+                  </div>
+                )}
+
+                <div className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
+                      Format Needed
+                    </label>
+                    <select
+                      value={briefFormat}
+                      onChange={(e) => setBriefFormat(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400 focus:outline-none"
+                    >
+                      <option>Shorts / Reels (Vertical 9:16)</option>
+                      <option>YouTube Video (Horizontal 16:9)</option>
+                      <option>Full Channel Retainer (Both)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
+                      Your Channel / Reference Link *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://youtube.com/@yourchannel"
+                      value={briefChannelUrl}
+                      onChange={(e) => setBriefChannelUrl(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
+                      Project Notes (Min 20 characters) *
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Describe your raw footage length, deadline, editing style, and expectations..."
+                      value={briefNotes}
+                      onChange={(e) => setBriefNotes(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={briefSubmitting}
+                    className="w-full py-3.5 px-6 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 hover:from-lime-400 hover:to-emerald-500 transition-all flex items-center justify-center gap-2 shadow-md shadow-lime-400/20 disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4" /> {briefSubmitting ? 'Sending...' : `Send Brief to ${briefModalData.editorName}`}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
