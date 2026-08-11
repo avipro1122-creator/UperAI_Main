@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient, createSessionClient } from '@/lib/appwrite/server'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { parseVideoUrl } from '@/lib/video-parser'
-import { fetchYoutubeOEmbed } from '@/lib/youtube'
+import { fetchYoutubeOEmbed, parseYouTubeVideoId, getYouTubeThumbnail } from '@/lib/youtube'
 import { ID, Query } from 'node-appwrite'
 
 export async function POST(req: Request) {
@@ -56,49 +56,61 @@ export async function POST(req: Request) {
       if (!url) continue
 
       const parsed = parseVideoUrl(url)
-      if (parsed) {
-        let title: string | null = null
-        let thumbnailUrl: string | null = null
-        let isShort = false
+      const videoId = parsed?.videoId || parseYouTubeVideoId(url) || ''
+      let title: string | null = null
+      let thumbnailUrl: string | null = getYouTubeThumbnail(url)
+      let isShort = false
 
-        if (parsed.sourceType === 'youtube') {
-          const oembed = await fetchYoutubeOEmbed(url, !!parsed.isShortsUrl)
-          title = oembed.title ?? null
-          thumbnailUrl = oembed.thumbnailUrl ?? `https://img.youtube.com/vi/${parsed.videoId}/hqdefault.jpg`
-          isShort = !!oembed.isShort
+      if (parsed?.sourceType === 'youtube' || url.includes('youtu')) {
+        try {
+          const oembed = await fetchYoutubeOEmbed(url, !!parsed?.isShortsUrl)
+          if (oembed.available) {
+            title = oembed.title ?? null
+            thumbnailUrl = oembed.thumbnailUrl ?? thumbnailUrl
+            isShort = !!oembed.isShort
+          }
+        } catch {
+          // Fallback title & thumbnail
         }
-
-        processedItems.push({
-          editor_id: userId,
-          title: title || roleDesc || `Portfolio Video ${i + 1}`,
-          video_url: url,
-          youtube_url: url,
-          video_id: parsed.videoId,
-          role_description: roleDesc,
-          position: i,
-          thumbnail_url: thumbnailUrl,
-          is_short: isShort,
-          is_available: true,
-        })
       }
+
+      processedItems.push({
+        editor_id: userId,
+        title: title || roleDesc || `Portfolio Video ${i + 1}`,
+        video_url: url,
+        youtube_url: url,
+        video_id: videoId,
+        role_description: roleDesc,
+        position: i,
+        thumbnail_url: thumbnailUrl,
+        is_short: isShort,
+        is_available: true,
+      })
     }
 
-    const primaryYoutubeUrl = processedItems.length > 0 ? processedItems[0].youtube_url : body.youtubeUrl || ''
+    const firstRawUrl = (rawPortfolio[0]?.youtubeUrl || rawPortfolio[0]?.url || body.youtubeUrl || body.youtube_url || '').trim()
+    const primaryYoutubeUrl = processedItems.length > 0 ? processedItems[0].youtube_url : firstRawUrl
+    const instagramVal = (body.instagramHandle || body.instagram || body.instagram_handle || '').trim().replace(/^@/, '') || null
+    const whatsappVal = (body.whatsapp || body.whatsappNumber || body.whatsapp_number || '').trim() || null
 
     const payload = {
       user_id: userId,
       full_name: body.fullName || body.name || 'Editor',
+      display_name: body.fullName || body.name || 'Editor',
+      name: body.fullName || body.name || 'Editor',
       avatar_url: body.avatarUrl || '',
       specialty_tag: body.specialtyTag || body.headline || 'Video Editor',
       base_rate: Number(body.baseRate) || Number(body.rateShort) || Number(body.rateLong) || 1500,
       rate_short: body.rateShort ? Number(body.rateShort) : null,
       rate_long: body.rateLong ? Number(body.rateLong) : null,
       min_rate: Number(body.baseRate) || Number(body.rateShort) || Number(body.rateLong) || 1500,
+      max_rate: Number(body.rateLong) || Number(body.baseRate) || 1500,
       headline: body.headline || body.specialtyTag || 'Video Editor',
       bio: body.bio || null,
-      whatsapp: body.whatsapp || null,
-      whatsapp_number: body.whatsapp || body.whatsappNumber || null,
-      instagram_handle: body.instagramHandle || null,
+      whatsapp: whatsappVal,
+      whatsapp_number: whatsappVal,
+      instagram: instagramVal,
+      instagram_handle: instagramVal,
       turnaround_time: body.turnaroundTime || (body.turnaroundDays ? `${body.turnaroundDays} Days` : '2 Days'),
       turnaround_days: body.turnaroundDays ? Number(body.turnaroundDays) : 2,
       youtube_url: primaryYoutubeUrl,

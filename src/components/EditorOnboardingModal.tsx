@@ -109,6 +109,8 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
         headline: headline.trim() || 'Video Editor & Motion Graphics Specialist',
         whatsapp: whatsapp.trim() || null,
         instagramHandle: instagramHandle.trim() || null,
+        instagram: instagramHandle.trim() || null,
+        youtubeUrl: portfolio[0]?.youtubeUrl || null,
         format: mapFormatToDb(rawFormat),
         rateShort: rateShort ? Number(rateShort) : null,
         rateLong: rateLong ? Number(rateLong) : null,
