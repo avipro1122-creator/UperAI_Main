@@ -2,12 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Video } from 'lucide-react'
+import { Video, Menu, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 
 export default function Navbar() {
   const { user, loading, activeRole, setActiveRole, loginWithGoogle, logout } = useAuth()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -34,21 +35,21 @@ export default function Navbar() {
     const nextRole = activeRole === 'CREATOR' ? 'EDITOR' : 'CREATOR'
     setActiveRole(nextRole)
     setIsDropdownOpen(false)
+    setIsMobileMenuOpen(false)
   }
 
   return (
-    <nav className="bg-[#09090b] border-b border-zinc-800 px-6 py-4 flex items-center justify-between text-white sticky top-0 z-50">
-      {/* Main Brand Logo */}
-      <Link className="text-xl font-black tracking-tight text-white flex items-center gap-2 font-display" href="/">
+    <nav className="bg-[#09090b] border-b border-zinc-800 px-4 sm:px-6 py-3.5 flex items-center justify-between text-white sticky top-0 z-50">
+      {/* Brand Logo */}
+      <Link className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2 font-display" href="/">
         <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-950 shadow-sm transition-transform hover:scale-105">
           <Video className="w-4 h-4 text-zinc-950" />
         </div>
         <span>UPERAI</span>
       </Link>
 
-      {/* Right Controls */}
-      <div className="flex items-center gap-4">
-
+      {/* DESKTOP RIGHT CONTROLS */}
+      <div className="hidden md:flex items-center gap-4">
         {loading ? (
           <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />
         ) : !user ? (
@@ -87,7 +88,6 @@ export default function Navbar() {
 
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-3 z-50 space-y-2 text-xs animate-in fade-in slide-in-from-top-1 duration-100">
-                {/* User Header Block */}
                 <div className="px-3 py-2 border-b border-zinc-800">
                   <p className="font-bold text-white truncate">{user.name || user.email?.split('@')[0] || 'User'}</p>
                   {user.email && <p className="text-zinc-400 text-[10px] truncate">{user.email}</p>}
@@ -97,7 +97,6 @@ export default function Navbar() {
                 </div>
 
                 <div className="space-y-1">
-                  {/* My Profile Button */}
                   <Link
                     href="/profile"
                     onClick={() => setIsDropdownOpen(false)}
@@ -106,7 +105,6 @@ export default function Navbar() {
                     👤 My Profile
                   </Link>
 
-                  {/* Single Clean Toggle Button for Creator / Editor Mode */}
                   <button
                     onClick={toggleRole}
                     className="w-full text-left px-3 py-2.5 rounded-xl font-bold bg-zinc-800/80 hover:bg-zinc-800 text-lime-400 flex items-center justify-between transition-all"
@@ -116,7 +114,6 @@ export default function Navbar() {
                   </button>
                 </div>
 
-                {/* Logout Button */}
                 <button
                   onClick={logout}
                   className="w-full text-left px-3 py-2 text-red-400 hover:bg-red-950/30 rounded-xl font-bold border-t border-zinc-800 mt-1 transition-colors"
@@ -128,6 +125,65 @@ export default function Navbar() {
           </div>
         )}
       </div>
+
+      {/* MOBILE CONTROLS */}
+      <div className="flex md:hidden items-center gap-2">
+        {!user ? (
+          <button
+            onClick={loginWithGoogle}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-lime-400 text-black font-extrabold text-xs rounded-lg"
+          >
+            Log in
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center gap-2"
+          >
+            <img src={userAvatar} alt="Avatar" className="w-7 h-7 rounded-full object-cover" />
+            {isMobileMenuOpen ? <X className="w-4 h-4 text-zinc-400" /> : <Menu className="w-4 h-4 text-zinc-400" />}
+          </button>
+        )}
+      </div>
+
+      {/* MOBILE DRAWER */}
+      {isMobileMenuOpen && user && (
+        <div className="md:hidden fixed inset-x-0 top-[57px] bg-zinc-950 border-b border-zinc-800 p-4 space-y-4 shadow-2xl z-40 text-xs animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+            <div>
+              <p className="font-bold text-white text-sm">{user.name || user.email?.split('@')[0] || 'User'}</p>
+              <p className="text-zinc-400 text-[11px]">{user.email}</p>
+            </div>
+            <span className="px-2 py-1 bg-lime-950 text-lime-400 font-extrabold text-[10px] rounded border border-lime-500/20">
+              {activeRole}
+            </span>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <button
+              onClick={toggleRole}
+              className="w-full py-3 bg-zinc-900 border border-zinc-800 text-lime-400 font-bold rounded-xl text-center"
+            >
+              Switch to {activeRole === 'CREATOR' ? 'Editor Mode' : 'Creator Mode'}
+            </button>
+
+            <Link
+              href="/profile"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block w-full py-3 bg-zinc-900 text-white font-bold rounded-xl text-center border border-zinc-800"
+            >
+              👤 My Profile
+            </Link>
+
+            <button
+              onClick={logout}
+              className="w-full py-3 bg-red-950/40 text-red-400 font-bold rounded-xl text-center border border-red-900/30"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }
