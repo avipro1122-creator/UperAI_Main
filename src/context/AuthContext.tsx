@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { account } from '@/lib/appwrite/client'
+import { client } from '@/lib/appwrite'
 import { OAuthProvider } from 'appwrite'
 
 export type Role = 'CREATOR' | 'EDITOR'
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     checkSession()
+    client.ping().catch((err) => console.log('Appwrite backend ping check:', err))
     const savedRole = localStorage.getItem('uperai_role') as Role
     if (savedRole) setActiveRole(savedRole)
   }, [checkSession])
