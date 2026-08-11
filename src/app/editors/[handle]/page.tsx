@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/appwrite/server'
 import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { Query } from 'node-appwrite'
 
 export default async function EditorProfilePage({ params }: { params: { handle: string } }) {
@@ -110,7 +111,14 @@ export default async function EditorProfilePage({ params }: { params: { handle: 
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : '#'
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white p-4 md:p-8 max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#09090b] text-white p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+      {/* Back Button */}
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-4 py-2 rounded-xl transition-all w-fit shadow-sm"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to Marketplace
+      </Link>
       {/* Top Banner & Hero Header */}
       <div className="bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 rounded-3xl p-8 text-black flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="space-y-3 z-10">

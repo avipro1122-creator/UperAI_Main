@@ -76,7 +76,7 @@ export default async function HomePage() {
         itemsByEditor.set(key, list)
       }
 
-      featured = recentProfiles.slice(0, 3).map((p: any) => {
+      featured = recentProfiles.map((p: any) => {
         const editorId = p.user_id || p.$id
         const editorItems = itemsByEditor.get(editorId) ?? []
         const hasShort = editorItems.some((i) => i.is_short || i.format?.toLowerCase().includes('short'))
@@ -96,7 +96,7 @@ export default async function HomePage() {
         const handle = p.handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
         const firstItem = editorItems[0]
         const videoId = extractYouTubeId(p.youtube_url || firstItem?.video_url || firstItem?.youtube_url)
-        const previewImg = firstItem?.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+        const previewImg = firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
         const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long
 
         return {
@@ -128,7 +128,7 @@ export default async function HomePage() {
         const googleAvatar =
           doc.avatar_url ||
           `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editorName)}`
-        const previewImg = firstItem?.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+        const previewImg = firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
         const badgeText = firstItem?.role_explanation || firstItem?.role_description || doc.specialty_tag || doc.headline || 'Verified Editor'
 
         return {
@@ -143,7 +143,7 @@ export default async function HomePage() {
           turnaround: doc.turnaround_time || (doc.turnaround_days ? `${doc.turnaround_days} Days Turnaround` : '2 Days'),
           badgeText,
           videoId,
-          previewImg,
+          previewImg: previewImg || '',
           softwareTags: doc.software || ['Premiere Pro', 'After Effects'],
         } satisfies BentoEditorItem
       })
@@ -167,19 +167,24 @@ export default async function HomePage() {
       {/* Dynamic Bento Marketplace Grid */}
       <BentoMarketplace dbEditors={bentoEditors} />
 
-      {/* Featured editors — only render if real editors exist */}
+      {/* Main Editors Section (Primary Marketplace Showcase) */}
       {featured.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="flex items-end justify-between mb-8">
-            <h2 className="font-display text-xl sm:text-2xl font-bold text-white">
-              Recently active editors
-            </h2>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex items-end justify-between mb-8 border-b border-zinc-800 pb-4">
+            <div>
+              <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white">
+                Recently Active Editors
+              </h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                Browse verified video editors, view portfolio clips, and send project briefs directly.
+              </p>
+            </div>
             <Link href="/editors" className="text-xs font-semibold text-zinc-300 hover:text-white underline underline-offset-4">
-              View all
+              View all ({featured.length})
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {featured.map((editor) => (
               <EditorCard key={editor.handle} editor={editor} />
             ))}
