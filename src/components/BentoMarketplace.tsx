@@ -420,287 +420,100 @@ export default function BentoMarketplace({ dbEditors = [] }: BentoMarketplacePro
 
             </div>
 
-            {/* ── 2. MAIN MARKETPLACE GRID (REAL DATABASE EDITORS) ────────────── */}
-            <div className="space-y-10">
-
-              {/* TOP BLOCK: GAMING & SHORTS EDITORS */}
-              {(selectedFormat === 'all' || selectedFormat === 'shorts') && (
-                <div className="p-6 sm:p-8 rounded-3xl bg-[#f7fee7] border-2 border-lime-300 shadow-sm space-y-6">
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-lime-200/80 pb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-8 bg-lime-500 rounded-full" />
-                      <div>
-                        <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
-                          GAMING & SHORTS EDITORS
-                        </h3>
-                        <p className="text-xs font-semibold text-lime-900 mt-0.5">
-                          Fast pacing, energetic sound design & high retention 9:16 vertical edits.
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-lime-900 px-3 py-1 bg-lime-200/80 rounded-full">
-                      {shortsEditors.length} Editors Available
-                    </span>
+            {/* ── 2. MAIN MARKETPLACE GRID (ALL VERIFIED EDITORS) ────────────── */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#f7fee7] border-2 border-lime-300 shadow-sm space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-lime-200/80 pb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-8 bg-lime-500 rounded-full" />
+                  <div>
+                    <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
+                      ALL AVAILABLE EDITORS
+                    </h3>
+                    <p className="text-xs font-semibold text-lime-900 mt-0.5">
+                      Browse verified editors, watch real video edits, and send project briefs directly.
+                    </p>
                   </div>
+                </div>
+                <span className="text-xs font-bold text-lime-900 px-3 py-1 bg-lime-200/80 rounded-full">
+                  {filteredEditors.length} Editors Available
+                </span>
+              </div>
 
-                  {shortsEditors.length === 0 ? (
-                    <p className="text-xs text-zinc-500 py-4 italic">No shorts editors match the selected rate or search filter.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {shortsEditors.map((editor) => (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {filteredEditors.map((editor) => (
+                  <div
+                    key={editor.id}
+                    className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={editor.avatar}
+                          alt={editor.name}
+                          onError={(e) => {
+                            e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editor.name)}`
+                          }}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-lime-400 shrink-0"
+                        />
+                        <div>
+                          <h4 className="font-display font-bold text-base text-zinc-950">
+                            {editor.name}
+                          </h4>
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-lime-100 text-lime-800 text-[11px] font-bold">
+                            {editor.specialty}
+                          </span>
+                        </div>
+                      </div>
+
+                      {editor.previewImg && (
                         <div
-                          key={editor.id}
-                          className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
+                          onClick={() => handleOpenPreview(editor)}
+                          className="relative aspect-video rounded-xl bg-zinc-900 overflow-hidden group cursor-pointer"
                         >
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={editor.avatar}
-                                alt={editor.name}
-                                onError={(e) => {
-                                  e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editor.name)}`
-                                }}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-lime-400 shrink-0"
-                              />
-                              <div>
-                                <h4 className="font-display font-bold text-base text-zinc-950">
-                                  {editor.name}
-                                </h4>
-                                <span className="inline-block px-2 py-0.5 rounded-md bg-lime-100 text-lime-800 text-[11px] font-bold">
-                                  {editor.specialty}
-                                </span>
-                              </div>
-                            </div>
-
-                            {editor.previewImg && (
-                              <div
-                                onClick={() => handleOpenPreview(editor)}
-                                className="relative aspect-video rounded-xl bg-zinc-900 overflow-hidden group cursor-pointer"
-                              >
-                                <img
-                                  src={editor.previewImg}
-                                  alt={editor.name}
-                                  onError={(e) => {
-                                    e.currentTarget.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
-                                  }}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 flex flex-col items-center justify-center transition-colors p-2">
-                                  {editor.badgeText && (
-                                    <span className="px-3 py-1 text-[11px] font-bold text-white bg-pink-500/90 rounded-full uppercase tracking-wider backdrop-blur-sm shadow-sm mb-2 text-center max-w-[90%] truncate">
-                                      {editor.badgeText}
-                                    </span>
-                                  )}
-                                  <div className="w-9 h-9 rounded-full bg-white/90 group-hover:scale-110 flex items-center justify-center transition-transform shadow-md">
-                                    <Play className="w-4 h-4 text-zinc-950 fill-zinc-950 ml-0.5" />
-                                  </div>
-                                </div>
-                              </div>
+                          <img
+                            src={editor.previewImg}
+                            alt={editor.name}
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
+                            }}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 flex flex-col items-center justify-center transition-colors p-2">
+                            {editor.badgeText && (
+                              <span className="px-3 py-1 text-[11px] font-bold text-white bg-pink-500/90 rounded-full uppercase tracking-wider backdrop-blur-sm shadow-sm mb-2 text-center max-w-[90%] truncate">
+                                {editor.badgeText}
+                              </span>
                             )}
-
-                            <p className="text-xs text-zinc-600 leading-relaxed truncate">
-                              {editor.headline}
-                            </p>
-
-                            <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
-                              <span className="font-extrabold text-zinc-950 text-sm">
-                                {editor.rateLabel}
-                              </span>
-                              <span className="inline-flex items-center gap-1 font-semibold text-zinc-600 text-xs">
-                                <Clock className="w-3.5 h-3.5 text-lime-600" /> {editor.turnaround}
-                              </span>
+                            <div className="w-9 h-9 rounded-full bg-white/90 group-hover:scale-110 flex items-center justify-center transition-transform shadow-md">
+                              <Play className="w-4 h-4 text-zinc-950 fill-zinc-950 ml-0.5" />
                             </div>
                           </div>
-
-                          <button
-                            onClick={() => openBriefModal(editor.name, editor.specialty, editor.rateLabel)}
-                            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 hover:from-lime-400 hover:to-emerald-500 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                          >
-                            Send Brief <ArrowUpRight className="w-3.5 h-3.5" />
-                          </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                      )}
 
+                      <p className="text-xs text-zinc-600 leading-relaxed truncate">
+                        {editor.headline}
+                      </p>
 
-              {/* MIDDLE BLOCK: DOCUMENTARY & LONG-FORM */}
-              {(selectedFormat === 'all' || selectedFormat === 'long') && (
-                <div className="p-6 sm:p-8 rounded-3xl bg-[#f0f9ff] border-2 border-sky-300 shadow-sm space-y-6">
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sky-200/80 pb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-8 bg-sky-500 rounded-full" />
-                      <div>
-                        <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
-                          DOCUMENTARY & LONG-FORM
-                        </h3>
-                        <p className="text-xs font-semibold text-sky-900 mt-0.5">
-                          16:9 widescreen storytelling & narrative pacing.
-                        </p>
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
+                        <span className="font-extrabold text-zinc-950 text-sm">
+                          {editor.rateLabel}
+                        </span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-zinc-600 text-xs">
+                          <Clock className="w-3.5 h-3.5 text-lime-600" /> {editor.turnaround}
+                        </span>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-sky-900 px-3 py-1 bg-sky-200/80 rounded-full">
-                      {longEditors.length} Editors Available
-                    </span>
+
+                    <button
+                      onClick={() => openBriefModal(editor.name, editor.specialty, editor.rateLabel)}
+                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 hover:from-lime-400 hover:to-emerald-500 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      Send Brief <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-
-                  {longEditors.length === 0 ? (
-                    <p className="text-xs text-zinc-500 py-4 italic">No long-form editors match the selected rate or search filter.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {longEditors.map((editor) => (
-                        <div
-                          key={editor.id}
-                          className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={editor.avatar}
-                                alt={editor.name}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-sky-400 shrink-0"
-                              />
-                              <div>
-                                <h4 className="font-display font-bold text-base text-zinc-950">
-                                  {editor.name}
-                                </h4>
-                                <span className="inline-block px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 text-[11px] font-bold">
-                                  {editor.specialty}
-                                </span>
-                              </div>
-                            </div>
-
-                            {editor.previewImg && (
-                              <div
-                                onClick={() => handleOpenPreview(editor)}
-                                className="relative aspect-video rounded-xl bg-zinc-900 overflow-hidden group cursor-pointer"
-                              >
-                                <img
-                                  src={editor.previewImg}
-                                  alt={editor.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 flex items-center justify-center transition-colors">
-                                  <div className="w-9 h-9 rounded-full bg-white/90 group-hover:scale-110 flex items-center justify-center transition-transform shadow-md">
-                                    <Play className="w-4 h-4 text-zinc-950 fill-zinc-950 ml-0.5" />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
-                              <span className="font-extrabold text-zinc-950 text-sm">
-                                {editor.rateLabel}
-                              </span>
-                              <span className="inline-flex items-center gap-1 font-semibold text-zinc-600 text-xs">
-                                <Clock className="w-3.5 h-3.5 text-sky-600" /> {editor.turnaround}
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => openBriefModal(editor.name, editor.specialty, editor.rateLabel)}
-                            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-sky-300 via-sky-400 to-indigo-400 hover:from-sky-400 hover:to-indigo-500 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                          >
-                            Send Brief <ArrowUpRight className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-
-              {/* BOTTOM BLOCK: RETENTION & VFX EDITORS */}
-              {(selectedFormat === 'all' || selectedFormat === 'vfx') && (
-                <div className="p-6 sm:p-8 rounded-3xl bg-[#fdf2f8] border-2 border-pink-300 shadow-sm space-y-6">
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-pink-200/80 pb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-8 bg-pink-500 rounded-full" />
-                      <div>
-                        <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
-                          RETENTION & VFX EDITORS
-                        </h3>
-                        <p className="text-xs font-semibold text-pink-900 mt-0.5">
-                          3D motion graphics, kinetic typography & hook rate optimization.
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-pink-900 px-3 py-1 bg-pink-200/80 rounded-full">
-                      {vfxEditors.length} Editors Available
-                    </span>
-                  </div>
-
-                  {vfxEditors.length === 0 ? (
-                    <p className="text-xs text-zinc-500 py-4 italic">No VFX editors match the selected rate or search filter.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {vfxEditors.map((editor) => (
-                        <div
-                          key={editor.id}
-                          className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={editor.avatar}
-                                alt={editor.name}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-pink-400 shrink-0"
-                              />
-                              <div>
-                                <h4 className="font-display font-bold text-base text-zinc-950">
-                                  {editor.name}
-                                </h4>
-                                <span className="inline-block px-2 py-0.5 rounded-md bg-pink-100 text-pink-800 text-[11px] font-bold">
-                                  {editor.specialty}
-                                </span>
-                              </div>
-                            </div>
-
-                            {editor.previewImg && (
-                              <div
-                                onClick={() => handleOpenPreview(editor)}
-                                className="relative aspect-video rounded-xl bg-zinc-900 overflow-hidden group cursor-pointer"
-                              >
-                                <img
-                                  src={editor.previewImg}
-                                  alt={editor.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 flex items-center justify-center transition-colors">
-                                  <span className="px-2.5 py-1 rounded-full bg-pink-500/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
-                                    3D Motion Graphics
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
-                              <span className="font-extrabold text-zinc-950 text-sm">
-                                {editor.rateLabel}
-                              </span>
-                              <span className="inline-flex items-center gap-1 font-semibold text-zinc-600 text-xs">
-                                <Clock className="w-3.5 h-3.5 text-pink-600" /> {editor.turnaround}
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => openBriefModal(editor.name, editor.specialty, editor.rateLabel)}
-                            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-zinc-950 bg-gradient-to-r from-pink-300 via-pink-400 to-rose-400 hover:from-pink-400 hover:to-rose-500 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                          >
-                            Send Brief <ArrowUpRight className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
+                ))}
+              </div>
             </div>
           </>
         )}
