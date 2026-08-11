@@ -24,7 +24,7 @@ export default function GoogleSignInButton({
       const failureUrl = new URL('/login', window.location.origin)
       failureUrl.searchParams.set('error', 'appwrite_oauth_failed')
 
-      account.createOAuth2Session(
+      account.createOAuth2Token(
         OAuthProvider.Google,
         successUrl.toString(),
         failureUrl.toString()

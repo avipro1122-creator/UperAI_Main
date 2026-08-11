@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, loading])
 
   const loginWithGoogle = () => {
-    account.createOAuth2Session(
+    account.createOAuth2Token(
       OAuthProvider.Google,
       `${window.location.origin}/auth/callback`,
       `${window.location.origin}/?error=auth_failed`
