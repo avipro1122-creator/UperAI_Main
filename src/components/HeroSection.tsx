@@ -108,13 +108,13 @@ export default function HeroSection({
                 <button
                   type="button"
                   onClick={scrollToMarketplace}
-                  className="btn-primary text-sm px-6 py-3.5 inline-flex items-center justify-center gap-2 w-full sm:w-auto text-center shadow-lg shadow-white/10 hover:shadow-white/20 transition-all font-extrabold"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-zinc-200 text-black font-extrabold rounded-xl transition-all text-xs sm:text-sm shadow-lg text-center inline-flex items-center justify-center gap-1.5"
                 >
                   Browse editors <ArrowUpRight className="w-4 h-4" />
                 </button>
                 <Link
                   href="/editors"
-                  className="px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-2xl transition-all text-sm text-center"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-xl transition-all text-xs sm:text-sm text-center"
                 >
                   View All Directory
                 </Link>
@@ -124,15 +124,15 @@ export default function HeroSection({
                 <button
                   type="button"
                   onClick={openModal}
-                  className="btn-primary text-sm px-6 py-3.5 inline-flex items-center justify-center gap-2 w-full sm:w-auto text-center shadow-lg shadow-white/10 hover:shadow-white/20 transition-all"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold rounded-xl transition-all text-xs sm:text-sm shadow-lg text-center inline-flex items-center justify-center gap-1.5"
                 >
                   List your work <ArrowUpRight className="w-4 h-4" />
                 </button>
                 <Link
                   href="/editors"
-                  className="text-sm font-semibold text-zinc-400 hover:text-white transition-colors text-center sm:text-left py-2 sm:py-0"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-xl transition-all text-xs sm:text-sm text-center"
                 >
-                  View All Directory →
+                  View All Directory
                 </Link>
               </>
             )}
