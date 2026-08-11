@@ -46,42 +46,8 @@ export default function Navbar() {
         <span>UPERAI</span>
       </Link>
 
-      {/* Center Role Toggle Tabs */}
-      {!loading && user && (
-        <div className="bg-zinc-900 border border-zinc-800 p-1 rounded-xl flex items-center gap-1 text-xs font-bold">
-          <button
-            onClick={() => setActiveRole('CREATOR')}
-            className={`px-4 py-1.5 rounded-lg transition-all ${
-              activeRole === 'CREATOR'
-                ? 'bg-lime-400 text-black shadow-md font-extrabold'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            FOR CREATORS
-          </button>
-          <button
-            onClick={() => setActiveRole('EDITOR')}
-            className={`px-4 py-1.5 rounded-lg transition-all ${
-              activeRole === 'EDITOR'
-                ? 'bg-lime-400 text-black shadow-md font-extrabold'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            FOR EDITORS
-          </button>
-        </div>
-      )}
-
       {/* Right Controls */}
       <div className="flex items-center gap-4">
-        {!loading && user && activeRole === 'EDITOR' && (
-          <Link
-            className="px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black text-xs font-extrabold rounded-xl transition-all shadow-md"
-            href="/onboarding"
-          >
-            + List your work
-          </Link>
-        )}
 
         {loading ? (
           <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />
