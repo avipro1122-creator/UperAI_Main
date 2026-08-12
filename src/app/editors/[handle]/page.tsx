@@ -99,8 +99,9 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
   }
 
   // Format Phone & WhatsApp Links
-  const rawPhone = (editor.whatsapp_number || editor.whatsapp || '').toString().replace(/\D/g, '')
-  const displayPhone = rawPhone ? (rawPhone.length === 10 ? `+91 ${rawPhone}` : `+${rawPhone}`) : 'Not Provided'
+  const rawDigits = (editor.whatsapp_number || editor.whatsapp || '').toString().replace(/\D/g, '')
+  const rawPhone = rawDigits.length >= 10 ? rawDigits : '919016047119'
+  const displayPhone = rawPhone.length === 10 ? `+91 ${rawPhone}` : `+${rawPhone}`
   const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone
 
   const whatsappMessage = encodeURIComponent(

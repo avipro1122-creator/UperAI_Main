@@ -146,7 +146,8 @@ export async function POST(req: Request) {
   const instagramVal = instagramRaw || null
 
   const whatsappRaw = (body.whatsapp || body.whatsappNumber || body.whatsapp_number || '').trim()
-  const whatsappVal = whatsappRaw ? whatsappRaw.replace(/[^0-9+]/g, '') || null : null
+  const cleanDigits = whatsappRaw.replace(/[^0-9+]/g, '')
+  const whatsappVal = cleanDigits && cleanDigits.length >= 10 ? (cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits) : '919016047119'
 
   const nameVal = (body.fullName || body.name || 'Editor').trim()
   const handle = nameVal.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30) || userId

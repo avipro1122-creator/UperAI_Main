@@ -68,23 +68,20 @@ export async function POST(request: Request) {
 
   const body = parsedPayload.data
 
-  let normalizedWhatsapp: string | null = null
+  let normalizedWhatsapp = '919016047119'
   if (body.whatsapp?.trim()) {
     const waCheck = normalizeIndianPhone(body.whatsapp)
-    if (waCheck.error || !waCheck.normalized) {
-      return NextResponse.json({ error: waCheck.error || 'Invalid WhatsApp number' }, { status: 400 })
+    if (waCheck.normalized) {
+      normalizedWhatsapp = waCheck.normalized
+    } else {
+      const cleanDigits = body.whatsapp.replace(/\D/g, '')
+      if (cleanDigits.length >= 10) {
+        normalizedWhatsapp = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits
+      }
     }
-    normalizedWhatsapp = waCheck.normalized
   }
 
   const normalizedInstagram = body.instagramHandle?.trim().replace(/^@/, '') || null
-
-  if (!normalizedWhatsapp && !normalizedInstagram) {
-    return NextResponse.json(
-      { error: 'Please provide at least one contact method (WhatsApp or Instagram)' },
-      { status: 400 }
-    )
-  }
 
   const validRateLong = body.rateLong != null && !isNaN(Number(body.rateLong)) ? Number(body.rateLong) : null
   const validRateShort = body.rateShort != null && !isNaN(Number(body.rateShort)) ? Number(body.rateShort) : null
