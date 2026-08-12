@@ -2,13 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/navbar';
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[#09090b] text-white selection:bg-lime-400 selection:text-black">
-      <Navbar/>
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-12">
         {/* Header Badge */}
         <div className="space-y-4 text-center sm:text-left">
