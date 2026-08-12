@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Navbar from '@/components/navbar'
 import { useAuth } from '@/context/AuthContext'
 import { databases } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
@@ -144,8 +143,6 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white">
-      <Navbar />
-
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         <Link className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-zinc-300 hover:text-white rounded-xl transition-all" href="/">
           ← Back to Marketplace
