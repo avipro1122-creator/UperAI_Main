@@ -22,7 +22,7 @@ export function parseInstagramUrl(rawUrl: string): { code: string; embedUrl: str
     const isReel = /\/(?:reel|reels)\//i.test(trimmed)
     return {
       code,
-      embedUrl: `https://www.instagram.com/p/${code}/embed`,
+      embedUrl: `https://www.instagram.com/reel/${code}/embed/`,
       isReel,
     }
   }

@@ -200,9 +200,14 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-zinc-400 uppercase">Showreel #{index + 1}</span>
                     {item.sourceType === 'instagram' ? (
-                      <span className="text-[10px] font-bold text-pink-400 bg-pink-950/70 border border-pink-800/40 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Instagram className="w-3 h-3" /> Instagram Reel
-                      </span>
+                      <a
+                        href={item.rawUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold text-pink-300 hover:text-white bg-pink-950/80 border border-pink-700/50 hover:bg-pink-900 px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow"
+                      >
+                        <Instagram className="w-3 h-3 text-pink-400" /> Watch Reel ↗
+                      </a>
                     ) : item.sourceType === 'youtube' ? (
                       <span className="text-[10px] font-bold text-red-400 bg-red-950/70 border border-red-800/40 px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Video className="w-3 h-3" /> YouTube {item.isShortsUrl ? 'Short' : ''}
@@ -213,7 +218,7 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
                       </span>
                     ) : null}
                   </div>
-                  <div className={`w-full bg-black rounded-xl overflow-hidden border border-zinc-800 ${item.isShortsUrl || item.sourceType === 'instagram' ? 'aspect-[9/16] max-h-[500px] mx-auto' : 'aspect-video'}`}>
+                  <div className={`w-full bg-black rounded-xl overflow-hidden border border-zinc-800 flex flex-col justify-between ${item.isShortsUrl || item.sourceType === 'instagram' ? 'aspect-[9/16] max-h-[520px] mx-auto' : 'aspect-video'}`}>
                     <iframe
                       src={item.embedUrl}
                       title={`Showreel ${index + 1}`}
@@ -222,6 +227,19 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
                       allowFullScreen
                     />
                   </div>
+                  {item.sourceType === 'instagram' && (
+                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-800/80 text-xs">
+                      <span className="text-[11px] text-zinc-400 font-medium">Instagram Reel</span>
+                      <a
+                        href={item.rawUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-400 text-white font-black text-[11px] rounded-xl transition-all shadow-md flex items-center gap-1"
+                      >
+                        Open on Instagram ↗
+                      </a>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (

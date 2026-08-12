@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Play } from 'lucide-react'
+import { Play, Instagram } from 'lucide-react'
 
 export type FormatTag = 'Shorts' | 'Long-form' | 'Both'
 
@@ -40,6 +40,8 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
   const hasRate = editor.min_rate != null
   const targetIdOrHandle = editor.id || editor.handle
 
+  const isInstagram = editor.thumbnail_url?.includes('instagram.com') || (editor.format_tag === 'Shorts' && !editor.thumbnail_url?.includes('youtube'))
+
   return (
     <Link
       href={`/editors/${targetIdOrHandle}`}
@@ -47,7 +49,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
     >
       {/* ── Thumbnail ────────────────────────────────────────── */}
       <div className="relative w-full aspect-video bg-zinc-950 overflow-hidden">
-        {editor.thumbnail_url ? (
+        {editor.thumbnail_url && editor.thumbnail_url.startsWith('http') && !editor.thumbnail_url.includes('instagram.com') ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={editor.thumbnail_url}
@@ -57,6 +59,13 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             }}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
+        ) : isInstagram ? (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-tr from-purple-950 via-zinc-900 to-pink-950 p-4 space-y-1.5 text-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-pink-400 bg-pink-950/80 border border-pink-800/50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <Instagram className="w-3 h-3" /> Instagram Reel
+            </span>
+            <span className="text-xs text-zinc-300 font-bold">Featured Showreel</span>
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-zinc-900/80">
             <span className="text-zinc-600 text-xs">No preview video</span>
