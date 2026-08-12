@@ -113,7 +113,11 @@ export async function POST(req: Request) {
     let thumbnailUrl: string | null = getYouTubeThumbnail(url)
     let isShort = false
 
-    if (parsedVideo?.sourceType === 'youtube' || url.includes('youtu')) {
+    if (parsedVideo?.sourceType === 'instagram') {
+      title = title || 'Instagram Reel'
+      thumbnailUrl = null
+      isShort = true
+    } else if (parsedVideo?.sourceType === 'youtube' || url.includes('youtu')) {
       try {
         const oembed = await fetchYoutubeOEmbed(url, !!parsedVideo?.isShortsUrl)
         if (oembed.available) {

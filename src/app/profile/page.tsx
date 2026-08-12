@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import RoleGuard from '@/components/RoleGuard'
 import { useAuth } from '@/context/AuthContext'
+import { parseVideoUrl } from '@/lib/video-parser'
 import { databases } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { Query, ID, Permission, Role } from 'appwrite'
@@ -148,8 +149,8 @@ function ProfileDashboardContent() {
     const cleanUrl2 = sanitizeVideoUrl(formData.youtubeUrl2, 1900)
     const cleanUrl3 = sanitizeVideoUrl(formData.youtubeUrl3, 190)
     const mainVideoUrl = (cleanUrl1 || cleanUrl2 || cleanUrl3 || '').trim()
-    const videoId = extractYouTubeId(mainVideoUrl)
-    const previewImg = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
+    const parsedMain = parseVideoUrl(mainVideoUrl)
+    const previewImg = parsedMain?.thumbnailUrl || ''
 
     const payload: Record<string, any> = {
       user_id: user.$id,
@@ -238,7 +239,7 @@ function ProfileDashboardContent() {
   }
 
   const showreelUrls = [formData.youtubeUrl1, formData.youtubeUrl2, formData.youtubeUrl3]
-  const activeVideoId = extractYouTubeId(showreelUrls[activePreviewIndex] || showreelUrls[0] || '')
+  const activeParsedVideo = parseVideoUrl(showreelUrls[activePreviewIndex] || showreelUrls[0] || '')
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white selection:bg-lime-400 selection:text-black">
@@ -340,37 +341,37 @@ function ProfileDashboardContent() {
 
               {/* 3 SHOWREEL URL INPUTS */}
               <div className="space-y-3 pt-2">
-                <h3 className="text-xs font-bold text-lime-400 uppercase tracking-wider">Showreels / Featured Videos</h3>
+                <h3 className="text-xs font-bold text-lime-400 uppercase tracking-wider">Showreels / Featured Videos (YouTube or Instagram Reels)</h3>
 
                 <div>
-                  <label className="text-[11px] font-bold text-zinc-400">Video #1 (Main Showreel)</label>
+                  <label className="text-[11px] font-bold text-zinc-400">Video #1 (Main Showreel / Reel)</label>
                   <input
                     type="url"
                     value={formData.youtubeUrl1}
                     onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl1: e.target.value }))}
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/..."
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-zinc-400">Video #2 (Shorts / Reels Sample)</label>
+                  <label className="text-[11px] font-bold text-zinc-400">Video #2 (Shorts / Instagram Reel Sample)</label>
                   <input
                     type="url"
                     value={formData.youtubeUrl2}
                     onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl2: e.target.value }))}
-                    placeholder="https://www.youtube.com/shorts/..."
+                    placeholder="https://www.instagram.com/reel/... or https://youtube.com/shorts/..."
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-zinc-400">Video #3 (3D / Motion VFX Sample)</label>
+                  <label className="text-[11px] font-bold text-zinc-400">Video #3 (3D / Motion VFX / Reel Sample)</label>
                   <input
                     type="url"
                     value={formData.youtubeUrl3}
                     onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl3: e.target.value }))}
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/..."
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   />
                 </div>
@@ -405,11 +406,11 @@ function ProfileDashboardContent() {
                   </span>
                 </div>
 
-                <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-zinc-800">
-                  {activeVideoId ? (
-                    <iframe src={`https://www.youtube.com/embed/${activeVideoId}`} className="w-full h-full border-0" allowFullScreen />
+                <div className={`w-full bg-black rounded-2xl overflow-hidden border border-zinc-800 ${activeParsedVideo?.isShortsUrl || activeParsedVideo?.sourceType === 'instagram' ? 'aspect-[9/16] max-h-[460px] mx-auto' : 'aspect-video'}`}>
+                  {activeParsedVideo ? (
+                    <iframe src={activeParsedVideo.embedUrl} className="w-full h-full border-0" allowFullScreen />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">Paste YouTube URL</div>
+                    <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">Paste YouTube or Instagram Reel URL</div>
                   )}
                 </div>
 

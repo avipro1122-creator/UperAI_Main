@@ -97,6 +97,20 @@ export async function POST(request: Request) {
       const parsed = parseVideoUrl(item.youtubeUrl)
       if (!parsed) return null
 
+      if (parsed.sourceType === 'instagram') {
+        return {
+          editor_id: user.$id,
+          youtube_url: item.youtubeUrl.trim(),
+          video_id: parsed.videoId,
+          title: 'Instagram Reel',
+          role_description: item.roleDescription?.trim() || '',
+          position: index,
+          thumbnail_url: null,
+          is_short: true,
+          is_available: true,
+        }
+      }
+
       if (parsed.sourceType === 'youtube') {
         const oembed = await fetchYoutubeOEmbed(item.youtubeUrl, !!parsed.isShortsUrl)
         return {

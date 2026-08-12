@@ -1,7 +1,7 @@
 'use client'
 
 import { X, Send, Sparkles } from 'lucide-react'
-import { parseYouTubeVideoId } from '@/lib/youtube'
+import { parseVideoUrl } from '@/lib/video-parser'
 
 export interface PreviewModalEditor {
   full_name?: string
@@ -56,20 +56,14 @@ export default function VideoPlayerModal({
   editor,
   portfolioItem,
 }: VideoPlayerModalProps) {
-  const extractYouTubeId = (url?: string) => {
-    if (!url) return ''
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
-    return match ? match[1] : ''
-  }
-
   const targetVideoId = editor?.videoId || videoId || portfolioItem?.video_id
-  const targetYoutubeUrl = editor?.youtubeUrl || portfolioItem?.video_url || portfolioItem?.youtube_url
-
-  const embedSrc = targetVideoId && targetVideoId !== 'L_LUpnjgPso'
-    ? `https://www.youtube.com/embed/${targetVideoId}?autoplay=1`
-    : targetYoutubeUrl
-    ? `https://www.youtube.com/embed/${extractYouTubeId(targetYoutubeUrl)}?autoplay=1`
-    : ''
+  const targetVideoUrl = editor?.youtubeUrl || portfolioItem?.video_url || portfolioItem?.youtube_url || targetVideoId || ''
+  
+  const parsed = parseVideoUrl(targetVideoUrl)
+  
+  const embedSrc = parsed
+    ? (parsed.sourceType === 'youtube' ? `${parsed.embedUrl}?autoplay=1` : parsed.embedUrl)
+    : (targetVideoId ? `https://www.youtube.com/embed/${targetVideoId}?autoplay=1` : '')
 
   if (!isOpen) return null
 
@@ -84,6 +78,8 @@ export default function VideoPlayerModal({
   const clipExplanation =
     portfolioItem?.role_explanation || portfolioItem?.role_description || roleExplanation || null
 
+  const isVertical = parsed?.isShortsUrl || parsed?.sourceType === 'instagram'
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden">
       <div className="relative w-full max-w-5xl bg-zinc-950 text-white rounded-t-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col lg:flex-row max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
@@ -97,8 +93,8 @@ export default function VideoPlayerModal({
         </button>
 
         {/* Video Player Column */}
-        <div className="flex-1 bg-black flex flex-col justify-center min-h-[260px] sm:min-h-[360px]">
-          <div className="relative w-full aspect-video">
+        <div className="flex-1 bg-black flex flex-col justify-center min-h-[260px] sm:min-h-[360px] p-2">
+          <div className={`relative w-full ${isVertical ? 'aspect-[9/16] max-h-[75vh] mx-auto' : 'aspect-video'}`}>
             <iframe
               src={embedSrc}
               title={clipTitle}

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { CURRENCIES } from '@/lib/constants'
 import { normalizeIndianPhone } from '@/lib/phone'
-import { parseVideoUrl } from '@/lib/video-parser'
+import { parseVideoUrl, VideoSourceType } from '@/lib/video-parser'
 import { useAuth } from '@/context/AuthContext'
 import { account } from '@/lib/appwrite/client'
 
@@ -28,7 +28,7 @@ interface PortfolioRow {
   previewState: 'idle' | 'loading' | 'ok' | 'error'
   previewTitle?: string
   previewThumb?: string
-  sourceType?: 'youtube' | 'drive'
+  sourceType?: VideoSourceType
   driveError?: string
 }
 
@@ -99,11 +99,16 @@ export default function EditorOnboardingForm({ existing }: { existing?: Existing
 
     const parsed = parseVideoUrl(value)
     if (!parsed) {
-      updateRow(index, { previewState: 'error', driveError: 'Please enter a valid YouTube video URL or Google Drive link.' })
+      updateRow(index, { previewState: 'error', driveError: 'Please enter a valid YouTube, Instagram Reel, or Google Drive link.' })
       return
     }
 
     updateRow(index, { sourceType: parsed.sourceType })
+
+    if (parsed.sourceType === 'instagram') {
+      updateRow(index, { previewState: 'ok', previewTitle: 'Instagram Reel' })
+      return
+    }
 
     if (parsed.sourceType === 'drive') {
       debounceTimers.current[index] = setTimeout(async () => {

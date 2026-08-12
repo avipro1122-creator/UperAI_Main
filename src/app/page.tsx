@@ -4,6 +4,7 @@ import HeroSection from '@/components/HeroSection'
 import BentoMarketplace, { BentoEditorItem } from '@/components/BentoMarketplace'
 import RecentlyActiveEditors, { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
 import { Query } from 'node-appwrite'
+import { parseVideoUrl } from '@/lib/video-parser'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -105,8 +106,8 @@ export default async function HomePage() {
         const handle = p.handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
         const firstItem = editorItems[0]
         const rawVideoUrl = p.youtube_url || p.youtube_url1 || p.youtube_url2 || p.youtube_url3 || firstItem?.video_url || firstItem?.youtube_url
-        const videoId = extractYouTubeId(rawVideoUrl)
-        const previewImg = p.preview_img || firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+        const parsedVideo = parseVideoUrl(rawVideoUrl)
+        const previewImg = p.preview_img || firstItem?.thumbnail_url || parsedVideo?.thumbnailUrl || null
         const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long
 
         return {
@@ -130,9 +131,9 @@ export default async function HomePage() {
         const editorItems = itemsByEditor.get(editorId) ?? []
         const firstItem = editorItems[0]
         const rawVideoUrl = doc.youtube_url || doc.youtube_url1 || doc.youtube_url2 || doc.youtube_url3 || firstItem?.video_url || firstItem?.youtube_url
-        const videoId = extractYouTubeId(rawVideoUrl) || ''
+        const parsedVideo = parseVideoUrl(rawVideoUrl)
 
-        const hasShort = editorItems.some((i) => i.is_short || i.format?.toLowerCase().includes('short'))
+        const hasShort = editorItems.some((i) => i.is_short || i.format?.toLowerCase().includes('short')) || parsedVideo?.sourceType === 'instagram' || parsedVideo?.isShortsUrl
         const hasLong = editorItems.some((i) => !i.is_short || i.format?.toLowerCase().includes('long'))
         const category: 'shorts' | 'long' | 'vfx' =
           hasShort && !hasLong ? 'shorts' : hasLong && !hasShort ? 'long' : 'vfx'
@@ -141,7 +142,7 @@ export default async function HomePage() {
         const googleAvatar =
           doc.avatar_url ||
           `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editorName)}`
-        const previewImg = doc.preview_img || firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+        const previewImg = doc.preview_img || firstItem?.thumbnail_url || parsedVideo?.thumbnailUrl || null
         const badgeText = firstItem?.role_explanation || firstItem?.role_description || doc.specialty_tag || doc.headline || 'Verified Editor'
 
         return {
@@ -155,7 +156,7 @@ export default async function HomePage() {
           rateLabel: `₹${Number(doc.base_rate || minRate).toLocaleString()} / Video`,
           turnaround: doc.turnaround_time || (doc.turnaround_days ? `${doc.turnaround_days} Days Turnaround` : '2 Days'),
           badgeText,
-          videoId,
+          videoId: parsedVideo?.videoId || '',
           previewImg: previewImg || '',
           softwareTags: doc.software || ['Premiere Pro', 'After Effects'],
         } satisfies BentoEditorItem

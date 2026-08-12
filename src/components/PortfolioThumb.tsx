@@ -24,8 +24,9 @@ interface Props {
 // Thumbnail by default; click swaps to youtube-nocookie or gdrive preview iframe.
 export default function PortfolioThumb({ item, isPlaying, onPlay }: Props) {
   const parsed = parseVideoUrl(item.youtube_url || item.video_id)
-  const isDrive = parsed?.sourceType === 'drive' || (!item.thumbnail_url && !item.title)
-  const aspectClass = item.is_short ? 'aspect-[9/16]' : 'aspect-video'
+  const isDrive = parsed?.sourceType === 'drive' || (!item.thumbnail_url && !item.title && parsed?.sourceType !== 'instagram')
+  const isInstagram = parsed?.sourceType === 'instagram'
+  const aspectClass = (item.is_short || parsed?.isShortsUrl || isInstagram) ? 'aspect-[9/16]' : 'aspect-video'
 
   if (!item.is_available) {
     return (
@@ -39,9 +40,9 @@ export default function PortfolioThumb({ item, isPlaying, onPlay }: Props) {
     )
   }
 
-  const embedSrc = isDrive
+  const embedSrc = parsed?.embedUrl || (isDrive
     ? `https://drive.google.com/file/d/${item.video_id}/preview`
-    : youtubeEmbedUrl(item.video_id)
+    : youtubeEmbedUrl(item.video_id))
 
   return (
     <div className="space-y-2">

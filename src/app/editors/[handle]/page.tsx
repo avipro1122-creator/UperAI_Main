@@ -2,16 +2,19 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Instagram, Video } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { databases } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
+import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
 
 export default function PublicEditorProfilePage({ params }: { params: { handle?: string; id?: string } }) {
   const { user, loginWithGoogle } = useAuth()
   const targetId = params.handle || params.id || ''
   const [editor, setEditor] = useState<any | null>(null)
+  const [portfolioItems, setPortfolioItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -52,6 +55,27 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
         }
 
         setEditor(doc)
+
+        if (doc) {
+          const editorUserId = doc.user_id || doc.$id
+          try {
+            const itemsRes = await databases.listDocuments(
+              dbId,
+              APPWRITE_CONFIG.collections.portfolio_items,
+              [Query.equal('editor_id', editorUserId)]
+            )
+            setPortfolioItems(itemsRes.documents || [])
+          } catch {
+            try {
+              const itemsRes = await databases.listDocuments(
+                dbId,
+                APPWRITE_CONFIG.collections.portfolio_items,
+                [Query.equal('editor_id', doc.$id)]
+              )
+              setPortfolioItems(itemsRes.documents || [])
+            } catch {}
+          }
+        }
       } catch (err) {
         console.error('Failed to load public editor profile:', err)
       } finally {
@@ -60,12 +84,6 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     }
     fetchPublicEditor()
   }, [targetId])
-
-  const extractYouTubeId = (url?: string) => {
-    if (!url) return null
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
-    return match ? match[1] : null
-  }
 
   const formatTurnaround = (val?: string | number | null) => {
     if (!val) return '2 Days'
@@ -136,11 +154,24 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     }
   }
 
-  const showreels = [
-    extractYouTubeId(editor.youtube_url1 || editor.youtube_url),
-    extractYouTubeId(editor.youtube_url2),
-    extractYouTubeId(editor.youtube_url3),
-  ].filter(Boolean) as string[]
+  const rawShowreelUrls = [
+    editor?.youtube_url1,
+    editor?.youtube_url,
+    editor?.youtube_url2,
+    editor?.youtube_url3,
+    editor?.showreel_url,
+    editor?.video_url,
+    editor?.video_url1,
+    editor?.video_url2,
+    editor?.video_url3,
+    ...portfolioItems.map((pi: any) => pi.youtube_url || pi.video_url || pi.url),
+  ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+
+  const uniqueShowreelUrls = Array.from(new Set(rawShowreelUrls))
+
+  const showreels: ParsedVideoUrl[] = uniqueShowreelUrls
+    .map((url) => parseVideoUrl(url))
+    .filter((item): item is ParsedVideoUrl => item !== null)
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white">
@@ -162,13 +193,34 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
         <div className="space-y-4">
           <h2 className="text-xl font-black text-lime-400 font-display">Featured Work & Showreels ({showreels.length})</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {showreels.length > 0 ? (
-              showreels.map((id, index) => (
-                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden p-3 space-y-3 shadow-xl">
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase">Showreel #{index + 1}</span>
-                  <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
-                    <iframe src={`https://www.youtube.com/embed/${id}`} className="w-full h-full border-0" allowFullScreen />
+              showreels.map((item, index) => (
+                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden p-3 space-y-3 shadow-xl flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase">Showreel #{index + 1}</span>
+                    {item.sourceType === 'instagram' ? (
+                      <span className="text-[10px] font-bold text-pink-400 bg-pink-950/70 border border-pink-800/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Instagram className="w-3 h-3" /> Instagram Reel
+                      </span>
+                    ) : item.sourceType === 'youtube' ? (
+                      <span className="text-[10px] font-bold text-red-400 bg-red-950/70 border border-red-800/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Video className="w-3 h-3" /> YouTube {item.isShortsUrl ? 'Short' : ''}
+                      </span>
+                    ) : item.sourceType === 'drive' ? (
+                      <span className="text-[10px] font-bold text-sky-400 bg-sky-950/70 border border-sky-800/40 px-2 py-0.5 rounded-full">
+                        Google Drive
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className={`w-full bg-black rounded-xl overflow-hidden border border-zinc-800 ${item.isShortsUrl || item.sourceType === 'instagram' ? 'aspect-[9/16] max-h-[500px] mx-auto' : 'aspect-video'}`}>
+                    <iframe
+                      src={item.embedUrl}
+                      title={`Showreel ${index + 1}`}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
                   </div>
                 </div>
               ))
