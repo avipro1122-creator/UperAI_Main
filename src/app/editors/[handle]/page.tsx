@@ -1,236 +1,205 @@
-import { createAdminClient } from '@/lib/appwrite/server'
-import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
-import { notFound } from 'next/navigation'
+'use client'
+
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { Query } from 'node-appwrite'
+import Navbar from '@/components/navbar'
+import { useAuth } from '@/context/AuthContext'
+import { databases } from '@/lib/appwrite/client'
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
+import { Query } from 'appwrite'
+import { normalizeIndianPhone } from '@/lib/phone'
 
-export default async function EditorProfilePage({ params }: { params: { handle: string } }) {
-  if (!isAppwriteConfigured()) return notFound()
+export default function PublicEditorProfilePage({ params }: { params: { handle?: string; id?: string } }) {
+  const { user, loginWithGoogle } = useAuth()
+  const targetId = params.handle || params.id || ''
+  const [editor, setEditor] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const admin = await createAdminClient()
-  let profile: any = null
-
-  try {
-    // 1. Primary query: match editor_profiles by $id, user_id, or instagram_handle
-    const directRes = await admin.databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.editor_profiles,
-      [Query.equal('$id', params.handle)]
-    )
-
-    if (directRes.documents.length > 0) {
-      profile = directRes.documents[0]
-    }
-  } catch {
-    // Continue fallbacks
-  }
-
-  if (!profile) {
-    try {
-      const handleRes = await admin.databases.listDocuments(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.collections.editor_profiles,
-        [Query.equal('user_id', params.handle)]
-      )
-      if (handleRes.documents.length > 0) {
-        profile = handleRes.documents[0]
+  useEffect(() => {
+    async function fetchPublicEditor() {
+      if (!targetId) {
+        setLoading(false)
+        return
       }
-    } catch {
-      // Continue fallbacks
-    }
-  }
 
-  if (!profile) {
-    try {
-      const userRes = await admin.databases.listDocuments(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.collections.users,
-        [Query.equal('handle', params.handle)]
-      )
-      const userDoc = userRes.documents[0]
-      if (userDoc) {
-        const profRes = await admin.databases.listDocuments(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.editor_profiles,
-          [Query.equal('user_id', userDoc.$id)]
-        )
-        if (profRes.documents.length > 0) {
-          profile = {
-            ...profRes.documents[0],
-            full_name: userDoc.name,
-            avatar_url: userDoc.avatar_url,
-            bio: userDoc.bio,
+      try {
+        const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+        let doc: any = null
+
+        // 1. Try direct get document by ID
+        try {
+          doc = await databases.getDocument(
+            dbId,
+            APPWRITE_CONFIG.collections.editor_profiles,
+            targetId
+          )
+        } catch {
+          doc = null
+        }
+
+        // 2. Fallback: list documents matching user_id
+        if (!doc) {
+          const listRes = await databases.listDocuments(
+            dbId,
+            APPWRITE_CONFIG.collections.editor_profiles,
+            [Query.equal('user_id', targetId)]
+          ).catch(() => ({ documents: [] }))
+
+          if (listRes.documents.length > 0) {
+            doc = listRes.documents[0]
           }
         }
+
+        setEditor(doc)
+      } catch (err) {
+        console.error('Failed to load public editor profile:', err)
+      } finally {
+        setLoading(false)
       }
-    } catch {
-      // Continue fallbacks
     }
-  }
-
-  if (!profile) return notFound()
-
-  // Fetch portfolio items
-  let portfolioItems: any[] = []
-  try {
-    const editorId = profile.user_id || profile.$id
-    const itemsRes = await admin.databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.portfolio_items,
-      [Query.equal('editor_id', editorId)]
-    )
-    portfolioItems = itemsRes.documents || []
-  } catch {
-    portfolioItems = []
-  }
-
-  profile.portfolio_items = portfolioItems
+    fetchPublicEditor()
+  }, [targetId])
 
   const extractYouTubeId = (url?: string) => {
-    if (!url) return ''
+    if (!url) return null
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
-    return match ? match[1] : ''
+    return match ? match[1] : null
   }
 
-  const firstPortfolioUrl = profile.portfolio_items?.[0]?.youtube_url || profile.portfolio_items?.[0]?.video_url
-  const primaryVideoId = extractYouTubeId(profile.youtube_url || firstPortfolioUrl)
+  const formatTurnaround = (val?: string | number | null) => {
+    if (!val) return '2 Days'
+    const str = String(val).trim()
+    const numMatch = str.match(/\d+/)
+    if (numMatch) {
+      const num = numMatch[0]
+      return `${num} ${Number(num) === 1 ? 'Day' : 'Days'}`
+    }
+    if (/hour/i.test(str)) return str
+    return str.replace(/ays?/i, 'Days').replace(/days?/i, 'Days')
+  }
 
-  const fullName = profile.full_name || profile.name || 'Editor'
-  const firstName = fullName.split(' ')[0] || 'EDITOR'
-  const specialtyTag = profile.specialty_tag || profile.headline || 'VIDEO EDITOR'
-  const headlineOrBio = profile.headline || profile.bio || 'I create high-converting video edits that scale channels.'
-  const avatarUrl = profile.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`
-  const baseRate = profile.base_rate ?? profile.min_rate ?? profile.rate_short ?? profile.rate_long ?? 0
-  const turnaroundTime = profile.turnaround_time || (profile.turnaround_days ? `${profile.turnaround_days} Days` : '48 Hours')
-  const whatsappNumber = profile.whatsapp_number || profile.whatsapp || ''
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
+  if (!editor) {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center space-y-4">
+        <p className="text-zinc-400 text-sm font-bold">Editor profile not found.</p>
+        <Link className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-lime-400 rounded-xl" href="/">
+          ← Back to Marketplace
+        </Link>
+      </div>
+    )
+  }
+
+  const showreels = [
+    extractYouTubeId(editor.youtube_url1 || editor.youtube_url),
+    extractYouTubeId(editor.youtube_url2),
+    extractYouTubeId(editor.youtube_url3),
+  ].filter(Boolean) as string[]
+
+  const rawWhatsapp = editor.whatsapp_number || editor.whatsapp || ''
+  const cleanWhatsapp = normalizeIndianPhone(rawWhatsapp).normalized || rawWhatsapp.replace(/\D/g, '')
   const whatsappMessage = encodeURIComponent(
-    `Hi ${fullName}, I saw your portfolio on UperAI and want to hire you for a video edit!`
+    `Hi ${editor.full_name || 'Editor'}, I saw your portfolio on UperAI and would like to discuss a video project with you.`
   )
-  const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : '#'
+  const whatsappUrl = cleanWhatsapp ? `https://wa.me/${cleanWhatsapp}?text=${whatsappMessage}` : '#'
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white p-4 md:p-8 max-w-5xl mx-auto space-y-6">
-      {/* Back Button */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-4 py-2 rounded-xl transition-all w-fit shadow-sm"
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to Marketplace
-      </Link>
-      {/* Top Banner & Hero Header */}
-      <div className="bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 rounded-3xl p-8 text-black flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-        <div className="space-y-3 z-10">
-          <span className="text-xs font-black tracking-widest uppercase bg-black text-white px-3 py-1 rounded-full inline-block">
-            {specialtyTag}
+    <div className="min-h-screen bg-[#09090b] text-white">
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        <Link className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-zinc-300 hover:text-white rounded-xl transition-all" href="/">
+          ← Back to Marketplace
+        </Link>
+
+        {/* Hero Banner */}
+        <div className="bg-gradient-to-r from-yellow-500 via-amber-600 to-lime-500 rounded-3xl p-8 text-black shadow-2xl space-y-2">
+          <span className="bg-black text-lime-400 text-[10px] font-black uppercase px-3 py-1 rounded-full">
+            {editor.specialty_tag || 'VIDEO EDITOR'}
           </span>
-          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight">
-            HELLO! I'M {firstName}
-          </h1>
-          <p className="text-lg font-bold text-zinc-900 max-w-md">
-            {headlineOrBio}
+          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor.full_name?.toUpperCase() || 'AVANISH RAI'}</h1>
+          <p className="font-bold text-sm opacity-90">Verified Indian Video Editor • High Impact Showreels</p>
+        </div>
+
+        {/* Featured Work / Showreels Grid */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-lime-400 font-display">Featured Work & Showreels ({showreels.length})</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {showreels.length > 0 ? (
+              showreels.map((id, index) => (
+                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden p-3 space-y-3 shadow-xl">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase">Showreel #{index + 1}</span>
+                  <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
+                    <iframe src={`https://www.youtube.com/embed/${id}`} className="w-full h-full border-0" allowFullScreen />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-3 py-8 text-center text-zinc-500 text-xs bg-zinc-900 border border-zinc-800 rounded-2xl">
+                No showreels linked yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Selected Work & Rates Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
+            <p className="text-xs text-blue-200 uppercase tracking-wider">SPECIALTY</p>
+            <p className="text-base text-white mt-1">{editor.specialty_tag || 'Gaming Videos'}</p>
+          </div>
+          <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
+            <p className="text-xs text-blue-200 uppercase tracking-wider">BASE RATE</p>
+            <p className="text-xl text-yellow-300 font-black mt-1">₹{Number(editor.base_rate || 1500).toLocaleString()} / Video</p>
+          </div>
+          <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
+            <p className="text-xs text-blue-200 uppercase tracking-wider">TURNAROUND</p>
+            <p className="text-base text-white mt-1">{formatTurnaround(editor.turnaround_time)}</p>
+          </div>
+        </div>
+
+        {/* Contact CTA Block (Gated Behind Login) */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
+          <h3 className="text-2xl font-black font-display">LET'S CREATE SOMETHING GREAT!</h3>
+          <p className="text-xs text-zinc-400 max-w-md mx-auto">
+            {user
+              ? 'Have a project in mind? Send a brief directly on WhatsApp.'
+              : 'Sign in to access direct WhatsApp contacts and hire verified editors.'}
           </p>
-        </div>
 
-        {/* Profile Avatar / Hero Image */}
-        <div className="relative w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden border-4 border-black shadow-2xl shrink-0">
-          <img
-            src={avatarUrl}
-            alt={fullName}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </div>
-
-      {/* Featured Portfolio Video Section */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4">
-        <h2 className="text-2xl font-black uppercase tracking-wider text-lime-400">WHAT I DID</h2>
-        <div className="aspect-video w-full rounded-2xl overflow-hidden border border-zinc-700 bg-black">
-          {primaryVideoId ? (
-            <iframe
-              src={`https://www.youtube.com/embed/${primaryVideoId}?autoplay=0`}
-              className="w-full h-full border-0"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-            />
+          {user ? (
+            /* Unlocked: Direct WhatsApp Link for Logged-In Users */
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
+            >
+              CONTACT ME ON WHATSAPP →
+            </a>
           ) : (
-            <div className="flex items-center justify-center h-full text-zinc-500">No Featured Video</div>
+            /* Locked: Google OAuth Trigger for Guest Users */
+            <button
+              onClick={loginWithGoogle}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="#000" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#000" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#000" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#000" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              LOG IN TO CONTACT ON WHATSAPP 🔒
+            </button>
           )}
         </div>
-      </div>
-
-      {/* Selected Work Grid & Stats */}
-      <div className="bg-blue-600 rounded-3xl p-6 text-white space-y-6">
-        <h2 className="text-3xl font-black uppercase tracking-wider">SELECTED WORK</h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-zinc-900 rounded-2xl p-4 border border-blue-400/30 space-y-2">
-            <span className="text-xs font-bold text-zinc-400">SPECIALTY</span>
-            <p className="text-lg font-bold">{specialtyTag}</p>
-          </div>
-
-          <div className="bg-zinc-900 rounded-2xl p-4 border border-blue-400/30 space-y-2">
-            <span className="text-xs font-bold text-zinc-400">BASE RATE</span>
-            <p className="text-xl font-black text-lime-400">₹{Number(baseRate).toLocaleString()} / Video</p>
-          </div>
-
-          <div className="bg-zinc-900 rounded-2xl p-4 border border-blue-400/30 space-y-2">
-            <span className="text-xs font-bold text-zinc-400">TURNAROUND</span>
-            <p className="text-lg font-bold">{turnaroundTime}</p>
-          </div>
-        </div>
-
-        {/* Additional Portfolio Video Grid */}
-        {profile.portfolio_items && profile.portfolio_items.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-            {profile.portfolio_items.map((item: any, idx: number) => {
-              const videoId = extractYouTubeId(item.youtube_url || item.video_url)
-              const thumb = item.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '')
-
-              return (
-                <div key={item.$id || idx} className="bg-zinc-900 rounded-2xl overflow-hidden border border-blue-400/30">
-                  <div className="aspect-video relative bg-black">
-                    {videoId ? (
-                      <iframe
-                        src={`https://www.youtube.com/embed/${videoId}?autoplay=0`}
-                        className="w-full h-full border-0"
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                      />
-                    ) : thumb ? (
-                      <img src={thumb} alt={item.title || 'Portfolio video'} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-zinc-500 text-xs">No Video</div>
-                    )}
-                  </div>
-                  {item.title && (
-                    <div className="p-3">
-                      <p className="text-sm font-bold text-zinc-200 line-clamp-1">{item.title}</p>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Footer Contact Banner */}
-      <div className="bg-lime-400 text-black rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <h3 className="text-3xl font-black uppercase">LET'S CREATE SOMETHING GREAT!</h3>
-          <p className="font-bold text-zinc-800">Have a project in mind? Send a brief directly on WhatsApp.</p>
-        </div>
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-black text-white px-8 py-4 rounded-2xl font-black uppercase tracking-wider hover:bg-zinc-800 transition-colors inline-block"
-        >
-          CONTACT ME ↗
-        </a>
-      </div>
+      </main>
     </div>
   )
 }

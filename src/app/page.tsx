@@ -5,6 +5,7 @@ import EditorCard, { EditorCardData } from '@/components/EditorCard'
 import HeroSection from '@/components/HeroSection'
 import BentoMarketplace, { BentoEditorItem } from '@/components/BentoMarketplace'
 import MarketplaceRoleHeader from '@/components/MarketplaceRoleHeader'
+import RecentlyActiveEditors, { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
 import { Query } from 'node-appwrite'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,7 @@ const extractYouTubeId = (url?: string) => {
 }
 
 export default async function HomePage() {
-  let featured: EditorCardData[] = []
+  let featured: ExtendedEditorCardData[] = []
   let bentoEditors: BentoEditorItem[] = []
   let userRole: string | null = null
   let userHandle: string | null = null
@@ -45,12 +46,23 @@ export default async function HomePage() {
       }
 
       // Fetch editor profiles from Appwrite Databases
-      const response = await admin.databases.listDocuments(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.collections.editor_profiles,
-        [Query.orderDesc('$createdAt')]
-      )
-      const recentProfiles = response.documents || []
+      let response: any
+      const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+      try {
+        response = await admin.databases.listDocuments(
+          dbId,
+          APPWRITE_CONFIG.collections.editor_profiles,
+          [Query.limit(100), Query.orderDesc('$createdAt')]
+        )
+      } catch {
+        response = await admin.databases.listDocuments(
+          dbId,
+          APPWRITE_CONFIG.collections.editor_profiles,
+          [Query.limit(100)]
+        )
+      }
+
+      const recentProfiles = (response?.documents || []).filter((p: any) => !p.is_hidden)
 
       const editorIds = recentProfiles.map((p: any) => p.user_id || p.$id).filter(Boolean)
 
@@ -110,7 +122,9 @@ export default async function HomePage() {
           thumbnail_url: previewImg,
           format_tag,
           instagram_handle: p.instagram_handle || p.instagram || null,
-        } satisfies EditorCardData
+          specialty: p.specialty_tag || p.headline || '',
+          softwareTags: p.software || ['Premiere Pro', 'After Effects'],
+        } satisfies ExtendedEditorCardData
       })
 
       bentoEditors = recentProfiles.map((doc: any) => {
@@ -167,30 +181,8 @@ export default async function HomePage() {
       {/* Dynamic Bento Marketplace Grid */}
       <BentoMarketplace dbEditors={bentoEditors} />
 
-      {/* Main Editors Section (Primary Marketplace Showcase) */}
-      {featured.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex items-end justify-between mb-8 border-b border-zinc-800 pb-4">
-            <div>
-              <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white">
-                Recently Active Editors
-              </h2>
-              <p className="text-xs text-zinc-400 mt-1">
-                Browse verified video editors, view portfolio clips, and send project briefs directly.
-              </p>
-            </div>
-            <Link href="/editors" className="text-xs font-semibold text-zinc-300 hover:text-white underline underline-offset-4">
-              View all ({featured.length})
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {featured.map((editor) => (
-              <EditorCard key={editor.handle} editor={editor} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Main Editors Section (Primary Marketplace Showcase with Search) */}
+      <RecentlyActiveEditors editors={featured} />
     </div>
   )
 }

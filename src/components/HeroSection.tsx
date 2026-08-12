@@ -121,13 +121,12 @@ export default function HeroSection({
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={openModal}
+                <Link
+                  href="/profile"
                   className="w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold rounded-xl transition-all text-xs sm:text-sm shadow-lg text-center inline-flex items-center justify-center gap-1.5"
                 >
                   List your work <ArrowUpRight className="w-4 h-4" />
-                </button>
+                </Link>
                 <Link
                   href="/editors"
                   className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-xl transition-all text-xs sm:text-sm text-center"

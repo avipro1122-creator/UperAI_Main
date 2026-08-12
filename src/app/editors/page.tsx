@@ -22,13 +22,24 @@ export default function DirectoryPage() {
   useEffect(() => {
     async function fetchEditors() {
       try {
-        const response = await databases.listDocuments(
-          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.editor_profiles,
-          [Query.orderDesc('$createdAt')]
-        )
+        const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+        let response: any
+        try {
+          response = await databases.listDocuments(
+            dbId,
+            APPWRITE_CONFIG.collections.editor_profiles,
+            [Query.limit(100), Query.orderDesc('$createdAt')]
+          )
+        } catch {
+          response = await databases.listDocuments(
+            dbId,
+            APPWRITE_CONFIG.collections.editor_profiles,
+            [Query.limit(100)]
+          )
+        }
 
-        const mapped = response.documents.map((doc: any) => {
+        const validDocs = (response.documents || []).filter((d: any) => !d.is_hidden)
+        const mapped = validDocs.map((doc: any) => {
           const rawUrl = doc.youtube_url || ''
           const match = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
           const videoId = match ? match[1] : 'L_LUpnjgPso'

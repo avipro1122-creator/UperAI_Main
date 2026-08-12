@@ -48,8 +48,17 @@ export default function Navbar() {
         <span>UPERAI</span>
       </Link>
 
+
+
       {/* DESKTOP RIGHT CONTROLS */}
       <div className="hidden md:flex items-center gap-4">
+        {/* Strictly ENABLED for Editors / HIDDEN for Creators */}
+        {user && activeRole === 'EDITOR' && (
+          <Link className="px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black text-xs font-extrabold rounded-xl transition-all shadow-md" href="/profile">
+            + List your work
+          </Link>
+        )}
+
         {loading ? (
           <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />
         ) : !user ? (
@@ -97,13 +106,20 @@ export default function Navbar() {
                 </div>
 
                 <div className="space-y-1">
-                  <Link
-                    href="/profile"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className="block px-3 py-2 text-white font-bold hover:bg-zinc-800 rounded-xl transition-colors"
-                  >
-                    👤 My Profile
-                  </Link>
+                  {/* My Profile Link (Unlocked for Editors / Locked Notice for Creators) */}
+                  {activeRole === 'EDITOR' ? (
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="block px-3 py-2 text-white font-bold hover:bg-zinc-800 rounded-xl transition-colors"
+                    >
+                      👤 My Editor Profile
+                    </Link>
+                  ) : (
+                    <div className="px-3 py-2 text-zinc-500 text-[11px] italic border-b border-zinc-800/50">
+                      🔒 Uploading locked in Creator Mode
+                    </div>
+                  )}
 
                   <button
                     onClick={toggleRole}
@@ -167,13 +183,19 @@ export default function Navbar() {
               Switch to {activeRole === 'CREATOR' ? 'Editor Mode' : 'Creator Mode'}
             </button>
 
-            <Link
-              href="/profile"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block w-full py-3 bg-zinc-900 text-white font-bold rounded-xl text-center border border-zinc-800"
-            >
-              👤 My Profile
-            </Link>
+            {activeRole === 'EDITOR' ? (
+              <Link
+                href="/profile"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block w-full py-3 bg-zinc-900 text-white font-bold rounded-xl text-center border border-zinc-800"
+              >
+                👤 My Profile
+              </Link>
+            ) : (
+              <div className="py-2.5 text-center text-zinc-500 text-xs italic">
+                🔒 Uploading locked in Creator Mode
+              </div>
+            )}
 
             <button
               onClick={logout}

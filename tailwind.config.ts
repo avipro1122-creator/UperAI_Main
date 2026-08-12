@@ -9,6 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        lime: {
+          400: "#a3e635",
+          500: "#84cc16",
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -32,6 +36,15 @@ const config: Config = {
           foreground: "hsl(var(--accent-foreground))",
         },
         border: "hsl(var(--border))",
+      },
+      animation: {
+        'glow-pulse': 'glowPulse 3s infinite ease-in-out',
+      },
+      keyframes: {
+        glowPulse: {
+          '0%, 100%': { boxShadow: '0 0 15px rgba(163, 230, 53, 0.15)' },
+          '50%': { boxShadow: '0 0 30px rgba(163, 230, 53, 0.35)' },
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

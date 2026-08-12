@@ -35,6 +35,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[AuthContext Debug] account.get() SUCCESS (HTTP 200):', activeAccount)
       setUser(activeAccount)
       localStorage.setItem('uperai_user', JSON.stringify(activeAccount))
+      if (activeAccount.prefs?.role) {
+        setActiveRole(activeAccount.prefs.role as Role)
+        localStorage.setItem('uperai_role', activeAccount.prefs.role)
+      }
     } catch (err: any) {
       console.error('[AuthContext Debug] account.get() FAILED:', err)
       setUser(null)

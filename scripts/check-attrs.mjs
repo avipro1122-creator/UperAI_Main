@@ -9,10 +9,10 @@ const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(a
 const databases = new Databases(client);
 
 async function main() {
-  const attrs = await databases.listAttributes(databaseId, 'editor_profiles');
-  console.log('Current attributes in editor_profiles:');
-  for (const a of attrs.attributes) {
-    console.log(`- ${a.key} (${a.type}) status: ${a.status}`);
+  const collection = await databases.getCollection(databaseId, 'editor_profiles');
+  console.log('Collection attributes:');
+  for (const attr of collection.attributes) {
+    console.log(`- ${attr.key}: status=${attr.status}, type=${attr.type}`);
   }
 }
 

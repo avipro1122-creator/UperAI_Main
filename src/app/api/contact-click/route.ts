@@ -1,24 +1,38 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/appwrite/server'
 import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { ID } from 'node-appwrite'
+import { z } from 'zod'
+
+const contactClickSchema = z.object({
+  editor_id: z.string().min(1).max(255),
+})
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request)
+  const limitCheck = rateLimit(ip, 15, 60000)
+  if (!limitCheck.success) {
+    return NextResponse.json({ ok: false, error: 'Rate limit exceeded' }, { status: 429 })
+  }
+
   if (!isAppwriteConfigured()) {
-    return NextResponse.json({ ok: false }, { status: 503 })
+    return NextResponse.json({ ok: false, error: 'Database service unavailable' }, { status: 503 })
   }
 
-  let editorId: string
+  let jsonBody: any
   try {
-    const body = await request.json()
-    editorId = String(body.editor_id ?? '')
+    jsonBody = await request.json()
   } catch {
-    return NextResponse.json({ ok: false }, { status: 400 })
+    return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 })
   }
 
-  if (!editorId) {
-    return NextResponse.json({ ok: false }, { status: 400 })
+  const parsed = contactClickSchema.safeParse(jsonBody)
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, error: 'Validation error' }, { status: 400 })
   }
+
+  const editorId = parsed.data.editor_id
 
   try {
     const admin = await createAdminClient()

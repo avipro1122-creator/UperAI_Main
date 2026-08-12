@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
+import { GoogleTagManager } from '@next/third-parties/google'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { OnboardingProvider } from '@/context/OnboardingContext'
@@ -31,8 +33,35 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const gtmId = process.env.NEXT_PUBLIC_GTM_ID
+
   return (
     <html lang="en" className="dark">
+      <head>
+        <Script id="consent-mode-default" strategy="beforeInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('consent', 'default', {
+              ad_storage: 'denied',
+              ad_user_data: 'denied',
+              ad_personalization: 'denied',
+              analytics_storage: 'denied',
+              functionality_storage: 'denied',
+              personalization_storage: 'denied',
+              security_storage: 'granted',
+              wait_for_update: 500
+            });
+          `}
+        </Script>
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="d5c9bb0a-b958-4310-b7d3-3f9f5f4bb32b"
+          data-blockingmode="auto"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-purple-500 selection:text-white">
         <AuthProvider>
           <OnboardingProvider>
@@ -41,6 +70,7 @@ export default function RootLayout({
             <Footer />
           </OnboardingProvider>
         </AuthProvider>
+        {gtmId && <GoogleTagManager gtmId={gtmId} />}
       </body>
     </html>
   )

@@ -5,35 +5,43 @@ import { parseVideoUrl } from '@/lib/video-parser'
 import { fetchYoutubeOEmbed } from '@/lib/youtube'
 import { checkDrivePublicAccess } from '@/lib/gdrive'
 import { normalizeIndianPhone } from '@/lib/phone'
-import { ID, Query } from 'node-appwrite'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { ID, Query, Permission, Role } from 'node-appwrite'
+import { z } from 'zod'
 
-interface PortfolioInput {
-  youtubeUrl: string
-  roleDescription: string
-}
+const portfolioItemSchema = z.object({
+  youtubeUrl: z.string().min(1),
+  roleDescription: z.string().max(2000),
+})
 
-interface Body {
-  name: string
-  bio: string | null
-  city: string | null
-  headline: string | null
-  rateLong: number | null
-  rateShort: number | null
-  currency: string
-  turnaroundDays: number | null
-  whatsapp: string | null
-  instagramHandle: string | null
-  portfolio: PortfolioInput[]
-}
+const editorOnboardingSchema = z.object({
+  name: z.string().min(1).max(255),
+  bio: z.string().max(2000).nullable().optional(),
+  city: z.string().max(255).nullable().optional(),
+  headline: z.string().max(500).nullable().optional(),
+  rateLong: z.number().int().nonnegative().max(1000000).nullable().optional(),
+  rateShort: z.number().int().nonnegative().max(1000000).nullable().optional(),
+  currency: z.string().max(10).optional().default('INR'),
+  turnaroundDays: z.number().int().nonnegative().max(365).nullable().optional(),
+  whatsapp: z.string().max(50).nullable().optional(),
+  instagramHandle: z.string().max(100).nullable().optional(),
+  portfolio: z.array(portfolioItemSchema).min(3).max(6),
+})
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request)
+  const limitCheck = rateLimit(ip, 10, 60000)
+  if (!limitCheck.success) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
+  }
+
   if (!isAppwriteConfigured()) {
     return NextResponse.json({ error: 'Database service unavailable' }, { status: 503 })
   }
 
   let user: any = null
   try {
-    const { account } = await createSessionClient()
+    const { account } = await createSessionClient(request)
     user = await account.get()
   } catch {
     return NextResponse.json({ error: 'Please sign in to save your editor profile' }, { status: 401 })
@@ -43,11 +51,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Please sign in to save your editor profile' }, { status: 401 })
   }
 
-  const body: Body = await request.json()
-
-  if (!body.name?.trim()) {
-    return NextResponse.json({ error: 'Display name is required' }, { status: 400 })
+  let jsonBody: any
+  try {
+    jsonBody = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
+
+  const parsedPayload = editorOnboardingSchema.safeParse(jsonBody)
+  if (!parsedPayload.success) {
+    return NextResponse.json(
+      { error: 'Validation error', details: parsedPayload.error.format() },
+      { status: 400 }
+    )
+  }
+
+  const body = parsedPayload.data
 
   let normalizedWhatsapp: string | null = null
   if (body.whatsapp?.trim()) {
@@ -61,15 +80,10 @@ export async function POST(request: Request) {
   const normalizedInstagram = body.instagramHandle?.trim().replace(/^@/, '') || null
 
   if (!normalizedWhatsapp && !normalizedInstagram) {
-    return NextResponse.json({ error: 'Please provide at least one contact method (WhatsApp or Instagram)' }, { status: 400 })
-  }
-
-  if (body.rateLong !== null && body.rateLong !== undefined && Number(body.rateLong) < 1) {
-    return NextResponse.json({ error: 'Long-form rate must be at least ₹1 (or leave blank)' }, { status: 400 })
-  }
-
-  if (body.rateShort !== null && body.rateShort !== undefined && Number(body.rateShort) < 1) {
-    return NextResponse.json({ error: 'Shorts rate must be at least ₹1 (or leave blank)' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Please provide at least one contact method (WhatsApp or Instagram)' },
+      { status: 400 }
+    )
   }
 
   const validRateLong = body.rateLong != null && !isNaN(Number(body.rateLong)) ? Number(body.rateLong) : null
@@ -77,10 +91,6 @@ export async function POST(request: Request) {
 
   if (validRateLong === null && validRateShort === null) {
     return NextResponse.json({ error: 'Please set at least one rate (Long-form or Shorts)' }, { status: 400 })
-  }
-
-  if (!Array.isArray(body.portfolio) || body.portfolio.length < 3 || body.portfolio.length > 6) {
-    return NextResponse.json({ error: 'Please add between 3 and 6 video links' }, { status: 400 })
   }
 
   let driveErrorMsg: string | null = null
@@ -144,9 +154,14 @@ export async function POST(request: Request) {
   }
 
   const admin = await createAdminClient()
+  const documentPermissions = [
+    Permission.read(Role.any()),
+    Permission.update(Role.user(user.$id)),
+    Permission.delete(Role.user(user.$id)),
+  ]
 
-  // Update user document
-  const handle = body.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const handle = body.name.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30) || user.$id
+
   try {
     await admin.databases.updateDocument(
       APPWRITE_CONFIG.databaseId,
@@ -173,7 +188,8 @@ export async function POST(request: Request) {
         city: body.city?.trim() || null,
         role: 'editor',
         last_active_at: new Date().toISOString(),
-      }
+      },
+      documentPermissions
     )
   }
 
@@ -207,7 +223,8 @@ export async function POST(request: Request) {
       APPWRITE_CONFIG.databaseId,
       APPWRITE_CONFIG.collections.editor_profiles,
       user.$id,
-      profilePayload
+      profilePayload,
+      documentPermissions
     )
   } catch {
     await admin.databases.updateDocument(
@@ -218,7 +235,6 @@ export async function POST(request: Request) {
     )
   }
 
-  // Delete old portfolio items for this editor in Appwrite
   try {
     const existing = await admin.databases.listDocuments(
       APPWRITE_CONFIG.databaseId,
@@ -236,7 +252,6 @@ export async function POST(request: Request) {
     // Ignore cleanup error
   }
 
-  // Insert portfolio items
   for (let index = 0; index < validItems.length; index++) {
     const item = validItems[index]
     await admin.databases.createDocument(
@@ -254,7 +269,8 @@ export async function POST(request: Request) {
         thumbnail_url: item.thumbnail_url,
         is_short: item.is_short,
         is_available: item.is_available,
-      }
+      },
+      documentPermissions
     )
   }
 

@@ -1,30 +1,51 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import RoleGuard from '@/components/RoleGuard'
 import { useAuth } from '@/context/AuthContext'
 import { databases } from '@/lib/appwrite/client'
-import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
-import SetupNotice from '@/components/SetupNotice'
-import { Query } from 'appwrite'
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
+import { Query, ID } from 'appwrite'
+
+const PREDEFINED_SPECIALTIES = [
+  'Long Form Video Editor',
+  'Short Form Video Editor',
+  'Design',
+  'VFX',
+  'Custom',
+]
 
 export default function ProfilePage() {
+  return (
+    <RoleGuard>
+      <ProfileDashboardContent />
+    </RoleGuard>
+  )
+}
+
+function ProfileDashboardContent() {
+  const router = useRouter()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profileDocId, setProfileDocId] = useState<string | null>(null)
+  const [activePreviewIndex, setActivePreviewIndex] = useState(0)
+
+  const [selectedSpecialtyOption, setSelectedSpecialtyOption] = useState<string>('Long Form Video Editor')
+  const [customSpecialty, setCustomSpecialty] = useState<string>('')
 
   const [formData, setFormData] = useState({
     fullName: '',
-    specialtyTag: 'Video Editor',
+    specialtyTag: 'Long Form Video Editor',
     baseRate: 1500,
     turnaroundTime: '2 Days',
-    youtubeUrl: '',
+    youtubeUrl1: '',
+    youtubeUrl2: '',
+    youtubeUrl3: '',
     whatsappNumber: '',
   })
-
-  if (!isAppwriteConfigured()) {
-    return <SetupNotice />
-  }
 
   useEffect(() => {
     if (!user) return
@@ -49,13 +70,25 @@ export default function ProfilePage() {
         if (response.documents.length > 0) {
           const doc = response.documents[0]
           setProfileDocId(doc.$id)
+          const tag = doc.specialty_tag || 'Long Form Video Editor'
+          
+          if (PREDEFINED_SPECIALTIES.includes(tag)) {
+            setSelectedSpecialtyOption(tag)
+            setCustomSpecialty('')
+          } else {
+            setSelectedSpecialtyOption('Custom')
+            setCustomSpecialty(tag)
+          }
+
           setFormData({
             fullName: doc.full_name || user.name || '',
-            specialtyTag: doc.specialty_tag || 'Video Editor',
+            specialtyTag: tag,
             baseRate: doc.base_rate || 1500,
             turnaroundTime: doc.turnaround_time || '2 Days',
-            youtubeUrl: doc.youtube_url || '',
-            whatsappNumber: doc.whatsapp_number || '',
+            youtubeUrl1: doc.youtube_url1 || doc.youtube_url || '',
+            youtubeUrl2: doc.youtube_url2 || '',
+            youtubeUrl3: doc.youtube_url3 || '',
+            whatsappNumber: doc.whatsapp_number || doc.whatsapp || '',
           })
         } else {
           setFormData((prev) => ({ ...prev, fullName: user.name || '' }))
@@ -81,185 +114,271 @@ export default function ProfilePage() {
     if (!user) return
     setSaving(true)
 
-    try {
-      const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+    const finalSpecialtyTag =
+      selectedSpecialtyOption === 'Custom'
+        ? customSpecialty.trim() || 'Video Editor'
+        : selectedSpecialtyOption
 
+    const cleanPhone = formData.whatsappNumber.replace(/\D/g, '')
+    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+
+    const payload: Record<string, any> = {
+      user_id: user.$id,
+      full_name: formData.fullName,
+      specialty_tag: finalSpecialtyTag,
+      base_rate: Number(formData.baseRate),
+      turnaround_time: formData.turnaroundTime,
+      youtube_url: formData.youtubeUrl1,
+      youtube_url1: formData.youtubeUrl1,
+      youtube_url2: formData.youtubeUrl2,
+      youtube_url3: formData.youtubeUrl3,
+      whatsapp_number: cleanPhone,
+      whatsapp: cleanPhone,
+      open_to_work: true,
+      is_hidden: false,
+    }
+
+    async function attemptSave(docPayload: Record<string, any>) {
       if (profileDocId) {
-        await databases.updateDocument(
+        return await databases.updateDocument(
           dbId,
           APPWRITE_CONFIG.collections.editor_profiles,
           profileDocId,
-          {
-            full_name: formData.fullName,
-            specialty_tag: formData.specialtyTag,
-            base_rate: Number(formData.baseRate),
-            turnaround_time: formData.turnaroundTime,
-            youtube_url: formData.youtubeUrl,
-            whatsapp_number: formData.whatsappNumber,
-          }
+          docPayload
         )
       } else {
         const created = await databases.createDocument(
           dbId,
           APPWRITE_CONFIG.collections.editor_profiles,
-          user.$id,
-          {
-            user_id: user.$id,
-            full_name: formData.fullName,
-            specialty_tag: formData.specialtyTag,
-            base_rate: Number(formData.baseRate),
-            turnaround_time: formData.turnaroundTime,
-            youtube_url: formData.youtubeUrl,
-            whatsapp_number: formData.whatsappNumber,
-          }
+          ID.unique(),
+          docPayload
         )
         setProfileDocId(created.$id)
+        return created
       }
-      alert('Profile updated successfully!')
+    }
+
+    try {
+      await attemptSave(payload)
+      alert('Profile & WhatsApp details saved successfully!')
+      router.refresh()
+      router.push('/')
     } catch (err: any) {
+      if (err.message && err.message.includes('Unknown attribute')) {
+        const match = err.message.match(/Unknown attribute:\s*"([^"]+)"/)
+        if (match && match[1]) {
+          const badKey = match[1]
+          delete payload[badKey]
+          try {
+            await attemptSave(payload)
+            alert('Profile & WhatsApp details saved successfully!')
+            router.refresh()
+            router.push('/')
+            return
+          } catch (retryErr: any) {
+            alert(`Save failed: ${retryErr.message}`)
+            return
+          }
+        }
+      }
       alert(`Save failed: ${err.message}`)
     } finally {
       setSaving(false)
     }
   }
 
-  const videoId = extractYouTubeId(formData.youtubeUrl)
+  const showreelUrls = [formData.youtubeUrl1, formData.youtubeUrl2, formData.youtubeUrl3]
+  const activeVideoId = extractYouTubeId(showreelUrls[activePreviewIndex] || showreelUrls[0] || '')
 
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 min-h-screen bg-[#09090b] text-white">
-      <div>
-        <h1 className="text-3xl font-black font-display">Editor Profile Dashboard</h1>
-        <p className="text-zinc-400 text-sm mt-1">
-          Manage your public listing, YouTube showreel, rates, and direct brief contacts.
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#09090b] text-white selection:bg-lime-400 selection:text-black">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
+          <div>
+            <Link className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-lime-400 mb-2 transition-colors" href="/">
+              ← Back to Marketplace
+            </Link>
+            <h1 className="text-2xl sm:text-4xl font-black font-display">Editor Profile Dashboard</h1>
+            <p className="text-zinc-400 text-xs sm:text-sm">Manage your showreels, upfront rates, and client contact info.</p>
+          </div>
 
-      {loading ? (
-        <div className="py-12 text-center text-zinc-500">Loading your profile...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Form Column */}
-          <form onSubmit={handleSave} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xl">
-            <h2 className="text-lg font-bold text-lime-400">Edit Details</h2>
+          {profileDocId && (
+            <Link className="px-4 py-2 bg-zinc-900 border border-zinc-700 text-lime-400 font-bold text-xs rounded-xl hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-md" href={`/editors/${profileDocId}`}>
+              👁️ View Live Public Portfolio Page ↗
+            </Link>
+          )}
+        </div>
 
-            <div>
-              <label className="text-xs font-bold text-zinc-400">Full Name</label>
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                className="w-full mt-1 p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:border-lime-400 focus:outline-none"
-                required
-              />
-            </div>
+        {loading ? (
+          <div className="py-16 text-center text-zinc-500 text-sm">Loading profile settings...</div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <form onSubmit={handleSave} className="lg:col-span-7 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-lg font-bold text-lime-400 border-b border-zinc-800 pb-3">Edit Listing Info</h2>
 
-            <div>
-              <label className="text-xs font-bold text-zinc-400">Specialty Tag</label>
-              <input
-                type="text"
-                value={formData.specialtyTag}
-                onChange={(e) => setFormData({ ...formData, specialtyTag: e.target.value })}
-                placeholder="e.g. Gaming Videos, 3D Motion Graphics"
-                className="w-full mt-1 p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:border-lime-400 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-zinc-400">Base Rate (₹)</label>
-                <input
-                  type="number"
-                  value={formData.baseRate}
-                  onChange={(e) => setFormData({ ...formData, baseRate: Number(e.target.value) })}
-                  className="w-full mt-1 p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:border-lime-400 focus:outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-zinc-400">Turnaround Time</label>
+                <label className="text-xs font-bold text-zinc-400">Full Name</label>
                 <input
                   type="text"
-                  value={formData.turnaroundTime}
-                  onChange={(e) => setFormData({ ...formData, turnaroundTime: e.target.value })}
-                  className="w-full mt-1 p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:border-lime-400 focus:outline-none"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   required
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="text-xs font-bold text-zinc-400">YouTube Showreel URL</label>
-              <input
-                type="url"
-                value={formData.youtubeUrl}
-                onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full mt-1 p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:border-lime-400 focus:outline-none"
-              />
-            </div>
+              {/* SPECIALTY TAG DROPDOWN WITH CUSTOM OPTION */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-400">Specialty Tag *</label>
+                <select
+                  value={selectedSpecialtyOption}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setSelectedSpecialtyOption(val)
+                    if (val !== 'Custom') {
+                      setFormData((prev) => ({ ...prev, specialtyTag: val }))
+                    }
+                  }}
+                  className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all font-semibold"
+                >
+                  <option value="Long Form Video Editor">Long Form Video Editor</option>
+                  <option value="Short Form Video Editor">Short Form Video Editor</option>
+                  <option value="Design">Design</option>
+                  <option value="VFX">VFX</option>
+                  <option value="Custom">Custom (Type your own)</option>
+                </select>
 
-            <div>
-              <label className="text-xs font-bold text-zinc-400">WhatsApp Number</label>
-              <input
-                type="text"
-                value={formData.whatsappNumber}
-                onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-                placeholder="+91 9876543210"
-                className="w-full mt-1 p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:border-lime-400 focus:outline-none"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full py-3 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs rounded-xl transition-all shadow-md"
-            >
-              {saving ? 'Saving Changes...' : 'Save Profile Changes'}
-            </button>
-          </form>
-
-          {/* Live Preview Column */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-bold text-zinc-300">Marketplace Preview</h2>
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4 shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-lime-400 shrink-0">
-                  <img
-                    src={user?.prefs?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(formData.fullName || 'Editor')}`}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
+                {/* Custom Specialty Field (Visible only when 'Custom' is selected) */}
+                {selectedSpecialtyOption === 'Custom' && (
+                  <input
+                    type="text"
+                    value={customSpecialty}
+                    onChange={(e) => {
+                      setCustomSpecialty(e.target.value)
+                      setFormData((prev) => ({ ...prev, specialtyTag: e.target.value }))
+                    }}
+                    placeholder="Type custom specialty (e.g., 3D Motion Animator)..."
+                    className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-lime-400 transition-all mt-2"
+                    required
                   />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-white text-base truncate">{formData.fullName || 'Your Name'}</h3>
-                  <span className="inline-block text-[10px] bg-pink-950 text-pink-400 font-bold px-2 py-0.5 rounded-full border border-pink-800/40 truncate">
-                    {formData.specialtyTag}
-                  </span>
-                </div>
-              </div>
-
-              <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800 flex items-center justify-center">
-                {videoId ? (
-                  <iframe
-                    src={`https://www.youtube.com/embed/${videoId}`}
-                    className="w-full h-full border-0"
-                    allowFullScreen
-                  />
-                ) : (
-                  <span className="text-xs text-zinc-500">Paste YouTube URL to view preview</span>
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-xs font-bold pt-2 border-t border-zinc-800">
-                <span className="text-white">₹{Number(formData.baseRate).toLocaleString()} / Video</span>
-                <span className="text-zinc-400">⏱ {formData.turnaroundTime}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-zinc-400">Base Rate (₹)</label>
+                  <input
+                    type="number"
+                    value={formData.baseRate}
+                    onChange={(e) => setFormData({ ...formData, baseRate: Number(e.target.value) })}
+                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-zinc-400">Turnaround Time</label>
+                  <input
+                    type="text"
+                    value={formData.turnaroundTime}
+                    onChange={(e) => setFormData({ ...formData, turnaroundTime: e.target.value })}
+                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 3 SHOWREEL URL INPUTS */}
+              <div className="space-y-3 pt-2">
+                <h3 className="text-xs font-bold text-lime-400 uppercase tracking-wider">Showreels / Featured Videos</h3>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400">Video #1 (Main Showreel)</label>
+                  <input
+                    type="url"
+                    value={formData.youtubeUrl1}
+                    onChange={(e) => setFormData({ ...formData, youtubeUrl1: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400">Video #2 (Shorts / Reels Sample)</label>
+                  <input
+                    type="url"
+                    value={formData.youtubeUrl2}
+                    onChange={(e) => setFormData({ ...formData, youtubeUrl2: e.target.value })}
+                    placeholder="https://www.youtube.com/shorts/..."
+                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400">Video #3 (3D / Motion VFX Sample)</label>
+                  <input
+                    type="url"
+                    value={formData.youtubeUrl3}
+                    onChange={(e) => setFormData({ ...formData, youtubeUrl3: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400">WhatsApp Number</label>
+                <input
+                  type="text"
+                  value={formData.whatsappNumber}
+                  onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                  placeholder="e.g. 9016047119"
+                  className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                />
+              </div>
+
+              <button type="submit" disabled={saving} className="w-full py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl uppercase tracking-wider transition-all mt-2 shadow-lg">
+                {saving ? 'Saving...' : 'SAVE ALL CHANGES'}
+              </button>
+            </form>
+
+            {/* PREVIEW PANEL WITH SHOWREEL SWITCHER */}
+            <div className="lg:col-span-5 space-y-4 sticky top-24">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 space-y-4 shadow-xl">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-white text-sm">{formData.fullName || 'Avi Rai'}</h3>
+                  <span className="text-[10px] bg-lime-950 text-lime-400 font-bold px-2 py-0.5 rounded border border-lime-800/40">
+                    {selectedSpecialtyOption === 'Custom' ? customSpecialty || 'Custom' : selectedSpecialtyOption}
+                  </span>
+                </div>
+
+                <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-zinc-800">
+                  {activeVideoId ? (
+                    <iframe src={`https://www.youtube.com/embed/${activeVideoId}`} className="w-full h-full border-0" allowFullScreen />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">Paste YouTube URL</div>
+                  )}
+                </div>
+
+                {/* Showreel Selector Tabs */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[0, 1, 2].map((idx) => (
+                    <button
+                      type="button"
+                      key={idx}
+                      onClick={() => setActivePreviewIndex(idx)}
+                      className={`py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                        activePreviewIndex === idx ? 'bg-lime-400 text-black border-lime-400' : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                      }`}
+                    >
+                      Video #{idx + 1}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </main>
+        )}
+      </main>
+    </div>
   )
 }

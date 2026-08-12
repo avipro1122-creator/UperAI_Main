@@ -20,15 +20,34 @@ export async function createAdminClient() {
   }
 }
 
-export async function createSessionClient() {
+export async function createSessionClient(req?: Request) {
   const client = new Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || APPWRITE_CONFIG.endpoint)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || APPWRITE_CONFIG.projectId)
 
-  const cookieStore = cookies()
-  const session = cookieStore.get('appwrite-session')?.value || cookieStore.get('a_session')?.value
-  if (session) {
-    client.setSession(session)
+  let sessionSecret: string | undefined
+
+  if (req) {
+    const authHeader = req.headers.get('authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      sessionSecret = authHeader.substring(7).trim()
+    }
+    if (!sessionSecret) {
+      sessionSecret = req.headers.get('x-appwrite-session') || undefined
+    }
+  }
+
+  if (!sessionSecret) {
+    const cookieStore = cookies()
+    const allCookies = cookieStore.getAll()
+    const sessionCookie = allCookies.find(
+      (c) => c.name === 'appwrite-session' || c.name === 'a_session' || c.name.startsWith('a_session_')
+    )
+    sessionSecret = sessionCookie?.value
+  }
+
+  if (sessionSecret) {
+    client.setSession(sessionSecret)
   }
 
   return {
