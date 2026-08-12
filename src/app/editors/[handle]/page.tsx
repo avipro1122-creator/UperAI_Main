@@ -21,36 +21,57 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
 
   useEffect(() => {
     async function fetchPublicEditor() {
-      if (!targetId) {
-        setLoading(false)
-        return
-      }
-
       try {
         const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+        const rawTarget = targetId ? decodeURIComponent(targetId).trim() : ''
         let doc: any = null
 
-        // 1. Try direct get document by ID
-        try {
-          doc = await databases.getDocument(
-            dbId,
-            APPWRITE_CONFIG.collections.editor_profiles,
-            targetId
-          )
-        } catch {
-          doc = null
+        // 1. Direct get document by ID if rawTarget looks like an Appwrite ID
+        if (rawTarget) {
+          try {
+            doc = await databases.getDocument(
+              dbId,
+              APPWRITE_CONFIG.collections.editor_profiles,
+              rawTarget
+            )
+          } catch {
+            doc = null
+          }
         }
 
-        // 2. Fallback: list documents matching user_id
+        // 2. Comprehensive search across editor_profiles
         if (!doc) {
           const listRes = await databases.listDocuments(
             dbId,
-            APPWRITE_CONFIG.collections.editor_profiles,
-            [Query.equal('user_id', targetId)]
+            APPWRITE_CONFIG.collections.editor_profiles
           ).catch(() => ({ documents: [] }))
 
-          if (listRes.documents.length > 0) {
-            doc = listRes.documents[0]
+          const docs = listRes.documents || []
+          if (docs.length > 0) {
+            if (rawTarget) {
+              const lowerTarget = rawTarget.toLowerCase()
+              const slugTarget = lowerTarget.replace(/\s+/g, '-')
+
+              doc = docs.find((d: any) => {
+                const dId = (d.$id || '').toLowerCase()
+                const dUserId = (d.user_id || '').toLowerCase()
+                const dHandle = (d.handle || '').toLowerCase()
+                const dName = (d.full_name || d.name || d.display_name || '').toLowerCase()
+                const dNameSlug = dName.replace(/\s+/g, '-')
+
+                return (
+                  dId === lowerTarget ||
+                  dUserId === lowerTarget ||
+                  (dHandle && dHandle === lowerTarget) ||
+                  dName === lowerTarget ||
+                  dNameSlug === slugTarget ||
+                  dId.includes(lowerTarget) ||
+                  dUserId.includes(lowerTarget)
+                )
+              }) || docs[0]
+            } else {
+              doc = docs[0]
+            }
           }
         }
 
