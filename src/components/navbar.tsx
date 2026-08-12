@@ -156,7 +156,19 @@ export default function Navbar() {
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center gap-2"
           >
-            <img src={userAvatar} alt="Avatar" className="w-7 h-7 rounded-full object-cover" />
+            {!imgError ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={userAvatar}
+                alt="Avatar"
+                className="w-7 h-7 rounded-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <span className="w-7 h-7 rounded-full bg-lime-400 text-black text-xs font-black flex items-center justify-center">
+                {(user.name || user.email)?.[0]?.toUpperCase() ?? 'U'}
+              </span>
+            )}
             {isMobileMenuOpen ? <X className="w-4 h-4 text-zinc-400" /> : <Menu className="w-4 h-4 text-zinc-400" />}
           </button>
         )}
