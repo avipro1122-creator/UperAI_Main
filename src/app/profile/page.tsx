@@ -21,6 +21,12 @@ const PREDEFINED_SPECIALTIES = [
 const sanitizeVideoUrl = (rawUrl: string, maxLength = 190): string => {
   if (!rawUrl) return ''
   let url = rawUrl.trim()
+  const instaMatch = url.match(/(?:instagram\.com|instagr\.am)\/(?:reel|reels|p|tv|share\/reel)\/([A-Za-z0-9_-]+)/i)
+  if (instaMatch && instaMatch[1]) {
+    const rawCode = instaMatch[1]
+    const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode
+    return `https://www.instagram.com/reel/${code}/`
+  }
   try {
     const parsed = new URL(url)
     parsed.searchParams.delete('si')

@@ -16,14 +16,15 @@ export interface ParsedVideoUrl {
 export function parseInstagramUrl(rawUrl: string): { code: string; embedUrl: string; isReel: boolean } | null {
   if (!rawUrl || typeof rawUrl !== 'string') return null
   const trimmed = rawUrl.trim()
-  const match = trimmed.match(/(?:instagram\.com|instagr\.am)\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/i)
+  const match = trimmed.match(/(?:instagram\.com|instagr\.am)\/(?:reel|reels|p|tv|share\/reel)\/([A-Za-z0-9_-]+)/i)
   if (match && match[1]) {
-    const code = match[1]
-    const isReel = /\/(?:reel|reels)\//i.test(trimmed)
+    const rawCode = match[1]
+    const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode
+    const isReel = /\/(?:reel|reels|share\/reel)\//i.test(trimmed)
     return {
       code,
       embedUrl: `https://www.instagram.com/reel/${code}/embed/`,
-      isReel,
+      isReel: true,
     }
   }
   return null
