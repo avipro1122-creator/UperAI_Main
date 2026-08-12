@@ -1,9 +1,13 @@
+const defaultEndpoint = 'https://sgp.cloud.appwrite.io/v1'
+const rawEndpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT?.trim()
+const safeEndpoint = rawEndpoint && (rawEndpoint.startsWith('http://') || rawEndpoint.startsWith('https://')) ? rawEndpoint : defaultEndpoint
+
 export const APPWRITE_CONFIG = {
-  endpoint: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1',
-  projectId: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '6a79eb7d0027a520fe58',
+  endpoint: safeEndpoint,
+  projectId: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID?.trim() || '6a79eb7d0027a520fe58',
   projectName: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_NAME || 'UperAI',
-  databaseId: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '6a79f6b70038d98dca2c',
-  apiKey: process.env.APPWRITE_API_KEY || '',
+  databaseId: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID?.trim() || '6a79f6b70038d98dca2c',
+  apiKey: process.env.APPWRITE_API_KEY?.trim() || '',
   collections: {
     users: 'users',
     editor_profiles: 'editor_profiles',

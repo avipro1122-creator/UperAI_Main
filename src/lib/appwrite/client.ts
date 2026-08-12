@@ -1,10 +1,11 @@
 import { Client, Account, Databases, Storage } from 'appwrite'
+import { APPWRITE_CONFIG } from './config'
 
 export const client = new Client()
 
 client
-  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1')
-  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '6a79eb7d0027a520fe58')
+  .setEndpoint(APPWRITE_CONFIG.endpoint)
+  .setProject(APPWRITE_CONFIG.projectId)
 
 export const account = new Account(client)
 export const databases = new Databases(client)

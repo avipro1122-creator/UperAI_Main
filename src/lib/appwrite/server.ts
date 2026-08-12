@@ -4,10 +4,10 @@ import { APPWRITE_CONFIG } from './config'
 
 export async function createAdminClient() {
   const client = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || APPWRITE_CONFIG.endpoint)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || APPWRITE_CONFIG.projectId)
+    .setEndpoint(APPWRITE_CONFIG.endpoint)
+    .setProject(APPWRITE_CONFIG.projectId)
 
-  const apiKey = process.env.APPWRITE_API_KEY || APPWRITE_CONFIG.apiKey
+  const apiKey = APPWRITE_CONFIG.apiKey
   if (apiKey) {
     client.setKey(apiKey)
   }
@@ -22,8 +22,8 @@ export async function createAdminClient() {
 
 export async function createSessionClient(req?: Request) {
   const client = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || APPWRITE_CONFIG.endpoint)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || APPWRITE_CONFIG.projectId)
+    .setEndpoint(APPWRITE_CONFIG.endpoint)
+    .setProject(APPWRITE_CONFIG.projectId)
 
   let sessionSecret: string | undefined
 
@@ -38,12 +38,16 @@ export async function createSessionClient(req?: Request) {
   }
 
   if (!sessionSecret) {
-    const cookieStore = cookies()
-    const allCookies = cookieStore.getAll()
-    const sessionCookie = allCookies.find(
-      (c) => c.name === 'appwrite-session' || c.name === 'a_session' || c.name.startsWith('a_session_')
-    )
-    sessionSecret = sessionCookie?.value
+    try {
+      const cookieStore = cookies()
+      const allCookies = cookieStore.getAll()
+      const sessionCookie = allCookies.find(
+        (c) => c.name === 'appwrite-session' || c.name === 'a_session' || c.name.startsWith('a_session_')
+      )
+      sessionSecret = sessionCookie?.value
+    } catch {
+      // Ignore cookieStore error during static page prerendering
+    }
   }
 
   if (sessionSecret) {
