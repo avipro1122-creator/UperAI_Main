@@ -122,16 +122,21 @@ function ProfileDashboardContent() {
     const cleanPhone = formData.whatsappNumber.replace(/\D/g, '')
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
 
+    const mainVideoUrl = (formData.youtubeUrl1 || formData.youtubeUrl2 || formData.youtubeUrl3 || '').trim()
+    const videoId = extractYouTubeId(mainVideoUrl)
+    const previewImg = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
+
     const payload: Record<string, any> = {
       user_id: user.$id,
       full_name: formData.fullName,
       specialty_tag: finalSpecialtyTag,
       base_rate: Number(formData.baseRate),
       turnaround_time: formData.turnaroundTime,
-      youtube_url: formData.youtubeUrl1,
-      youtube_url1: formData.youtubeUrl1,
-      youtube_url2: formData.youtubeUrl2,
-      youtube_url3: formData.youtubeUrl3,
+      youtube_url: mainVideoUrl,
+      youtube_url1: formData.youtubeUrl1.trim(),
+      youtube_url2: formData.youtubeUrl2.trim(),
+      youtube_url3: formData.youtubeUrl3.trim(),
+      preview_img: previewImg,
       whatsapp_number: cleanPhone,
       whatsapp: cleanPhone,
       open_to_work: true,

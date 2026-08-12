@@ -8,10 +8,10 @@ import { Query } from 'node-appwrite'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-const extractYouTubeId = (url?: string) => {
-  if (!url) return 'L_LUpnjgPso'
+const extractYouTubeId = (url?: string | null) => {
+  if (!url) return null
   const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
-  return match ? match[1] : 'L_LUpnjgPso'
+  return match ? match[1] : null
 }
 
 export default async function HomePage() {
@@ -104,8 +104,9 @@ export default async function HomePage() {
           `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
         const handle = p.handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
         const firstItem = editorItems[0]
-        const videoId = extractYouTubeId(p.youtube_url || firstItem?.video_url || firstItem?.youtube_url)
-        const previewImg = firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+        const rawVideoUrl = p.youtube_url || p.youtube_url1 || p.youtube_url2 || p.youtube_url3 || firstItem?.video_url || firstItem?.youtube_url
+        const videoId = extractYouTubeId(rawVideoUrl)
+        const previewImg = p.preview_img || firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
         const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long
 
         return {
@@ -128,7 +129,8 @@ export default async function HomePage() {
         const editorId = doc.user_id || doc.$id
         const editorItems = itemsByEditor.get(editorId) ?? []
         const firstItem = editorItems[0]
-        const videoId = extractYouTubeId(doc.youtube_url || firstItem?.video_url || firstItem?.youtube_url)
+        const rawVideoUrl = doc.youtube_url || doc.youtube_url1 || doc.youtube_url2 || doc.youtube_url3 || firstItem?.video_url || firstItem?.youtube_url
+        const videoId = extractYouTubeId(rawVideoUrl) || ''
 
         const hasShort = editorItems.some((i) => i.is_short || i.format?.toLowerCase().includes('short'))
         const hasLong = editorItems.some((i) => !i.is_short || i.format?.toLowerCase().includes('long'))
@@ -139,7 +141,7 @@ export default async function HomePage() {
         const googleAvatar =
           doc.avatar_url ||
           `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editorName)}`
-        const previewImg = firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+        const previewImg = doc.preview_img || firstItem?.thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
         const badgeText = firstItem?.role_explanation || firstItem?.role_description || doc.specialty_tag || doc.headline || 'Verified Editor'
 
         return {
