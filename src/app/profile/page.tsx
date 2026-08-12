@@ -160,21 +160,31 @@ function ProfileDashboardContent() {
             profileDocId,
             docPayload
           )
-        } catch (err: any) {
-          if (err.message && err.message.includes('Unknown attribute')) {
-            // Re-create doc clean if existing doc structure has invalid stale attribute
-            try {
-              await databases.deleteDocument(dbId, APPWRITE_CONFIG.collections.editor_profiles, profileDocId)
-            } catch {}
+        } catch {
+          // Document not found (404) or schema update issue: recreate seamlessly
+          try {
+            await databases.deleteDocument(dbId, APPWRITE_CONFIG.collections.editor_profiles, profileDocId).catch(() => {})
+          } catch {}
+
+          try {
             const created = await databases.createDocument(
               dbId,
               APPWRITE_CONFIG.collections.editor_profiles,
               profileDocId,
               docPayload
             )
+            setProfileDocId(created.$id)
+            return created
+          } catch {
+            const created = await databases.createDocument(
+              dbId,
+              APPWRITE_CONFIG.collections.editor_profiles,
+              ID.unique(),
+              docPayload
+            )
+            setProfileDocId(created.$id)
             return created
           }
-          throw err
         }
       } else {
         const created = await databases.createDocument(
