@@ -17,6 +17,19 @@ const PREDEFINED_SPECIALTIES = [
   'Custom',
 ]
 
+const cleanYouTubeUrl = (url: string) => {
+  if (!url) return ''
+  try {
+    const parsed = new URL(url.trim())
+    parsed.searchParams.delete('si')
+    parsed.searchParams.delete('feature')
+    parsed.searchParams.delete('pp')
+    return parsed.toString()
+  } catch {
+    return url.trim()
+  }
+}
+
 export default function ProfilePage() {
   return (
     <RoleGuard>
@@ -129,11 +142,13 @@ function ProfileDashboardContent() {
 
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
 
-    const mainVideoUrl = (formData.youtubeUrl1 || formData.youtubeUrl2 || formData.youtubeUrl3 || '').trim()
+    const url1Clean = cleanYouTubeUrl(formData.youtubeUrl1)
+    const url2Clean = cleanYouTubeUrl(formData.youtubeUrl2)
+    const url3Clean = cleanYouTubeUrl(formData.youtubeUrl3)
+    const mainVideoUrl = (url1Clean || url2Clean || url3Clean || '').trim()
     const videoId = extractYouTubeId(mainVideoUrl)
     const previewImg = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
 
-    // STRICT CLEAN PAYLOAD MATCHING APPWRITE SCHEMA EXACTLY (NO 'handle' FIELD)
     const payload: Record<string, any> = {
       user_id: user.$id,
       full_name: formData.fullName,
@@ -141,9 +156,9 @@ function ProfileDashboardContent() {
       base_rate: Number(formData.baseRate),
       turnaround_time: formData.turnaroundTime,
       youtube_url: mainVideoUrl,
-      youtube_url1: formData.youtubeUrl1.trim(),
-      youtube_url2: formData.youtubeUrl2.trim(),
-      youtube_url3: formData.youtubeUrl3.trim(),
+      youtube_url1: url1Clean,
+      youtube_url2: url2Clean,
+      youtube_url3: url3Clean,
       preview_img: previewImg,
       whatsapp_number: cleanPhone,
       whatsapp: cleanPhone,
