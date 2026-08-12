@@ -7,7 +7,7 @@ import RoleGuard from '@/components/RoleGuard'
 import { useAuth } from '@/context/AuthContext'
 import { databases } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
-import { Query, ID } from 'appwrite'
+import { Query, ID, Permission, Role } from 'appwrite'
 
 const PREDEFINED_SPECIALTIES = [
   'Long Form Video Editor',
@@ -17,17 +17,19 @@ const PREDEFINED_SPECIALTIES = [
   'Custom',
 ]
 
-const cleanYouTubeUrl = (url: string) => {
-  if (!url) return ''
+const sanitizeVideoUrl = (rawUrl: string, maxLength = 190): string => {
+  if (!rawUrl) return ''
+  let url = rawUrl.trim()
   try {
-    const parsed = new URL(url.trim())
+    const parsed = new URL(url)
     parsed.searchParams.delete('si')
     parsed.searchParams.delete('feature')
     parsed.searchParams.delete('pp')
-    return parsed.toString()
+    url = parsed.toString()
   } catch {
-    return url.trim()
+    // Keep trimmed string
   }
+  return url.length > maxLength ? url.substring(0, maxLength) : url
 }
 
 export default function ProfilePage() {
@@ -142,10 +144,10 @@ function ProfileDashboardContent() {
 
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
 
-    const url1Clean = cleanYouTubeUrl(formData.youtubeUrl1)
-    const url2Clean = cleanYouTubeUrl(formData.youtubeUrl2)
-    const url3Clean = cleanYouTubeUrl(formData.youtubeUrl3)
-    const mainVideoUrl = (url1Clean || url2Clean || url3Clean || '').trim()
+    const cleanUrl1 = sanitizeVideoUrl(formData.youtubeUrl1, 1900)
+    const cleanUrl2 = sanitizeVideoUrl(formData.youtubeUrl2, 1900)
+    const cleanUrl3 = sanitizeVideoUrl(formData.youtubeUrl3, 190)
+    const mainVideoUrl = (cleanUrl1 || cleanUrl2 || cleanUrl3 || '').trim()
     const videoId = extractYouTubeId(mainVideoUrl)
     const previewImg = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
 
@@ -155,16 +157,22 @@ function ProfileDashboardContent() {
       specialty_tag: finalSpecialtyTag,
       base_rate: Number(formData.baseRate),
       turnaround_time: formData.turnaroundTime,
-      youtube_url: mainVideoUrl,
-      youtube_url1: url1Clean,
-      youtube_url2: url2Clean,
-      youtube_url3: url3Clean,
+      youtube_url: cleanUrl1,
+      youtube_url1: cleanUrl1,
+      youtube_url2: cleanUrl2,
+      youtube_url3: cleanUrl3,
       preview_img: previewImg,
       whatsapp_number: cleanPhone,
       whatsapp: cleanPhone,
       open_to_work: true,
       is_hidden: false,
     }
+
+    const documentPermissions = [
+      Permission.read(Role.any()),
+      Permission.update(Role.user(user.$id)),
+      Permission.delete(Role.user(user.$id)),
+    ]
 
     async function attemptSave(docPayload: Record<string, any>) {
       if (profileDocId) {
@@ -173,7 +181,8 @@ function ProfileDashboardContent() {
             dbId,
             APPWRITE_CONFIG.collections.editor_profiles,
             profileDocId,
-            docPayload
+            docPayload,
+            documentPermissions
           )
         } catch {
           // Document not found (404) or schema update issue: recreate seamlessly
@@ -186,7 +195,8 @@ function ProfileDashboardContent() {
               dbId,
               APPWRITE_CONFIG.collections.editor_profiles,
               profileDocId,
-              docPayload
+              docPayload,
+              documentPermissions
             )
             setProfileDocId(created.$id)
             return created
@@ -195,7 +205,8 @@ function ProfileDashboardContent() {
               dbId,
               APPWRITE_CONFIG.collections.editor_profiles,
               ID.unique(),
-              docPayload
+              docPayload,
+              documentPermissions
             )
             setProfileDocId(created.$id)
             return created
@@ -206,7 +217,8 @@ function ProfileDashboardContent() {
           dbId,
           APPWRITE_CONFIG.collections.editor_profiles,
           ID.unique(),
-          docPayload
+          docPayload,
+          documentPermissions
         )
         setProfileDocId(created.$id)
         return created
@@ -215,7 +227,7 @@ function ProfileDashboardContent() {
 
     try {
       await attemptSave(payload)
-      alert('Profile & WhatsApp contact details saved successfully!')
+      alert('Profile details & WhatsApp contact info saved successfully!')
       router.refresh()
       router.push('/')
     } catch (err: any) {
@@ -259,7 +271,7 @@ function ProfileDashboardContent() {
                 <input
                   type="text"
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, fullName: e.target.value }))}
                   placeholder="e.g. Avanish Rai"
                   className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   required
@@ -309,7 +321,7 @@ function ProfileDashboardContent() {
                   <input
                     type="number"
                     value={formData.baseRate}
-                    onChange={(e) => setFormData({ ...formData, baseRate: Number(e.target.value) })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, baseRate: Number(e.target.value) }))}
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                     required
                   />
@@ -319,7 +331,7 @@ function ProfileDashboardContent() {
                   <input
                     type="text"
                     value={formData.turnaroundTime}
-                    onChange={(e) => setFormData({ ...formData, turnaroundTime: e.target.value })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, turnaroundTime: e.target.value }))}
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                     required
                   />
@@ -335,7 +347,7 @@ function ProfileDashboardContent() {
                   <input
                     type="url"
                     value={formData.youtubeUrl1}
-                    onChange={(e) => setFormData({ ...formData, youtubeUrl1: e.target.value })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl1: e.target.value }))}
                     placeholder="https://www.youtube.com/watch?v=..."
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   />
@@ -346,7 +358,7 @@ function ProfileDashboardContent() {
                   <input
                     type="url"
                     value={formData.youtubeUrl2}
-                    onChange={(e) => setFormData({ ...formData, youtubeUrl2: e.target.value })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl2: e.target.value }))}
                     placeholder="https://www.youtube.com/shorts/..."
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   />
@@ -357,7 +369,7 @@ function ProfileDashboardContent() {
                   <input
                     type="url"
                     value={formData.youtubeUrl3}
-                    onChange={(e) => setFormData({ ...formData, youtubeUrl3: e.target.value })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl3: e.target.value }))}
                     placeholder="https://www.youtube.com/watch?v=..."
                     className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   />
@@ -370,7 +382,7 @@ function ProfileDashboardContent() {
                 <input
                   type="text"
                   value={formData.whatsappNumber}
-                  onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, whatsappNumber: e.target.value }))}
                   placeholder="e.g. 9016047119"
                   className="w-full p-3 bg-zinc-950 border border-lime-800/60 focus:border-lime-400 rounded-xl text-xs text-white transition-all"
                   required
