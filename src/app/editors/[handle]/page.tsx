@@ -154,6 +154,28 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     }
   }
 
+  // Utility to parse YouTube vs Instagram URLs cleanly
+  const parseVideoMedia = (url?: string) => {
+    if (!url) return null;
+    const cleanUrl = url.trim();
+
+    // 1. YouTube Match (Long form, Shorts, or short links)
+    const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/);
+    if (ytMatch) {
+      return { type: 'youtube', id: ytMatch[1], url: cleanUrl };
+    }
+
+    // 2. Instagram Match (Reels or Posts)
+    const instaMatch = cleanUrl.match(/(?:instagram\.com\/(?:reel|reels|p|tv|share\/reel)\/)([\w-]+)/i);
+    if (instaMatch) {
+      const rawCode = instaMatch[1];
+      const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode;
+      return { type: 'instagram', id: code, url: cleanUrl };
+    }
+
+    return { type: 'unknown', url: cleanUrl };
+  };
+
   const rawShowreelUrls = [
     editor?.youtube_url1,
     editor?.youtube_url,
@@ -165,13 +187,10 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     editor?.video_url2,
     editor?.video_url3,
     ...portfolioItems.map((pi: any) => pi.youtube_url || pi.video_url || pi.url),
-  ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+  ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
 
-  const uniqueShowreelUrls = Array.from(new Set(rawShowreelUrls))
-
-  const showreels: ParsedVideoUrl[] = uniqueShowreelUrls
-    .map((url) => parseVideoUrl(url))
-    .filter((item): item is ParsedVideoUrl => item !== null)
+  const uniqueShowreelUrls = Array.from(new Set(rawShowreelUrls));
+  const parsedVideos = uniqueShowreelUrls.map(parseVideoMedia).filter(Boolean);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white">
@@ -185,58 +204,67 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
           <span className="bg-black text-lime-400 text-[10px] font-black uppercase px-3 py-1 rounded-full">
             {editor.specialty_tag || 'VIDEO EDITOR'}
           </span>
-          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor.full_name?.toUpperCase() || 'AVANISH RAI'}</h1>
+          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor.full_name?.toUpperCase() || 'EDITOR'}</h1>
           <p className="font-bold text-sm opacity-90">Verified Indian Video Editor • High Impact Showreels</p>
         </div>
 
-        {/* Featured Work / Showreels Grid */}
+        {/* Featured Work Grid */}
         <div className="space-y-4">
-          <h2 className="text-xl font-black text-lime-400 font-display">Featured Work & Showreels ({showreels.length})</h2>
+          <h2 className="text-xl font-black text-lime-400 font-display">Featured Work & Showreels ({parsedVideos.length})</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            {showreels.length > 0 ? (
-              showreels.map((item, index) => (
-                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden p-3 space-y-3 shadow-xl flex flex-col justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
+            {parsedVideos.length > 0 ? (
+              parsedVideos.map((media: any, index: number) => (
+                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-zinc-400 uppercase">Showreel #{index + 1}</span>
-                    {item.sourceType === 'instagram' ? (
+                    <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2 py-0.5 rounded-full uppercase">
+                      {media.type}
+                    </span>
+                  </div>
+
+                  {/* YOUTUBE EMBED */}
+                  {media.type === 'youtube' && (
+                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${media.id}`}
+                        className="w-full h-full border-0"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+
+                  {/* INSTAGRAM REEL PREVIEW CARD */}
+                  {media.type === 'instagram' && (
+                    <div className="aspect-[9/16] bg-gradient-to-b from-zinc-900 to-zinc-950 border border-zinc-800 rounded-xl flex flex-col items-center justify-center p-6 text-center space-y-4 shadow-inner">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                        📸
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-white">Instagram Reel Sample</p>
+                        <p className="text-[10px] text-zinc-400">Click below to open reel directly on Instagram</p>
+                      </div>
                       <a
-                        href={item.rawUrl}
+                        href={media.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[10px] font-bold text-pink-300 hover:text-white bg-pink-950/80 border border-pink-700/50 hover:bg-pink-900 px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow"
+                        className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs rounded-xl uppercase tracking-wider transition-all shadow-md text-center"
                       >
-                        <Instagram className="w-3 h-3 text-pink-400" /> Watch Reel ↗
+                        Watch Reel on Instagram ↗
                       </a>
-                    ) : item.sourceType === 'youtube' ? (
-                      <span className="text-[10px] font-bold text-red-400 bg-red-950/70 border border-red-800/40 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Video className="w-3 h-3" /> YouTube {item.isShortsUrl ? 'Short' : ''}
-                      </span>
-                    ) : item.sourceType === 'drive' ? (
-                      <span className="text-[10px] font-bold text-sky-400 bg-sky-950/70 border border-sky-800/40 px-2 py-0.5 rounded-full">
-                        Google Drive
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className={`w-full bg-black rounded-xl overflow-hidden border border-zinc-800 flex flex-col justify-between ${item.isShortsUrl || item.sourceType === 'instagram' ? 'aspect-[9/16] max-h-[520px] mx-auto' : 'aspect-video'}`}>
-                    <iframe
-                      src={item.embedUrl}
-                      title={`Showreel ${index + 1}`}
-                      className="w-full h-full border-0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                  {item.sourceType === 'instagram' && (
-                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-800/80 text-xs">
-                      <span className="text-[11px] text-zinc-400 font-medium">Instagram Reel</span>
+                    </div>
+                  )}
+
+                  {/* UNKNOWN / FALLBACK MEDIA */}
+                  {media.type === 'unknown' && (
+                    <div className="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl flex items-center justify-center p-4 text-center">
                       <a
-                        href={item.rawUrl}
+                        href={media.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-400 text-white font-black text-[11px] rounded-xl transition-all shadow-md flex items-center gap-1"
+                        className="text-xs font-bold text-lime-400 underline"
                       >
-                        Open on Instagram ↗
+                        View External Video Link ↗
                       </a>
                     </div>
                   )}
