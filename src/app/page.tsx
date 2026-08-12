@@ -1,11 +1,8 @@
-import Link from 'next/link'
 import { createAdminClient, createSessionClient } from '@/lib/appwrite/server'
 import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
-import EditorCard, { EditorCardData } from '@/components/EditorCard'
 import HeroSection from '@/components/HeroSection'
 import BentoMarketplace, { BentoEditorItem } from '@/components/BentoMarketplace'
-import MarketplaceRoleHeader from '@/components/MarketplaceRoleHeader'
-import RecentlyActiveEditors, { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
+import { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
 import { Query } from 'node-appwrite'
 
 export const dynamic = 'force-dynamic'
@@ -167,22 +164,18 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="bg-[#09090b] text-zinc-100 min-h-screen">
-      {/* Hero Section */}
+    <div className="bg-[#09090b] text-zinc-100 min-h-screen selection:bg-lime-400 selection:text-black">
+      {/* Main Hero Header */}
       <HeroSection
         featured={featured}
         userRole={userRole}
         userHandle={userHandle}
       />
 
-      {/* Role-based marketplace header bar */}
-      <MarketplaceRoleHeader />
-
-      {/* Dynamic Bento Marketplace Grid */}
-      <BentoMarketplace dbEditors={bentoEditors} />
-
-      {/* Main Editors Section (Primary Marketplace Showcase with Search) */}
-      <RecentlyActiveEditors editors={featured} />
+      {/* Single Unified Editor Directory Marketplace */}
+      <main className="pb-16">
+        <BentoMarketplace dbEditors={bentoEditors} />
+      </main>
     </div>
   )
 }
