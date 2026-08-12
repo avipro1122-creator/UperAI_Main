@@ -18,14 +18,22 @@ export default function HeroSection({
 }: HeroSectionProps) {
   const { activeRole, setActiveRole } = useAuth()
   const { openModal } = useOnboarding()
-  const [visitorCount, setVisitorCount] = useState(1420)
+  const [visitorCount, setVisitorCount] = useState<number | null>(null)
 
-  // Subtle live visitor ticker effect
+  // Real-time site visitor tracker from Appwrite
   useEffect(() => {
-    const baseCount = 1420
-    // Optional dynamic bump based on minute of the day for realism
-    const minuteBump = Math.floor(new Date().getMinutes() * 1.5)
-    setVisitorCount(baseCount + minuteBump)
+    async function trackVisitor() {
+      try {
+        const res = await fetch('/api/visitor-count', { method: 'POST' })
+        const data = await res.json()
+        if (data.count) {
+          setVisitorCount(data.count)
+        }
+      } catch {
+        setVisitorCount(1)
+      }
+    }
+    trackVisitor()
   }, [])
 
   const isCreators = activeRole === 'CREATOR'
@@ -72,7 +80,10 @@ export default function HeroSection({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               </span>
-              <span className="text-zinc-200 font-extrabold">{visitorCount.toLocaleString()}+</span> Creators & Editors visited today
+              <span className="text-zinc-200 font-extrabold">
+                {visitorCount !== null ? `${visitorCount.toLocaleString()}+` : '...'}
+              </span>{' '}
+              Creators & Editors visited today
             </div>
           </div>
 
