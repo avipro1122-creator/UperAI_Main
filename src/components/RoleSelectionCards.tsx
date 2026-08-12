@@ -137,7 +137,7 @@ export default function RoleSelectionCards({ initialRole }: RoleSelectionCardsPr
             )}
           </div>
           <div>
-            <p className="font-display font-bold text-white text-base">I&apos;m a creator</p>
+            <p className="font-display font-bold text-white text-base">I&apos;m a creator / client</p>
             <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
               Find an editor who&apos;s actually good, and see what they charge.
             </p>

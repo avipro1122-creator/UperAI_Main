@@ -99,7 +99,7 @@ export default function HeroSection({
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                FOR CREATORS
+                FOR CREATORS / CLIENTS
               </button>
               <button
                 type="button"
