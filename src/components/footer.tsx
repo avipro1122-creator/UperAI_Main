@@ -16,13 +16,20 @@ export default function Footer() {
           <p className="text-xs text-zinc-500 text-center sm:text-left max-w-md">
             Real portfolios you can play, rates upfront. Built by a creator who's been on both sides of this.
           </p>
-          <div className="flex space-x-6 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center gap-6 text-xs text-zinc-500">
+            <Link href="/about" className="hover:text-white transition-colors">About</Link>
             <Link href="/editors" className="hover:text-white transition-colors">Browse editors</Link>
             <ListYourWorkButton className="hover:text-white transition-colors">List your work</ListYourWorkButton>
+            <a href="mailto:support@uperai.in" className="text-zinc-400 hover:text-lime-400 transition-colors">
+              support@uperai.in
+            </a>
           </div>
         </div>
-        <div className="border-t border-zinc-800/60 mt-8 pt-6 text-center sm:text-left">
-          <p className="text-xs text-zinc-600">© {new Date().getFullYear()} UperAI</p>
+        <div className="border-t border-zinc-800/60 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-zinc-600">
+          <p>© {new Date().getFullYear()} UperAI</p>
+          <a href="mailto:support@uperai.in" className="text-zinc-500 hover:text-lime-400 transition-colors">
+            support@uperai.in
+          </a>
         </div>
       </div>
     </footer>
