@@ -10,9 +10,9 @@ import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
 
-export default function PublicEditorProfilePage({ params }: { params: { handle?: string; id?: string } }) {
+export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
   const { user, loginWithGoogle } = useAuth()
-  const targetId = params.handle || params.id || ''
+  const targetId = params?.handle || params?.id || ''
   const [editor, setEditor] = useState<any | null>(null)
   const [portfolioItems, setPortfolioItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -156,47 +156,59 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
 
   // Dynamically load & process Instagram Embed Script whenever videos change
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) return
 
-    // Inject Instagram embed.js script if not already present
-    if (!document.getElementById('instagram-embed-script')) {
-      const script = document.createElement('script');
-      script.id = 'instagram-embed-script';
-      script.src = 'https://www.instagram.com/embed.js';
-      script.async = true;
-      document.body.appendChild(script);
-      script.onload = () => {
-        if ((window as any).instgrm) {
-          (window as any).instgrm.Embeds.process();
+    try {
+      if (typeof window === 'undefined') return
+
+      const processInsta = () => {
+        try {
+          if ((window as any).instgrm?.Embeds?.process) {
+            (window as any).instgrm.Embeds.process()
+          }
+        } catch (err) {
+          console.warn('Instagram embed process warning:', err)
         }
-      };
-    } else if ((window as any).instgrm) {
-      (window as any).instgrm.Embeds.process();
+      }
+
+      if (!document.getElementById('instagram-embed-script')) {
+        const script = document.createElement('script')
+        script.id = 'instagram-embed-script'
+        script.src = 'https://www.instagram.com/embed.js'
+        script.async = true
+        script.onload = processInsta
+        document.body.appendChild(script)
+      } else {
+        processInsta()
+      }
+    } catch (err) {
+      console.warn('Instagram embed script warning:', err)
     }
-  }, [editor]);
+  }, [editor])
 
   // Utility to parse YouTube vs Instagram URLs cleanly
   const parseVideoMedia = (url?: string) => {
-    if (!url) return null;
-    const cleanUrl = url.trim();
+    if (!url || typeof url !== 'string') return null
+    const cleanUrl = url.trim()
+    if (!cleanUrl) return null
 
     // 1. YouTube Match (Long form, Shorts, or short links)
-    const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/);
-    if (ytMatch) {
-      return { type: 'youtube', id: ytMatch[1], url: cleanUrl };
+    const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
+    if (ytMatch && ytMatch[1]) {
+      return { type: 'youtube', id: ytMatch[1], url: cleanUrl }
     }
 
     // 2. Instagram Match (Reels or Posts)
-    const instaMatch = cleanUrl.match(/(?:instagram\.com\/(?:reel|reels|p|tv|share\/reel)\/)([\w-]+)/i);
-    if (instaMatch) {
-      const rawCode = instaMatch[1];
-      const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode;
-      const cleanInstaUrl = `https://www.instagram.com/reel/${code}/`;
-      return { type: 'instagram', id: code, url: cleanInstaUrl };
+    const instaMatch = cleanUrl.match(/(?:instagram\.com\/(?:reel|reels|p|tv|share\/reel)\/)([\w-]+)/i)
+    if (instaMatch && instaMatch[1]) {
+      const rawCode = instaMatch[1]
+      const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode
+      const cleanInstaUrl = `https://www.instagram.com/reel/${code}/`
+      return { type: 'instagram', id: code, url: cleanInstaUrl }
     }
 
-    return { type: 'unknown', url: cleanUrl };
-  };
+    return { type: 'unknown', url: cleanUrl }
+  }
 
   const rawShowreelUrls = [
     editor?.youtube_url1,
@@ -208,11 +220,13 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     editor?.video_url1,
     editor?.video_url2,
     editor?.video_url3,
-    ...portfolioItems.map((pi: any) => pi.youtube_url || pi.video_url || pi.url),
-  ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+    ...(Array.isArray(portfolioItems) ? portfolioItems.map((pi: any) => pi?.youtube_url || pi?.video_url || pi?.url) : []),
+  ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
 
-  const uniqueShowreelUrls = Array.from(new Set(rawShowreelUrls));
-  const parsedVideos = uniqueShowreelUrls.map(parseVideoMedia).filter(Boolean);
+  const uniqueShowreelUrls = Array.from(new Set(rawShowreelUrls))
+  const parsedVideos = uniqueShowreelUrls
+    .map(parseVideoMedia)
+    .filter((item): item is NonNullable<ReturnType<typeof parseVideoMedia>> => item !== null)
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white">
