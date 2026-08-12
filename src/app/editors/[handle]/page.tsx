@@ -10,6 +10,60 @@ import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
 
+function InstagramEmbed({ url }: { url: string }) {
+  const containerRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (!url) return
+
+    let isMounted = true
+
+    const processInsta = () => {
+      try {
+        if (isMounted && (window as any).instgrm?.Embeds?.process && containerRef.current) {
+          (window as any).instgrm.Embeds.process(containerRef.current)
+        }
+      } catch (err) {
+        console.warn('Instagram embed process warning:', err)
+      }
+    }
+
+    if (!document.getElementById('instagram-embed-script')) {
+      const script = document.createElement('script')
+      script.id = 'instagram-embed-script'
+      script.src = 'https://www.instagram.com/embed.js'
+      script.async = true
+      script.onload = processInsta
+      document.body.appendChild(script)
+    } else {
+      setTimeout(processInsta, 50)
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [url])
+
+  return (
+    <div ref={containerRef} className="w-full bg-black rounded-xl overflow-hidden flex flex-col items-center justify-center p-1 border border-zinc-800 min-h-[400px]">
+      <blockquote
+        className="instagram-media"
+        data-instgrm-permalink={url}
+        data-instgrm-version="14"
+        style={{
+          background: '#000',
+          borderRadius: '12px',
+          margin: '0',
+          width: '100%',
+          maxWidth: '540px',
+          minWidth: '280px',
+          padding: '0',
+        }}
+      />
+    </div>
+  )
+}
+
 export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
   const { user, loginWithGoogle } = useAuth()
   const targetId = params?.handle || params?.id || ''
@@ -175,38 +229,6 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
     }
   }
 
-  // Dynamically load & process Instagram Embed Script whenever videos change
-  useEffect(() => {
-    if (!editor) return
-
-    try {
-      if (typeof window === 'undefined') return
-
-      const processInsta = () => {
-        try {
-          if ((window as any).instgrm?.Embeds?.process) {
-            (window as any).instgrm.Embeds.process()
-          }
-        } catch (err) {
-          console.warn('Instagram embed process warning:', err)
-        }
-      }
-
-      if (!document.getElementById('instagram-embed-script')) {
-        const script = document.createElement('script')
-        script.id = 'instagram-embed-script'
-        script.src = 'https://www.instagram.com/embed.js'
-        script.async = true
-        script.onload = processInsta
-        document.body.appendChild(script)
-      } else {
-        processInsta()
-      }
-    } catch (err) {
-      console.warn('Instagram embed script warning:', err)
-    }
-  }, [editor])
-
   // Utility to parse YouTube vs Instagram URLs cleanly
   const parseVideoMedia = (url?: string) => {
     if (!url || typeof url !== 'string') return null
@@ -259,9 +281,9 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
         {/* Hero Banner */}
         <div className="bg-gradient-to-r from-yellow-500 via-amber-600 to-lime-500 rounded-3xl p-8 text-black shadow-2xl space-y-2">
           <span className="bg-black text-lime-400 text-[10px] font-black uppercase px-3 py-1 rounded-full">
-            {editor.specialty_tag || 'VIDEO EDITOR'}
+            {editor?.specialty_tag || 'VIDEO EDITOR'}
           </span>
-          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor.full_name?.toUpperCase() || 'EDITOR'}</h1>
+          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor?.full_name?.toUpperCase() || 'EDITOR'}</h1>
           <p className="font-bold text-sm opacity-90">Verified Indian Video Editor • High Impact Showreels</p>
         </div>
 
@@ -293,22 +315,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
 
                   {/* PLAYABLE INSTAGRAM REEL INLINE CONTAINER */}
                   {media.type === 'instagram' && (
-                    <div className="w-full bg-black rounded-xl overflow-hidden flex justify-center p-1 border border-zinc-800 min-h-[400px]">
-                      <blockquote
-                        className="instagram-media"
-                        data-instgrm-permalink={media.url}
-                        data-instgrm-version="14"
-                        style={{
-                          background: '#000',
-                          borderRadius: '12px',
-                          margin: '0',
-                          width: '100%',
-                          maxWidth: '540px',
-                          minWidth: '280px',
-                          padding: '0',
-                        }}
-                      />
-                    </div>
+                    <InstagramEmbed url={media.url} />
                   )}
 
                   {/* UNKNOWN / FALLBACK MEDIA */}
