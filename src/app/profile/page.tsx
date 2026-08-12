@@ -112,6 +112,14 @@ function ProfileDashboardContent() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
+
+    // MANDATORY PHONE NUMBER VALIDATION
+    const cleanPhone = formData.whatsappNumber.replace(/\D/g, '')
+    if (!cleanPhone || cleanPhone.length < 10) {
+      alert('A valid 10-digit WhatsApp phone number is compulsory to create or update your profile.')
+      return
+    }
+
     setSaving(true)
 
     const finalSpecialtyTag =
@@ -119,13 +127,13 @@ function ProfileDashboardContent() {
         ? customSpecialty.trim() || 'Video Editor'
         : selectedSpecialtyOption
 
-    const cleanPhone = formData.whatsappNumber.replace(/\D/g, '')
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
 
     const mainVideoUrl = (formData.youtubeUrl1 || formData.youtubeUrl2 || formData.youtubeUrl3 || '').trim()
     const videoId = extractYouTubeId(mainVideoUrl)
     const previewImg = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
 
+    // STRICT CLEAN PAYLOAD MATCHING APPWRITE SCHEMA EXACTLY (NO 'handle' FIELD)
     const payload: Record<string, any> = {
       user_id: user.$id,
       full_name: formData.fullName,
@@ -145,12 +153,29 @@ function ProfileDashboardContent() {
 
     async function attemptSave(docPayload: Record<string, any>) {
       if (profileDocId) {
-        return await databases.updateDocument(
-          dbId,
-          APPWRITE_CONFIG.collections.editor_profiles,
-          profileDocId,
-          docPayload
-        )
+        try {
+          return await databases.updateDocument(
+            dbId,
+            APPWRITE_CONFIG.collections.editor_profiles,
+            profileDocId,
+            docPayload
+          )
+        } catch (err: any) {
+          if (err.message && err.message.includes('Unknown attribute')) {
+            // Re-create doc clean if existing doc structure has invalid stale attribute
+            try {
+              await databases.deleteDocument(dbId, APPWRITE_CONFIG.collections.editor_profiles, profileDocId)
+            } catch {}
+            const created = await databases.createDocument(
+              dbId,
+              APPWRITE_CONFIG.collections.editor_profiles,
+              profileDocId,
+              docPayload
+            )
+            return created
+          }
+          throw err
+        }
       } else {
         const created = await databases.createDocument(
           dbId,
@@ -165,27 +190,10 @@ function ProfileDashboardContent() {
 
     try {
       await attemptSave(payload)
-      alert('Profile & WhatsApp details saved successfully!')
+      alert('Profile & WhatsApp contact details saved successfully!')
       router.refresh()
       router.push('/')
     } catch (err: any) {
-      if (err.message && err.message.includes('Unknown attribute')) {
-        const match = err.message.match(/Unknown attribute:\s*"([^"]+)"/)
-        if (match && match[1]) {
-          const badKey = match[1]
-          delete payload[badKey]
-          try {
-            await attemptSave(payload)
-            alert('Profile & WhatsApp details saved successfully!')
-            router.refresh()
-            router.push('/')
-            return
-          } catch (retryErr: any) {
-            alert(`Save failed: ${retryErr.message}`)
-            return
-          }
-        }
-      }
       alert(`Save failed: ${err.message}`)
     } finally {
       setSaving(false)
@@ -201,10 +209,10 @@ function ProfileDashboardContent() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
           <div>
             <Link className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-lime-400 mb-2 transition-colors" href="/">
-              ← Back to Marketplace
+              ← Back to Marketplace / Home
             </Link>
             <h1 className="text-2xl sm:text-4xl font-black font-display">Editor Profile Dashboard</h1>
-            <p className="text-zinc-400 text-xs sm:text-sm">Manage your showreels, upfront rates, and client contact info.</p>
+            <p className="text-zinc-400 text-xs sm:text-sm">Manage your public listing, showreels, and direct WhatsApp contact info.</p>
           </div>
 
           {profileDocId && (
@@ -219,14 +227,15 @@ function ProfileDashboardContent() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             <form onSubmit={handleSave} className="lg:col-span-7 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4 shadow-xl">
-              <h2 className="text-lg font-bold text-lime-400 border-b border-zinc-800 pb-3">Edit Listing Info</h2>
+              <h2 className="text-lg font-bold text-lime-400 border-b border-zinc-800 pb-3">Edit Details</h2>
 
               <div>
-                <label className="text-xs font-bold text-zinc-400">Full Name</label>
+                <label className="text-xs font-bold text-zinc-400">Full Name *</label>
                 <input
                   type="text"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  placeholder="e.g. Avanish Rai"
                   className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
                   required
                 />
@@ -271,7 +280,7 @@ function ProfileDashboardContent() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-zinc-400">Base Rate (₹)</label>
+                  <label className="text-xs font-bold text-zinc-400">Base Rate (₹) *</label>
                   <input
                     type="number"
                     value={formData.baseRate}
@@ -281,7 +290,7 @@ function ProfileDashboardContent() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-zinc-400">Turnaround Time</label>
+                  <label className="text-xs font-bold text-zinc-400">Turnaround Time *</label>
                   <input
                     type="text"
                     value={formData.turnaroundTime}
@@ -330,15 +339,18 @@ function ProfileDashboardContent() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-zinc-400">WhatsApp Number</label>
+              {/* COMPULSORY WHATSAPP NUMBER FIELD */}
+              <div className="space-y-1.5 pt-2">
+                <label className="text-xs font-bold text-lime-400">WhatsApp Phone Number * (Compulsory)</label>
                 <input
                   type="text"
                   value={formData.whatsappNumber}
                   onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
                   placeholder="e.g. 9016047119"
-                  className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                  className="w-full p-3 bg-zinc-950 border border-lime-800/60 focus:border-lime-400 rounded-xl text-xs text-white transition-all"
+                  required
                 />
+                <p className="text-[10px] text-zinc-400">Required so creators can connect with you directly via WhatsApp.</p>
               </div>
 
               <button type="submit" disabled={saving} className="w-full py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl uppercase tracking-wider transition-all mt-2 shadow-lg">
