@@ -154,6 +154,27 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     }
   }
 
+  // Dynamically load & process Instagram Embed Script whenever videos change
+  useEffect(() => {
+    if (!editor) return;
+
+    // Inject Instagram embed.js script if not already present
+    if (!document.getElementById('instagram-embed-script')) {
+      const script = document.createElement('script');
+      script.id = 'instagram-embed-script';
+      script.src = 'https://www.instagram.com/embed.js';
+      script.async = true;
+      document.body.appendChild(script);
+      script.onload = () => {
+        if ((window as any).instgrm) {
+          (window as any).instgrm.Embeds.process();
+        }
+      };
+    } else if ((window as any).instgrm) {
+      (window as any).instgrm.Embeds.process();
+    }
+  }, [editor]);
+
   // Utility to parse YouTube vs Instagram URLs cleanly
   const parseVideoMedia = (url?: string) => {
     if (!url) return null;
@@ -170,7 +191,8 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     if (instaMatch) {
       const rawCode = instaMatch[1];
       const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode;
-      return { type: 'instagram', id: code, url: cleanUrl };
+      const cleanInstaUrl = `https://www.instagram.com/reel/${code}/`;
+      return { type: 'instagram', id: code, url: cleanInstaUrl };
     }
 
     return { type: 'unknown', url: cleanUrl };
@@ -223,7 +245,7 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
                     </span>
                   </div>
 
-                  {/* YOUTUBE EMBED */}
+                  {/* YOUTUBE EMBED PLAYER */}
                   {media.type === 'youtube' && (
                     <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
                       <iframe
@@ -234,24 +256,23 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
                     </div>
                   )}
 
-                  {/* INSTAGRAM REEL PREVIEW CARD */}
+                  {/* PLAYABLE INSTAGRAM REEL INLINE CONTAINER */}
                   {media.type === 'instagram' && (
-                    <div className="aspect-[9/16] bg-gradient-to-b from-zinc-900 to-zinc-950 border border-zinc-800 rounded-xl flex flex-col items-center justify-center p-6 text-center space-y-4 shadow-inner">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white text-2xl shadow-lg">
-                        📸
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-black text-white">Instagram Reel Sample</p>
-                        <p className="text-[10px] text-zinc-400">Click below to open reel directly on Instagram</p>
-                      </div>
-                      <a
-                        href={media.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs rounded-xl uppercase tracking-wider transition-all shadow-md text-center"
-                      >
-                        Watch Reel on Instagram ↗
-                      </a>
+                    <div className="w-full bg-black rounded-xl overflow-hidden flex justify-center p-1 border border-zinc-800 min-h-[400px]">
+                      <blockquote
+                        className="instagram-media"
+                        data-instgrm-permalink={media.url}
+                        data-instgrm-version="14"
+                        style={{
+                          background: '#000',
+                          borderRadius: '12px',
+                          margin: '0',
+                          width: '100%',
+                          maxWidth: '540px',
+                          minWidth: '280px',
+                          padding: '0',
+                        }}
+                      />
                     </div>
                   )}
 
