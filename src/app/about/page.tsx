@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { Linkedin } from 'lucide-react';
 
 export default function AboutPage() {
   return (
@@ -52,35 +53,65 @@ export default function AboutPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Avanish Rai */}
-            <div className="bg-zinc-900/90 border border-zinc-800 hover:border-lime-400/50 rounded-3xl p-6 space-y-3 transition-all shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-lime-400 text-black font-black flex items-center justify-center text-sm shadow-md">
-                  AR
+            <div className="bg-zinc-900/90 border border-zinc-800 hover:border-lime-400/50 rounded-3xl p-6 space-y-3 transition-all shadow-xl flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-lime-400 text-black font-black flex items-center justify-center text-sm shadow-md">
+                      AR
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-white">Avanish Rai</h3>
+                      <p className="text-[10px] font-bold text-lime-400 uppercase tracking-wider">Co-Founder, Developer & Content Lead</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-black text-white">Avanish Rai</h3>
-                  <p className="text-[10px] font-bold text-lime-400 uppercase tracking-wider">Co-Founder, Developer & Content Lead</p>
-                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  A Game Artist, Full-Stack Developer, and Content Creator with over 380,000 subscribers, Avanish built UperAI from the ground up. Having experienced the friction of managing video production pipelines, game development, and short-form/long-form content creation firsthand, he engineered UperAI to give creators a frictionless way to find verified editing talent.
+                </p>
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                A Game Artist, Full-Stack Developer, and Content Creator with over 380,000 subscribers, Avanish built UperAI from the ground up. Having experienced the friction of managing video production pipelines, game development, and short-form/long-form content creation firsthand, he engineered UperAI to give creators a frictionless way to find verified editing talent.
-              </p>
+              <div className="pt-2">
+                <a
+                  href="https://www.linkedin.com/in/avanish-rai-proshot/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-lime-400 hover:text-lime-300 transition-colors"
+                >
+                  <Linkedin className="w-4 h-4" />
+                  <span>Connect on LinkedIn ↗</span>
+                </a>
+              </div>
             </div>
 
             {/* Kumar Karan */}
-            <div className="bg-zinc-900/90 border border-zinc-800 hover:border-lime-400/50 rounded-3xl p-6 space-y-3 transition-all shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 text-white font-black flex items-center justify-center text-sm shadow-md">
-                  KK
+            <div className="bg-zinc-900/90 border border-zinc-800 hover:border-lime-400/50 rounded-3xl p-6 space-y-3 transition-all shadow-xl flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 text-white font-black flex items-center justify-center text-sm shadow-md">
+                      KK
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-white">Kumar Karan</h3>
+                      <p className="text-[10px] font-bold text-lime-400 uppercase tracking-wider">Co-Founder & Operations Lead</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-black text-white">Kumar Karan</h3>
-                  <p className="text-[10px] font-bold text-lime-400 uppercase tracking-wider">Co-Founder & Operations Lead</p>
-                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Leads creator relations, editor onboarding, and marketplace operations. Kumar Karan focuses on verifying editor talent and ensuring seamless, direct WhatsApp communication across the platform.
+                </p>
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Leads creator relations, editor onboarding, and marketplace operations. Kumar Karan focuses on verifying editor talent and ensuring seamless, direct WhatsApp communication across the platform.
-              </p>
+              <div className="pt-2">
+                <a
+                  href="https://www.linkedin.com/in/karan-kr-v-83746b272/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-lime-400 hover:text-lime-300 transition-colors"
+                >
+                  <Linkedin className="w-4 h-4" />
+                  <span>Connect on LinkedIn ↗</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
