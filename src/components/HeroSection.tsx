@@ -84,7 +84,7 @@ export default function HeroSection({
                 <span className="text-zinc-200 font-extrabold">
                   {visitorCount !== null ? `${visitorCount.toLocaleString()}+` : '...'}
                 </span>{' '}
-                Creators & Editors visited today
+                Creators & Editors visited
               </div>
             </div>
 
