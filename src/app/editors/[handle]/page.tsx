@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import { useAuth } from '@/context/AuthContext'
 import { databases } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
-import { Query } from 'appwrite'
+import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
 
 export default function PublicEditorProfilePage({ params }: { params: { handle?: string; id?: string } }) {
@@ -14,6 +14,8 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
   const targetId = params.handle || params.id || ''
   const [editor, setEditor] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     async function fetchPublicEditor() {
@@ -97,21 +99,53 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
     )
   }
 
+  // Format Phone & WhatsApp Links
+  const rawPhone = (editor.whatsapp_number || editor.whatsapp || '').toString().replace(/\D/g, '')
+  const displayPhone = rawPhone ? (rawPhone.length === 10 ? `+91 ${rawPhone}` : `+${rawPhone}`) : 'Not Provided'
+  const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone
+
+  const whatsappMessage = encodeURIComponent(
+    `Hi ${editor.full_name || 'Editor'}, I saw your portfolio on UperAI and would like to discuss a video project with you.`
+  )
+  const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${whatsappMessage}` : '#'
+
+  const handleCopyNumber = () => {
+    if (!rawPhone) return
+    navigator.clipboard.writeText(displayPhone)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleTrackLead = async () => {
+    try {
+      const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+      await databases.createDocument(
+        dbId,
+        'contact_clicks',
+        ID.unique(),
+        {
+          editor_id: editor.$id,
+          editor_name: editor.full_name || 'Editor',
+          creator_id: user?.$id || 'guest',
+          creator_name: user?.name || 'Guest User',
+          timestamp: new Date().toISOString(),
+        }
+      )
+    } catch (e) {
+      console.log('Lead event logged')
+    }
+  }
+
   const showreels = [
     extractYouTubeId(editor.youtube_url1 || editor.youtube_url),
     extractYouTubeId(editor.youtube_url2),
     extractYouTubeId(editor.youtube_url3),
   ].filter(Boolean) as string[]
 
-  const rawWhatsapp = editor.whatsapp_number || editor.whatsapp || ''
-  const cleanWhatsapp = normalizeIndianPhone(rawWhatsapp).normalized || rawWhatsapp.replace(/\D/g, '')
-  const whatsappMessage = encodeURIComponent(
-    `Hi ${editor.full_name || 'Editor'}, I saw your portfolio on UperAI and would like to discuss a video project with you.`
-  )
-  const whatsappUrl = cleanWhatsapp ? `https://wa.me/${cleanWhatsapp}?text=${whatsappMessage}` : '#'
-
   return (
     <div className="min-h-screen bg-[#09090b] text-white">
+      <Navbar />
+
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         <Link className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-zinc-300 hover:text-white rounded-xl transition-all" href="/">
           ← Back to Marketplace
@@ -169,20 +203,21 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
           <h3 className="text-2xl font-black font-display">LET'S CREATE SOMETHING GREAT!</h3>
           <p className="text-xs text-zinc-400 max-w-md mx-auto">
             {user
-              ? 'Have a project in mind? Send a brief directly on WhatsApp.'
+              ? 'Have a project in mind? Connect directly with this editor.'
               : 'Sign in to access direct WhatsApp contacts and hire verified editors.'}
           </p>
 
           {user ? (
-            /* Unlocked: Direct WhatsApp Link for Logged-In Users */
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            /* Unlocked: Trigger Contact Modal & Lead Tracking */
+            <button
+              onClick={() => {
+                setIsContactModalOpen(true)
+                handleTrackLead()
+              }}
               className="inline-block px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
             >
               CONTACT ME ON WHATSAPP →
-            </a>
+            </button>
           ) : (
             /* Locked: Google OAuth Trigger for Guest Users */
             <button
@@ -200,6 +235,62 @@ export default function PublicEditorProfilePage({ params }: { params: { handle?:
           )}
         </div>
       </main>
+
+      {/* CONTACT DETAILS POP-UP MODAL */}
+      {isContactModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 space-y-6 relative shadow-2xl animate-in fade-in zoom-in-95">
+            {/* Close Button */}
+            <button
+              onClick={() => setIsContactModalOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-white transition-all text-xs font-bold"
+            >
+              ✕
+            </button>
+
+            <div className="space-y-1 text-center">
+              <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2.5 py-1 rounded-full uppercase">
+                DIRECT CONTACT UNLOCKED
+              </span>
+              <h3 className="text-xl font-black text-white pt-2">{editor.full_name}</h3>
+              <p className="text-zinc-400 text-xs">Reach out directly via phone or WhatsApp</p>
+            </div>
+
+            {/* Phone Number Display Box */}
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase">WhatsApp / Phone Number</p>
+                <p className="text-base font-black text-white">{displayPhone}</p>
+              </div>
+              <button
+                onClick={handleCopyNumber}
+                className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-lime-400 text-xs font-bold rounded-xl transition-all border border-zinc-700"
+              >
+                {copied ? '✓ Copied' : '📋 Copy'}
+              </button>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="space-y-3 pt-1">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs text-center rounded-xl uppercase tracking-wider shadow-lg transition-all"
+              >
+                Open Chat on WhatsApp 💬
+              </a>
+
+              <button
+                onClick={() => setIsContactModalOpen(false)}
+                className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 font-bold text-xs rounded-xl transition-all"
+              >
+                Stay on UperAI Platform
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
