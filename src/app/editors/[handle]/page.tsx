@@ -109,22 +109,27 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
   }, [targetId])
 
   useEffect(() => {
-    // Inject official Instagram embed script
+    const processInsta = () => {
+      try {
+        if ((window as any).instgrm?.Embeds?.process) {
+          (window as any).instgrm.Embeds.process();
+        }
+      } catch (err) {
+        console.warn('Instagram Embed processing notice:', err);
+      }
+    };
+
     if (!document.getElementById('instagram-embed-script')) {
       const script = document.createElement('script');
       script.id = 'instagram-embed-script';
       script.src = 'https://www.instagram.com/embed.js';
       script.async = true;
+      script.onload = () => setTimeout(processInsta, 100);
       document.body.appendChild(script);
-      script.onload = () => {
-        if ((window as any).instgrm) {
-          (window as any).instgrm.Embeds.process();
-        }
-      };
-    } else if ((window as any).instgrm) {
-      (window as any).instgrm.Embeds.process();
+    } else {
+      setTimeout(processInsta, 100);
     }
-  }, [editor]);
+  }, [editor, portfolioItems]);
 
   const formatTurnaround = (val?: string | number | null) => {
     if (!val) return '2 Days'
@@ -283,15 +288,22 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                     </div>
                   )}
 
-                  {/* RELIABLE INSTAGRAM IFRAME WITH ACTION FALLBACK */}
+                  {/* PLAYABLE INSTAGRAM REEL CONTAINER WITH ACTION FALLBACK */}
                   {media.type === 'instagram' && (
                     <div className="space-y-2">
-                      <div className="w-full aspect-[9/16] max-h-[480px] bg-black rounded-xl overflow-hidden border border-zinc-800 relative">
-                        <iframe
-                          src={media.embedUrl}
-                          className="w-full h-full border-0"
-                          scrolling="no"
-                          allowTransparency
+                      <div className="w-full min-h-[440px] bg-black rounded-2xl overflow-hidden flex justify-center p-2 border border-zinc-800">
+                        <blockquote
+                          className="instagram-media"
+                          data-instgrm-permalink={media.rawUrl || media.url}
+                          data-instgrm-version="14"
+                          style={{
+                            background: '#000',
+                            borderRadius: '12px',
+                            margin: '0',
+                            width: '100%',
+                            maxWidth: '540px',
+                            padding: '0',
+                          }}
                         />
                       </div>
 
