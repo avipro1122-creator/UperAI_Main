@@ -340,40 +340,49 @@ function ProfileDashboardContent() {
 
               {/* 3 SHOWREEL URL INPUTS */}
               <div className="space-y-3 pt-2">
-                <h3 className="text-xs font-bold text-lime-400 uppercase tracking-wider">Showreels / Featured Videos (YouTube or Instagram Reels)</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-lime-400 uppercase tracking-wider">Showreels / Featured Videos</h3>
+                  <span className="text-[10px] text-amber-400 bg-amber-950/80 border border-amber-800/60 px-2.5 py-0.5 rounded-full font-semibold">
+                    ⚠️ Private Instagram Reels Not Allowed
+                  </span>
+                </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-400">Video #1 (Main Showreel / Reel)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-zinc-400">Video #1 (Main Showreel - YouTube / Public Instagram Reel)</label>
                   <input
                     type="url"
                     value={formData.youtubeUrl1}
                     onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl1: e.target.value }))}
                     placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/..."
-                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                    className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400"
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-400">Video #2 (Shorts / Instagram Reel Sample)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-zinc-400">Video #2 (Shorts / Reels Sample)</label>
                   <input
                     type="url"
                     value={formData.youtubeUrl2}
                     onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl2: e.target.value }))}
-                    placeholder="https://www.instagram.com/reel/... or https://youtube.com/shorts/..."
-                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                    placeholder="https://www.youtube.com/shorts/... or https://www.instagram.com/reel/..."
+                    className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400"
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-400">Video #3 (3D / Motion VFX / Reel Sample)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-zinc-400">Video #3 (3D / Motion VFX / Additional Sample)</label>
                   <input
                     type="url"
                     value={formData.youtubeUrl3}
                     onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl3: e.target.value }))}
                     placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/..."
-                    className="w-full mt-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400 transition-all"
+                    className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400"
                   />
                 </div>
+
+                <p className="text-[10px] text-zinc-400 leading-relaxed pt-1">
+                  📌 <span className="font-bold text-zinc-300">Note:</span> Make sure your Instagram account is set to <span className="text-lime-400 font-bold">Public</span>. Reels from private accounts cannot be embedded or viewed on UperAI.
+                </p>
               </div>
 
               {/* COMPULSORY WHATSAPP NUMBER FIELD */}
