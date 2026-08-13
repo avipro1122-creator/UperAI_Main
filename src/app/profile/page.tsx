@@ -18,26 +18,19 @@ const PREDEFINED_SPECIALTIES = [
   'Custom',
 ]
 
-const sanitizeVideoUrl = (rawUrl: string, maxLength = 190): string => {
-  if (!rawUrl) return ''
-  let url = rawUrl.trim()
-  const instaMatch = url.match(/(?:instagram\.com|instagr\.am)\/(?:reel|reels|p|tv|share\/reel)\/([A-Za-z0-9_-]+)/i)
-  if (instaMatch && instaMatch[1]) {
-    const rawCode = instaMatch[1]
-    const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode
-    return `https://www.instagram.com/reel/${code}/`
+// Helper to normalize Instagram Reel links
+const normalizeMediaUrl = (url: string) => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  
+  // Clean Instagram Reel URLs to clean canonical format
+  const instaMatch = trimmed.match(/(?:instagram\.com\/(?:reel|reels|p)\/)([\w-]+)/i);
+  if (instaMatch) {
+    return `https://www.instagram.com/reel/${instaMatch[1]}/`;
   }
-  try {
-    const parsed = new URL(url)
-    parsed.searchParams.delete('si')
-    parsed.searchParams.delete('feature')
-    parsed.searchParams.delete('pp')
-    url = parsed.toString()
-  } catch {
-    // Keep trimmed string
-  }
-  return url.length > maxLength ? url.substring(0, maxLength) : url
-}
+  
+  return trimmed;
+};
 
 export default function ProfilePage() {
   return (
@@ -151,9 +144,9 @@ function ProfileDashboardContent() {
 
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
 
-    const cleanUrl1 = sanitizeVideoUrl(formData.youtubeUrl1, 1900)
-    const cleanUrl2 = sanitizeVideoUrl(formData.youtubeUrl2, 1900)
-    const cleanUrl3 = sanitizeVideoUrl(formData.youtubeUrl3, 190)
+    const cleanUrl1 = normalizeMediaUrl(formData.youtubeUrl1)
+    const cleanUrl2 = normalizeMediaUrl(formData.youtubeUrl2)
+    const cleanUrl3 = normalizeMediaUrl(formData.youtubeUrl3)
     const mainVideoUrl = (cleanUrl1 || cleanUrl2 || cleanUrl3 || '').trim()
     const parsedMain = parseVideoUrl(mainVideoUrl)
     const previewImg = parsedMain?.thumbnailUrl || ''

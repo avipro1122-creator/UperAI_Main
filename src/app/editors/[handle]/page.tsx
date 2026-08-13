@@ -10,59 +10,7 @@ import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
 
-function InstagramEmbed({ url }: { url: string }) {
-  const containerRef = React.useRef<HTMLDivElement>(null)
 
-  React.useEffect(() => {
-    if (!url) return
-
-    let isMounted = true
-
-    const processInsta = () => {
-      try {
-        if (isMounted && (window as any).instgrm?.Embeds?.process && containerRef.current) {
-          (window as any).instgrm.Embeds.process(containerRef.current)
-        }
-      } catch (err) {
-        console.warn('Instagram embed process warning:', err)
-      }
-    }
-
-    if (!document.getElementById('instagram-embed-script')) {
-      const script = document.createElement('script')
-      script.id = 'instagram-embed-script'
-      script.src = 'https://www.instagram.com/embed.js'
-      script.async = true
-      script.onload = processInsta
-      document.body.appendChild(script)
-    } else {
-      setTimeout(processInsta, 50)
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [url])
-
-  return (
-    <div ref={containerRef} className="w-full bg-black rounded-xl overflow-hidden flex flex-col items-center justify-center p-1 border border-zinc-800 min-h-[400px]">
-      <blockquote
-        className="instagram-media"
-        data-instgrm-permalink={url}
-        data-instgrm-version="14"
-        style={{
-          background: '#000',
-          borderRadius: '12px',
-          margin: '0',
-          width: '100%',
-          maxWidth: '540px',
-          minWidth: '280px',
-          padding: '0',
-        }}
-      />
-    </div>
-  )
-}
 
 export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
   const { user, loginWithGoogle } = useAuth()
@@ -160,6 +108,24 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
     fetchPublicEditor()
   }, [targetId])
 
+  useEffect(() => {
+    // Inject official Instagram embed script
+    if (!document.getElementById('instagram-embed-script')) {
+      const script = document.createElement('script');
+      script.id = 'instagram-embed-script';
+      script.src = 'https://www.instagram.com/embed.js';
+      script.async = true;
+      document.body.appendChild(script);
+      script.onload = () => {
+        if ((window as any).instgrm) {
+          (window as any).instgrm.Embeds.process();
+        }
+      };
+    } else if ((window as any).instgrm) {
+      (window as any).instgrm.Embeds.process();
+    }
+  }, [editor]);
+
   const formatTurnaround = (val?: string | number | null) => {
     if (!val) return '2 Days'
     const str = String(val).trim()
@@ -244,10 +210,14 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
     // 2. Instagram Match (Reels or Posts)
     const instaMatch = cleanUrl.match(/(?:instagram\.com\/(?:reel|reels|p|tv|share\/reel)\/)([\w-]+)/i)
     if (instaMatch && instaMatch[1]) {
-      const rawCode = instaMatch[1]
-      const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode
-      const cleanInstaUrl = `https://www.instagram.com/reel/${code}/`
-      return { type: 'instagram', id: code, url: cleanInstaUrl }
+      const code = instaMatch[1]
+      return {
+        type: 'instagram',
+        id: code,
+        embedUrl: `https://www.instagram.com/reel/${code}/embed/captioned/`,
+        rawUrl: `https://www.instagram.com/reel/${code}/`,
+        url: `https://www.instagram.com/reel/${code}/`
+      }
     }
 
     return { type: 'unknown', url: cleanUrl }
@@ -313,9 +283,27 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                     </div>
                   )}
 
-                  {/* PLAYABLE INSTAGRAM REEL INLINE CONTAINER */}
+                  {/* RELIABLE INSTAGRAM IFRAME WITH ACTION FALLBACK */}
                   {media.type === 'instagram' && (
-                    <InstagramEmbed url={media.url} />
+                    <div className="space-y-2">
+                      <div className="w-full aspect-[9/16] max-h-[480px] bg-black rounded-xl overflow-hidden border border-zinc-800 relative">
+                        <iframe
+                          src={media.embedUrl}
+                          className="w-full h-full border-0"
+                          scrolling="no"
+                          allowTransparency
+                        />
+                      </div>
+
+                      <a
+                        href={media.rawUrl || media.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full py-2 bg-gradient-to-r from-purple-600 via-rose-500 to-amber-500 hover:opacity-90 text-white font-black text-[11px] text-center rounded-xl uppercase tracking-wider transition-all shadow-md"
+                      >
+                        Open Reel on Instagram ↗
+                      </a>
+                    </div>
                   )}
 
                   {/* UNKNOWN / FALLBACK MEDIA */}

@@ -18,12 +18,11 @@ export function parseInstagramUrl(rawUrl: string): { code: string; embedUrl: str
   const trimmed = rawUrl.trim()
   const match = trimmed.match(/(?:instagram\.com|instagr\.am)\/(?:reel|reels|p|tv|share\/reel)\/([A-Za-z0-9_-]+)/i)
   if (match && match[1]) {
-    const rawCode = match[1]
-    const code = rawCode.length > 11 ? rawCode.slice(0, 11) : rawCode
+    const code = match[1]
     const isReel = /\/(?:reel|reels|share\/reel)\//i.test(trimmed)
     return {
       code,
-      embedUrl: `https://www.instagram.com/reel/${code}/embed/`,
+      embedUrl: `https://www.instagram.com/reel/${code}/embed/captioned/`,
       isReel: true,
     }
   }
