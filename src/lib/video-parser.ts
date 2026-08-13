@@ -93,7 +93,7 @@ export function parseVideoUrl(rawUrl: string | null | undefined): ParsedVideoUrl
       videoId: vimeo.videoId,
       embedUrl: vimeo.embedUrl,
       isShortsUrl: false,
-      thumbnailUrl: null,
+      thumbnailUrl: `https://vumbnail.com/${vimeo.videoId}.jpg`,
       rawUrl: url,
     }
   }

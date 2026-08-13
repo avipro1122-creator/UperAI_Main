@@ -33,6 +33,7 @@ async function main() {
     youtube_url1: vimeoUrl,
     youtube_url2: netlifyUrl,
     youtube_url3: '',
+    preview_img: 'https://vumbnail.com/1174509374.jpg',
     whatsapp_number: '919046855338',
     whatsapp: '919046855338',
     open_to_work: true,
