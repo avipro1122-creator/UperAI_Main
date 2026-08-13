@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { account, client, clearSession } from '@/lib/appwrite/client'
+import { getAuthRedirectOrigin } from '@/lib/appwrite/config'
 import { OAuthProvider } from 'appwrite'
 
 export type Role = 'CREATOR' | 'EDITOR'
@@ -61,10 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, loading])
 
   const loginWithGoogle = () => {
+    const baseOrigin = getAuthRedirectOrigin()
     account.createOAuth2Token(
       OAuthProvider.Google,
-      `${window.location.origin}/auth/callback`,
-      `${window.location.origin}/?error=auth_failed`
+      `${baseOrigin}/auth/callback`,
+      `${baseOrigin}/?error=auth_failed`
     )
   }
 

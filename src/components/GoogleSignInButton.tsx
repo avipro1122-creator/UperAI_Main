@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { account } from '@/lib/appwrite/client'
+import { getAuthRedirectOrigin } from '@/lib/appwrite/config'
 import { OAuthProvider } from 'appwrite'
 
 export default function GoogleSignInButton({
@@ -18,10 +19,11 @@ export default function GoogleSignInButton({
     setLoading(true)
     setError(null)
     try {
-      const successUrl = new URL('/auth/callback', window.location.origin)
+      const baseOrigin = getAuthRedirectOrigin()
+      const successUrl = new URL('/auth/callback', baseOrigin)
       if (next) successUrl.searchParams.set('next', next)
 
-      const failureUrl = new URL('/login', window.location.origin)
+      const failureUrl = new URL('/login', baseOrigin)
       failureUrl.searchParams.set('error', 'appwrite_oauth_failed')
 
       account.createOAuth2Token(

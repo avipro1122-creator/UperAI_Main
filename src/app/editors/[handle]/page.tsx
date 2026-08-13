@@ -13,7 +13,7 @@ import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
 
 export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
   const routeParams = useParams()
-  const targetId = (params?.handle || params?.id || routeParams?.handle) as string
+  const targetId = (params?.handle || params?.id || (routeParams as any)?.handle || (routeParams as any)?.id || '') as string
   const { user, loginWithGoogle } = useAuth()
 
   const [editor, setEditor] = useState<any | null>(null)
@@ -34,8 +34,8 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
 
         console.log('Starting getEditorProfile lookup for ID/param:', paramId)
 
+        // Step 1: Execute listDocuments with Query.equal('user_id', paramId) or Query.equal('userId', paramId)
         if (paramId) {
-          // Step 1: Execute listDocuments with Query.equal('user_id', paramId) or Query.equal('userId', paramId)
           try {
             console.log(`Executing listDocuments for userId/user_id with param: "${paramId}"`)
             let res = await safeListDocuments(
@@ -89,15 +89,17 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
               console.log('direct getDocument failed:', err?.message || err)
             }
           }
+        }
 
-          // Step 4: Fallback memory matching for slugs / handles / names
-          if (!doc) {
-            try {
-              console.log(`Fallback: Listing documents to match in memory for "${paramId}"`)
-              const listRes = await safeListDocuments(dbId, collectionId, [Query.limit(100)])
-              const docs = (listRes.documents || []).filter((d: any) => !d.is_hidden)
+        // Step 4: Fallback memory matching for slugs / handles / names (or if paramId is empty / not found directly)
+        if (!doc) {
+          try {
+            console.log(`Fallback: Listing documents to match in memory for "${paramId}"`)
+            const listRes = await safeListDocuments(dbId, collectionId, [Query.limit(100)])
+            const docs = (listRes.documents || []).filter((d: any) => !d.is_hidden)
 
-              if (docs.length > 0) {
+            if (docs.length > 0) {
+              if (paramId) {
                 const lowerTarget = paramId.toLowerCase()
                 const cleanTarget = lowerTarget.replace(/[^a-z0-9]/g, '')
                 const slugTarget = lowerTarget.replace(/\s+/g, '-')
@@ -123,12 +125,11 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                     dUserId.includes(lowerTarget)
                   )
                 })
-
-                if (!doc) doc = docs[0]
               }
-            } catch (err: any) {
-              console.error('Fallback listDocuments failed:', err?.message || err)
+              if (!doc) doc = docs[0]
             }
+          } catch (err: any) {
+            console.error('Fallback listDocuments failed:', err?.message || err)
           }
         }
 

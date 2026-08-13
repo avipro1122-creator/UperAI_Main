@@ -23,3 +23,29 @@ export const APPWRITE_CONFIG = {
 export function isAppwriteConfigured(): boolean {
   return Boolean(APPWRITE_CONFIG.projectId && APPWRITE_CONFIG.endpoint)
 }
+
+export function getAuthRedirectOrigin(): string {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_APP_URL || 'https://www.uperai.in'
+  }
+
+  const origin = window.location.origin
+  const hostname = window.location.hostname
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return origin
+  }
+
+  const isRegisteredDomain =
+    hostname === 'www.uperai.in' ||
+    hostname === 'uperai.in' ||
+    hostname === 'uper-ai.vercel.app' ||
+    hostname === 'uperai.vercel.app'
+
+  if (isRegisteredDomain) {
+    return origin
+  }
+
+  return 'https://www.uperai.in'
+}
+
