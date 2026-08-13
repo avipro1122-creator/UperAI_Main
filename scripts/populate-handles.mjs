@@ -9,16 +9,20 @@ const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(a
 const databases = new Databases(client);
 
 async function main() {
-  console.log('Fetching editor_profiles detailed...');
+  console.log('Populating handles on editor_profiles...');
   const res = await databases.listDocuments(databaseId, 'editor_profiles');
   for (const doc of res.documents) {
-    console.log({
-      id: doc.$id,
-      user_id: doc.user_id,
-      name: doc.full_name,
-      handle: doc.handle,
-      is_hidden: doc.is_hidden,
-    });
+    const name = doc.full_name || doc.name || doc.display_name || 'editor';
+    const generatedHandle = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    console.log(`Updating doc ${doc.$id} (${name}) -> handle: "${generatedHandle}"`);
+    try {
+      const updated = await databases.updateDocument(databaseId, 'editor_profiles', doc.$id, {
+        handle: generatedHandle,
+      });
+      console.log(`✅ Success for ${doc.$id}: handle="${updated.handle}"`);
+    } catch (err) {
+      console.log(`❌ Error for ${doc.$id}:`, err.message);
+    }
   }
 }
 

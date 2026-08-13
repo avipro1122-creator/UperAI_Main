@@ -41,91 +41,70 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
             doc = await safeGetDocument(dbId, collectionId, rawTarget)
             if (doc) console.log('Direct getDocument succeeded:', doc.$id)
           } catch (err: any) {
-            console.log(`Direct getDocument failed for ID "${rawTarget}", trying query fallbacks...`, err?.message || err)
+            console.log(`Direct getDocument failed for ID "${rawTarget}":`, err?.message || err)
             doc = null
           }
         }
 
-        // 2. Fall back to searching custom fields ($id, slug, userId, user_id, handle) via Query.or
+        // 2. Query by user_id equal search (user_id is a known indexed field)
         if (!doc && rawTarget) {
           try {
-            console.log('2. Trying Query.or fallback for custom fields...')
-            const queries = [
-              Query.or([
-                Query.equal('$id', rawTarget),
-                Query.equal('slug', rawTarget),
-                Query.equal('userId', rawTarget),
-                Query.equal('user_id', rawTarget),
-                Query.equal('handle', rawTarget),
-              ]),
-              Query.limit(1)
-            ]
-            const response = await safeListDocuments(dbId, collectionId, queries)
-            if (response.documents && response.documents.length > 0) {
-              doc = response.documents[0]
-              console.log('Query.or fallback succeeded:', doc.$id)
+            const queryRes = await safeListDocuments(
+              dbId,
+              collectionId,
+              [Query.equal('user_id', rawTarget), Query.limit(1)]
+            )
+            if (queryRes.documents && queryRes.documents.length > 0) {
+              doc = queryRes.documents[0]
+              console.log('Query.equal("user_id") succeeded:', doc.$id)
             }
           } catch (err: any) {
-            console.log(`Query.or listDocuments query failed for ID "${rawTarget}":`, err?.message || err)
+            // Ignore if user_id query fails
           }
         }
 
-        // 3. Fall back to individual Query.equal searches if Query.or is not indexed
-        if (!doc && rawTarget) {
-          const fieldsToQuery = ['$id', 'slug', 'user_id', 'handle']
-          for (const field of fieldsToQuery) {
-            try {
-              const queryRes = await safeListDocuments(
-                dbId,
-                collectionId,
-                [Query.equal(field, rawTarget), Query.limit(1)]
-              )
-              if (queryRes.documents && queryRes.documents.length > 0) {
-                doc = queryRes.documents[0]
-                console.log(`Query.equal("${field}") fallback succeeded:`, doc.$id)
-                break
-              }
-            } catch (err: any) {
-              // Ignore unindexed field errors
-            }
-          }
-        }
-
-        // 4. Final fallback: List documents and match in memory
+        // 3. Fallback: Fetch list of editor profiles and match in memory
         if (!doc) {
           try {
-            console.log('3. Final fallback: Listing documents to match in memory...')
+            console.log('3. Fallback: Listing documents to match in memory...')
             const listRes = await safeListDocuments(dbId, collectionId, [Query.limit(100)])
-            const docs = listRes.documents || []
+            const docs = (listRes.documents || []).filter((d: any) => !d.is_hidden)
+
             if (docs.length > 0) {
               if (rawTarget) {
                 const lowerTarget = rawTarget.toLowerCase()
+                const cleanTarget = lowerTarget.replace(/[^a-z0-9]/g, '')
                 const slugTarget = lowerTarget.replace(/\s+/g, '-')
 
                 doc = docs.find((d: any) => {
                   const dId = (d.$id || '').toLowerCase()
                   const dUserId = (d.user_id || '').toLowerCase()
                   const dHandle = (d.handle || '').toLowerCase()
-                  const dSlug = (d.slug || '').toLowerCase()
                   const dName = (d.full_name || d.name || d.display_name || '').toLowerCase()
-                  const dNameSlug = dName.replace(/\s+/g, '-')
+                  const dCleanName = dName.replace(/[^a-z0-9]/g, '')
+                  const dSlugName = dName.replace(/\s+/g, '-')
 
                   return (
                     dId === lowerTarget ||
                     dUserId === lowerTarget ||
-                    (dHandle && dHandle === lowerTarget) ||
-                    (dSlug && dSlug === lowerTarget) ||
+                    (dHandle && (dHandle === lowerTarget || dHandle === cleanTarget)) ||
                     dName === lowerTarget ||
-                    dNameSlug === slugTarget ||
+                    dSlugName === slugTarget ||
+                    dCleanName === cleanTarget ||
+                    dName.includes(lowerTarget) ||
+                    (cleanTarget && dCleanName.includes(cleanTarget)) ||
                     dId.includes(lowerTarget) ||
                     dUserId.includes(lowerTarget)
                   )
                 })
               }
-              if (!doc) doc = docs[0]
+              // If still no specific match, default to first available profile
+              if (!doc) {
+                doc = docs[0]
+              }
             }
           } catch (err: any) {
-            console.error('Final fallback listDocuments failed:', err?.message || err)
+            console.error('Fallback listDocuments failed:', err?.message || err)
           }
         }
 
