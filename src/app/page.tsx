@@ -171,7 +171,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="bg-[#09090b] text-zinc-100 min-h-screen selection:bg-lime-400 selection:text-black">
+    <div className="bg-[#0E1017] text-gray-100 min-h-screen selection:bg-lime-400 selection:text-black">
       {/* Soft Server Maintenance Banner Notice */}
       {isServerError && (
         <div className="bg-amber-950/80 border-b border-amber-800/60 py-3 px-4 text-center text-amber-200 text-xs font-semibold flex items-center justify-center gap-2">

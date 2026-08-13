@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import EditorCard, { EditorCardData } from '@/components/EditorCard'
+import EditorCardSkeleton from '@/components/EditorCardSkeleton'
 import { databases, safeListDocuments } from '@/lib/appwrite/client'
 import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import SetupNotice from '@/components/SetupNotice'
@@ -106,15 +107,15 @@ export default function DirectoryPage() {
   })
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 min-h-screen bg-[#09090b] text-white">
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 min-h-screen bg-[#0E1017] text-gray-100">
       {/* Header Title & Subtitle */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
         <div>
           <span className="text-xs font-bold text-lime-400 uppercase tracking-widest bg-lime-950/60 px-3 py-1 rounded-full border border-lime-800/40">
             DIRECTORY
           </span>
-          <h1 className="text-3xl sm:text-5xl font-black mt-3 font-display">All Verified Editors</h1>
-          <p className="text-zinc-400 text-sm mt-1">Browse portfolios, upfront rates, and turnaround times.</p>
+          <h1 className="text-3xl sm:text-5xl font-black mt-3 font-display text-gray-100">All Verified Editors</h1>
+          <p className="text-gray-400 text-sm mt-1">Browse portfolios, upfront rates, and turnaround times.</p>
         </div>
 
         <Link className="px-5 py-3 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl transition-all shadow-md self-start md:self-auto" href="/onboarding">
@@ -123,7 +124,7 @@ export default function DirectoryPage() {
       </div>
 
       {/* Real-Time Search Bar & Category Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-900/90 p-4 rounded-2xl border border-zinc-800">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#14161F]/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
         {/* Search Box */}
         <div className="relative w-full sm:w-96">
           <input
@@ -131,10 +132,10 @@ export default function DirectoryPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search editors, skills (e.g. Gaming, Premiere Pro, VFX)..."
-            className="w-full pl-10 pr-8 py-2.5 bg-zinc-950 border border-zinc-700 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-lime-400 transition-all"
+            className="w-full pl-10 pr-8 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/20 transition-all"
           />
           <svg
-            className="w-4 h-4 absolute left-3.5 top-3 text-zinc-500"
+            className="w-4 h-4 absolute left-3.5 top-3 text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -144,7 +145,7 @@ export default function DirectoryPage() {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-xs text-zinc-400 hover:text-white"
+              className="absolute right-3 top-2.5 text-xs text-gray-400 hover:text-gray-100"
             >
               ✕
             </button>
@@ -160,7 +161,7 @@ export default function DirectoryPage() {
               className={`px-4 py-2 rounded-xl uppercase transition-all whitespace-nowrap ${
                 selectedCategory === cat
                   ? 'bg-lime-400 text-black font-black'
-                  : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                  : 'bg-white/5 border border-white/10 text-gray-400 hover:text-gray-100'
               }`}
             >
               {cat === 'all' ? 'All Editors' : cat}
@@ -171,31 +172,35 @@ export default function DirectoryPage() {
 
       {/* Directory Grid OR Empty / Server Error State */}
       {loading ? (
-        <div className="text-center py-20 text-zinc-500 text-sm">Loading editors directory...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <EditorCardSkeleton key={i} />
+          ))}
+        </div>
       ) : hasError ? (
         <div className="bg-amber-950/20 border border-amber-800/40 rounded-3xl p-12 text-center space-y-4 max-w-2xl mx-auto my-12">
           <div className="w-16 h-16 bg-amber-950/80 border border-amber-800/50 rounded-2xl flex items-center justify-center mx-auto text-amber-400 text-2xl">
             ⚡
           </div>
           <h2 className="text-2xl font-black text-amber-200 font-display">Backend Maintenance</h2>
-          <p className="text-zinc-400 text-sm leading-relaxed max-w-md mx-auto">
+          <p className="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">
             We are currently undergoing brief backend maintenance. Please refresh in a few minutes.
           </p>
         </div>
       ) : filteredEditors.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEditors.map((editor) => (
             <EditorCard editor={editor.cardData} key={editor.id} />
           ))}
         </div>
       ) : (
         /* "No Listed Editors Yet" Empty State Block */
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-12 text-center space-y-4 max-w-2xl mx-auto my-12">
+        <div className="bg-[#14161F]/80 backdrop-blur-md border border-white/10 rounded-3xl p-12 text-center space-y-4 max-w-2xl mx-auto my-12">
           <div className="w-16 h-16 bg-lime-950/80 border border-lime-800/50 rounded-2xl flex items-center justify-center mx-auto text-lime-400 text-2xl">
             🎬
           </div>
-          <h2 className="text-2xl font-black text-white font-display">No Listed Editors Yet</h2>
-          <p className="text-zinc-400 text-sm leading-relaxed max-w-md mx-auto">
+          <h2 className="text-2xl font-black text-gray-100 font-display">No Listed Editors Yet</h2>
+          <p className="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">
             Be the first editor to list your portfolio, YouTube videos, and rates on UperAI!
           </p>
           <div className="pt-2">

@@ -181,36 +181,48 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
   const featuredEditor = dbEditors.find((e) => e.videoId)
 
   return (
-    <section id="marketplace-section" className="w-full bg-[#f8fafc] text-zinc-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <section
+      id="marketplace-section"
+      className="relative w-full bg-[#0E1017] text-gray-100 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden border-b border-white/5"
+    >
+      {/* Ambient glow — ties this section back to the hero */}
+      <div className="absolute top-0 left-1/4 w-[520px] h-[520px] ambient-glow-lime pointer-events-none blur-3xl opacity-40 -translate-y-1/2" />
+
+      <div className="relative z-10 max-w-7xl mx-auto space-y-8">
 
         {/* Section Header */}
-        <div className="pb-2 border-b border-zinc-200">
-          <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight">
-            Indian editors. Rates upfront.
+        <div className="pb-4 border-b border-white/10">
+          <span className="inline-block text-[11px] font-bold text-lime-300 uppercase tracking-widest bg-lime-400/10 px-3 py-1 rounded-full border border-lime-400/20 mb-3">
+            Marketplace
+          </span>
+          <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-gray-100 tracking-tight">
+            Indian editors. <span className="text-gradient-lime">Rates upfront.</span>
           </h2>
+          <p className="text-sm text-gray-400 mt-2 max-w-xl leading-relaxed">
+            Filter by format, audition real portfolio clips, and lock in a budget — before you message anyone.
+          </p>
         </div>
 
         {/* HIDE ALL CARDS IF ZERO EDITORS OR SHOW SOFT MAINTENANCE NOTICE */}
         {isServerError ? (
-          <div className="p-12 rounded-3xl bg-amber-950/10 border border-amber-800/30 text-center space-y-4 shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto text-xl font-bold">
+          <div className="p-12 rounded-3xl backdrop-blur-md bg-amber-400/5 border border-amber-400/20 text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20 flex items-center justify-center mx-auto text-xl font-bold">
               ⚡
             </div>
-            <h3 className="font-display text-xl font-bold text-zinc-900">
+            <h3 className="font-display text-xl font-bold text-gray-100">
               Brief Backend Maintenance
             </h3>
-            <p className="text-xs text-zinc-600 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed">
               We are currently undergoing brief backend maintenance. Please refresh in a few minutes.
             </p>
           </div>
         ) : filteredEditors.length === 0 ? (
           /* EMPTY STATE WHEN NO EDITORS IN DB */
-          <div className="p-12 rounded-3xl bg-white border border-zinc-200 text-center space-y-4 shadow-sm">
-            <h3 className="font-display text-2xl font-bold text-zinc-900">
+          <div className="p-12 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 text-center space-y-4 shadow-sm">
+            <h3 className="font-display text-2xl font-bold text-gray-100">
               No Listed Editors Yet
             </h3>
-            <p className="text-sm text-zinc-600 max-w-md mx-auto leading-relaxed">
+            <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
               Be the first editor to list your portfolio, YouTube videos, and rates on UperAI!
             </p>
             <Link className="inline-block px-8 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-black rounded-xl transition-all shadow-lg text-xs uppercase tracking-wider" href="/profile">
@@ -221,17 +233,17 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
           <>
             {/* ── TOP BANNER SECTION (4 BENTO FEATURE CARDS) ────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-              
+
               {/* Card 1: Format Filter */}
-              <div className="p-6 rounded-3xl bg-[#E2F952] border border-lime-300 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-between space-y-4 shadow-sm hover:border-white/20 hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
                 <div className="space-y-2">
-                  <span className="text-xs font-extrabold tracking-widest text-zinc-900 uppercase flex items-center justify-between">
+                  <span className="text-xs font-extrabold tracking-widest text-lime-300 uppercase flex items-center justify-between">
                     01. Filter by Format <Filter className="w-3.5 h-3.5" />
                   </span>
-                  <h3 className="font-display text-xl font-extrabold text-zinc-950">
+                  <h3 className="font-display text-xl font-extrabold text-gray-100">
                     Choose Niche
                   </h3>
-                  <p className="text-xs text-zinc-800 leading-relaxed">
+                  <p className="text-xs text-gray-400 leading-relaxed">
                     Filter vertical 9:16 Shorts vs 16:9 Long-form or VFX edits.
                   </p>
                 </div>
@@ -240,8 +252,8 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                     onClick={() => setSelectedFormat('all')}
                     className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
                       selectedFormat === 'all'
-                        ? 'bg-zinc-950 text-white shadow-sm'
-                        : 'bg-white/80 text-zinc-900 hover:bg-white'
+                        ? 'bg-lime-400 text-zinc-950 shadow-sm'
+                        : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
                     }`}
                   >
                     All
@@ -250,8 +262,8 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                     onClick={() => setSelectedFormat('shorts')}
                     className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
                       selectedFormat === 'shorts'
-                        ? 'bg-zinc-950 text-white shadow-sm'
-                        : 'bg-white/80 text-zinc-900 hover:bg-white'
+                        ? 'bg-lime-400 text-zinc-950 shadow-sm'
+                        : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
                     }`}
                   >
                     Shorts (9:16)
@@ -260,8 +272,8 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                     onClick={() => setSelectedFormat('long')}
                     className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
                       selectedFormat === 'long'
-                        ? 'bg-zinc-950 text-white shadow-sm'
-                        : 'bg-white/80 text-zinc-900 hover:bg-white'
+                        ? 'bg-lime-400 text-zinc-950 shadow-sm'
+                        : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
                     }`}
                   >
                     Long-Form (16:9)
@@ -271,54 +283,54 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
 
               {/* Card 2: Audition Player */}
               {featuredEditor && featuredEditor.videoId ? (
-                <div className="p-6 rounded-3xl bg-[#D0E8FF] border border-sky-300 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-between space-y-4 shadow-sm hover:border-white/20 hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
                   <div className="space-y-2">
-                    <span className="text-xs font-extrabold tracking-widest text-zinc-900 uppercase flex items-center justify-between">
-                      02. Audition Editors <Play className="w-3.5 h-3.5 fill-zinc-900" />
+                    <span className="text-xs font-extrabold tracking-widest text-sky-300 uppercase flex items-center justify-between">
+                      02. Audition Editors <Play className="w-3.5 h-3.5 fill-sky-300" />
                     </span>
-                    <h3 className="font-display text-xl font-extrabold text-zinc-950">
+                    <h3 className="font-display text-xl font-extrabold text-gray-100">
                       Play Real Work
                     </h3>
-                    <p className="text-xs text-zinc-800 leading-relaxed">
+                    <p className="text-xs text-gray-400 leading-relaxed">
                       Audition real video edits right in the player.
                     </p>
                   </div>
                   <button
                     onClick={() => handleOpenPreview(featuredEditor)}
-                    className="flex items-center gap-2 p-2.5 rounded-2xl bg-white/90 border border-sky-200 hover:bg-white transition-colors text-left"
+                    className="flex items-center gap-2 p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-left"
                   >
-                    <div className="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center shrink-0">
-                      <Play className="w-4 h-4 fill-white ml-0.5" />
+                    <div className="w-8 h-8 rounded-full bg-sky-400 text-zinc-950 flex items-center justify-center shrink-0">
+                      <Play className="w-4 h-4 fill-zinc-950 ml-0.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-zinc-900 truncate">{featuredEditor.name}</p>
-                      <span className="text-[10px] text-sky-700 font-semibold">Click to play video</span>
+                      <p className="text-xs font-bold text-gray-100 truncate">{featuredEditor.name}</p>
+                      <span className="text-[10px] text-sky-300 font-semibold">Click to play video</span>
                     </div>
                   </button>
                 </div>
               ) : (
-                <div className="p-6 rounded-3xl bg-zinc-100 border border-zinc-200 flex flex-col justify-center text-center">
-                  <p className="text-xs text-zinc-500">Audition player active when videos are linked.</p>
+                <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-center text-center">
+                  <p className="text-xs text-gray-500">Audition player active when videos are linked.</p>
                 </div>
               )}
 
               {/* Card 3: Lock Rates Slider */}
-              <div className="p-6 rounded-3xl bg-[#FFD6EC] border border-pink-300 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-between space-y-4 shadow-sm hover:border-white/20 hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
                 <div className="space-y-2">
-                  <span className="text-xs font-extrabold tracking-widest text-zinc-900 uppercase flex items-center justify-between">
+                  <span className="text-xs font-extrabold tracking-widest text-pink-300 uppercase flex items-center justify-between">
                     03. Lock Rates <Sliders className="w-3.5 h-3.5" />
                   </span>
-                  <h3 className="font-display text-xl font-extrabold text-zinc-950">
+                  <h3 className="font-display text-xl font-extrabold text-gray-100">
                     Max Price Filter
                   </h3>
-                  <p className="text-xs text-zinc-800 leading-relaxed">
+                  <p className="text-xs text-gray-400 leading-relaxed">
                     Filter editors under your budget.
                   </p>
                 </div>
-                <div className="space-y-2 bg-white/90 p-3 rounded-2xl border border-pink-200">
-                  <div className="flex items-center justify-between text-xs font-extrabold text-zinc-900">
+                <div className="space-y-2 bg-white/5 p-3 rounded-2xl border border-white/10">
+                  <div className="flex items-center justify-between text-xs font-extrabold text-gray-100">
                     <span>Max Budget:</span>
-                    <span className="text-pink-600 font-black">₹{maxRate.toLocaleString()}</span>
+                    <span className="text-pink-300 font-black">₹{maxRate.toLocaleString()}</span>
                   </div>
                   <input
                     type="range"
@@ -327,14 +339,14 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                     step="500"
                     value={maxRate}
                     onChange={(e) => setMaxRate(Number(e.target.value))}
-                    className="w-full accent-pink-500 cursor-pointer"
+                    className="w-full accent-pink-400 cursor-pointer"
                   />
                 </div>
               </div>
 
               {/* Card 4: Featured Real Editor */}
               {featuredEditor ? (
-                <div className="relative p-6 rounded-3xl bg-zinc-950 text-white overflow-hidden flex flex-col justify-between space-y-4 shadow-xl">
+                <div className="relative p-6 rounded-3xl border border-white/10 hover:border-white/20 bg-zinc-950 text-gray-100 overflow-hidden flex flex-col justify-between space-y-4 shadow-xl hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
                   {featuredEditor.previewImg && (
                     <div
                       className="absolute inset-0 bg-cover bg-center opacity-45 mix-blend-overlay"
@@ -347,7 +359,7 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-lime-400 text-zinc-950 uppercase tracking-wider">
                       <Sparkles className="w-3 h-3" /> Featured Editor
                     </span>
-                    <h3 className="font-display text-lg font-bold text-white leading-tight">
+                    <h3 className="font-display text-lg font-bold text-gray-100 leading-tight">
                       {featuredEditor.name}
                     </h3>
                   </div>
@@ -420,28 +432,28 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
 
       {briefModalData.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-white text-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-zinc-200">
+          <div className="relative w-full max-w-lg bg-[#14161F]/95 backdrop-blur-xl text-gray-100 rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/10">
             <button
               onClick={() => setBriefModalData({ ...briefModalData, isOpen: false })}
-              className="absolute top-5 right-5 p-2 text-zinc-400 hover:text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-full transition-colors"
+              className="absolute top-5 right-5 p-2 text-gray-400 hover:text-gray-100 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             {briefSuccessMsg ? (
               <div className="py-8 text-center space-y-4">
-                <div className="w-16 h-16 bg-lime-100 text-lime-700 rounded-full flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 bg-lime-400/10 text-lime-300 border border-lime-400/20 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="font-display text-2xl font-bold text-zinc-900">
+                <h3 className="font-display text-2xl font-bold text-gray-100">
                   Brief Sent to {briefModalData.editorName}!
                 </h3>
-                <p className="text-xs text-zinc-600 max-w-sm mx-auto leading-relaxed">
+                <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
                   {briefSuccessMsg}
                 </p>
                 <button
                   onClick={() => setBriefModalData({ ...briefModalData, isOpen: false })}
-                  className="mt-4 px-6 py-3 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors"
+                  className="mt-4 px-6 py-3 bg-lime-400 text-zinc-950 rounded-xl text-xs font-bold hover:bg-lime-300 transition-colors"
                 >
                   Done
                 </button>
@@ -449,41 +461,41 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
             ) : (
               <form onSubmit={handleSendBriefSubmit} className="space-y-4">
                 <div>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-lime-100 text-lime-800 mb-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-lime-400/10 text-lime-300 border border-lime-400/20 mb-2">
                     Send Project Brief
                   </span>
-                  <h3 className="font-display text-2xl font-extrabold text-zinc-900">
+                  <h3 className="font-display text-2xl font-extrabold text-gray-100">
                     Hire {briefModalData.editorName}
                   </h3>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Specialty: <span className="font-semibold text-zinc-700">{briefModalData.specialty}</span> • Rate: <span className="font-semibold text-zinc-700">{briefModalData.rate}</span>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Specialty: <span className="font-semibold text-gray-200">{briefModalData.specialty}</span> • Rate: <span className="font-semibold text-gray-200">{briefModalData.rate}</span>
                   </p>
                 </div>
 
                 {briefErrorMsg && (
-                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold">
                     {briefErrorMsg}
                   </div>
                 )}
 
                 <div className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">
                       Format Needed
                     </label>
                     <select
                       value={briefFormat}
                       onChange={(e) => setBriefFormat(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400 focus:outline-none"
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-gray-100 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 focus:outline-none"
                     >
-                      <option>Shorts / Reels (Vertical 9:16)</option>
-                      <option>YouTube Video (Horizontal 16:9)</option>
-                      <option>Full Channel Retainer (Both)</option>
+                      <option className="bg-zinc-900">Shorts / Reels (Vertical 9:16)</option>
+                      <option className="bg-zinc-900">YouTube Video (Horizontal 16:9)</option>
+                      <option className="bg-zinc-900">Full Channel Retainer (Both)</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">
                       Your Channel / Reference Link *
                     </label>
                     <input
@@ -492,12 +504,12 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                       placeholder="https://youtube.com/@yourchannel"
                       value={briefChannelUrl}
                       onChange={(e) => setBriefChannelUrl(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-400"
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-gray-100 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 focus:outline-none placeholder:text-gray-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">
                       Project Notes (Min 20 characters) *
                     </label>
                     <textarea
@@ -506,7 +518,7 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                       placeholder="Describe your raw footage length, deadline, editing style, and expectations..."
                       value={briefNotes}
                       onChange={(e) => setBriefNotes(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-400"
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-gray-100 rounded-xl text-xs font-medium focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 focus:outline-none placeholder:text-gray-500"
                     />
                   </div>
                 </div>

@@ -39,7 +39,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-[#09090b] border-b border-zinc-800 px-4 sm:px-6 py-3.5 flex items-center justify-between text-white sticky top-0 z-50">
+    <nav className="bg-[#0E1017] border-b border-zinc-800 px-4 sm:px-6 py-3.5 flex items-center justify-between text-gray-100 sticky top-0 z-50">
       {/* Brand Logo */}
       <Link className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2 font-display" href="/">
         <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-950 shadow-sm transition-transform hover:scale-105">
@@ -52,12 +52,13 @@ export default function Navbar() {
 
       {/* DESKTOP RIGHT CONTROLS */}
       <div className="hidden md:flex items-center gap-4">
-        {/* Strictly ENABLED for Editors / HIDDEN for Creators */}
-        {user && activeRole === 'EDITOR' && (
-          <Link className="px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black text-xs font-extrabold rounded-xl transition-all shadow-md" href="/profile">
-            + List your work
-          </Link>
-        )}
+        {/* Persistent sticky CTA — always visible, adapts to active role */}
+        <Link
+          href={activeRole === 'EDITOR' ? '/profile' : '/editors'}
+          className="px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black text-xs font-extrabold rounded-xl transition-all shadow-md hover:-translate-y-0.5 active:translate-y-0"
+        >
+          {activeRole === 'EDITOR' ? '+ List your work' : 'Browse Editors'}
+        </Link>
 
         {loading ? (
           <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />

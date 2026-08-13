@@ -66,7 +66,7 @@ export default function HeroSection({
           {/* Left Column — Text & Toggle */}
           <div className={hasMultipleEditors ? 'lg:col-span-6 xl:col-span-7' : ''}>
             {/* Live Status Badge & Live Visitor Counter */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6 animate-hero-in" style={{ animationDelay: '0ms' }}>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/90 text-xs font-semibold text-zinc-300 shadow-sm w-fit">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
                 <span className="inline-flex items-center gap-1">
@@ -89,7 +89,7 @@ export default function HeroSection({
             </div>
 
             {/* Toggle Switch */}
-            <div className="block sm:inline-flex items-center p-1 rounded-2xl sm:rounded-full bg-zinc-900/90 border border-zinc-800 mb-8 shadow-inner">
+            <div className="block sm:inline-flex items-center p-1 rounded-2xl sm:rounded-full bg-zinc-900/90 border border-zinc-800 mb-8 shadow-inner animate-hero-in" style={{ animationDelay: '80ms' }}>
               <button
                 type="button"
                 onClick={() => setActiveRole('CREATOR')}
@@ -115,56 +115,75 @@ export default function HeroSection({
             </div>
 
             {/* Headline */}
-            <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
+            <h1
+              className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-100 leading-[1.1] animate-hero-in"
+              style={{ animationDelay: '160ms' }}
+            >
               {isCreators ? (
                 <>
-                  Stop hiring in <span className="text-gradient-lime">Instagram DMs.</span>
+                  Stop hiring in{' '}
+                  <span className="text-gradient-lime drop-shadow-[0_2px_28px_rgba(226,249,82,0.18)]">
+                    Instagram DMs.
+                  </span>
                 </>
               ) : (
                 <>
-                  Show your work. <span className="text-gradient-lime">Set your rate.</span>
+                  Show your work.{' '}
+                  <span className="text-gradient-lime drop-shadow-[0_2px_28px_rgba(226,249,82,0.18)]">
+                    Set your rate.
+                  </span>
                 </>
               )}
             </h1>
 
             {/* Subheadline */}
-            <p className="text-base sm:text-xl text-zinc-300 font-normal leading-relaxed mt-4 sm:mt-5 max-w-xl">
+            <p
+              className="text-base sm:text-xl text-gray-400 font-normal leading-relaxed mt-4 sm:mt-5 max-w-xl animate-hero-in"
+              style={{ animationDelay: '240ms' }}
+            >
               {isCreators
                 ? "You don't need 40 replies. You need one editor who's actually good."
                 : 'Get found by creators who are actually hiring.'}
             </p>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-6 sm:mt-8 w-full sm:w-auto">
+            <div
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-6 sm:mt-8 w-full sm:w-auto animate-hero-in"
+              style={{ animationDelay: '320ms' }}
+            >
               {isCreators ? (
                 <>
                   <button
                     type="button"
                     onClick={scrollToMarketplace}
-                    className="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-zinc-200 text-black font-extrabold rounded-xl transition-all text-xs sm:text-sm shadow-lg text-center inline-flex items-center justify-center gap-1.5"
+                    className="group w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg hover:shadow-[0_0_32px_rgba(204,255,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-1.5"
                   >
-                    Browse editors <ArrowUpRight className="w-4 h-4" />
+                    Browse editors
+                    <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </button>
                   <Link
                     href="/editors"
-                    className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-xl transition-all text-xs sm:text-sm text-center"
+                    className="group w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 text-gray-100 font-bold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-1.5"
                   >
                     View All Directory
+                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
                   </Link>
                 </>
               ) : (
                 <>
                   <Link
                     href="/profile"
-                    className="w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold rounded-xl transition-all text-xs sm:text-sm shadow-lg text-center inline-flex items-center justify-center gap-1.5"
+                    className="group w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg hover:shadow-[0_0_32px_rgba(204,255,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-1.5"
                   >
-                    List your work <ArrowUpRight className="w-4 h-4" />
+                    List your work
+                    <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </Link>
                   <Link
                     href="/editors"
-                    className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-xl transition-all text-xs sm:text-sm text-center"
+                    className="group w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 text-gray-100 font-bold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-1.5"
                   >
                     View All Directory
+                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
                   </Link>
                 </>
               )}
@@ -173,7 +192,10 @@ export default function HeroSection({
 
           {/* Right Column */}
           {hasMultipleEditors && (
-            <div className="lg:col-span-6 xl:col-span-5 relative mt-6 lg:mt-0">
+            <div
+              className="lg:col-span-6 xl:col-span-5 relative mt-6 lg:mt-0 animate-hero-in"
+              style={{ animationDelay: '200ms' }}
+            >
               <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[420px] flex items-center justify-center">
                 {visibleCards.map((editor, idx) => {
                   const isFirst = idx === 0
@@ -190,7 +212,7 @@ export default function HeroSection({
                       key={editor.handle}
                       className={`absolute transition-transform duration-300 ${cardStyles}`}
                     >
-                      <div className="shadow-2xl shadow-black/90 rounded-2xl overflow-hidden border border-zinc-700/60 bg-zinc-950/95 backdrop-blur-xl hover:scale-[1.03] hover:border-lime-400/40 transition-all duration-300">
+                      <div className="shadow-2xl shadow-black/90 rounded-2xl overflow-hidden border border-white/10 bg-[#14161F]/90 backdrop-blur-xl hover:scale-[1.03] hover:border-lime-400/40 hover:shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
                         <EditorCard editor={editor} />
                       </div>
                     </div>

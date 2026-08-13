@@ -16,6 +16,8 @@ export interface EditorCardData {
   thumbnail_url: string | null
   format_tag: FormatTag | null
   instagram_handle?: string | null
+  specialty?: string | null
+  softwareTags?: string[]
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -42,10 +44,12 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
 
   const isInstagram = editor.thumbnail_url?.includes('instagram.com') || (editor.format_tag === 'Shorts' && !editor.thumbnail_url?.includes('youtube'))
 
+  const softwareTags = (editor.softwareTags || []).filter(Boolean).slice(0, 2)
+
   return (
     <Link
       href={`/editors/${targetIdOrHandle}`}
-      className="group block rounded-2xl overflow-hidden glass-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50 transition-all duration-300"
+      className="group block rounded-2xl overflow-hidden glass-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50 will-change-transform"
     >
       {/* ── Thumbnail ────────────────────────────────────────── */}
       <div className="relative w-full aspect-video bg-zinc-950 overflow-hidden">
@@ -101,7 +105,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700/80 shrink-0" />
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white truncate leading-tight group-hover:text-lime-300 transition-colors">
+            <p className="text-sm font-bold text-gray-100 truncate leading-tight group-hover:text-lime-300 transition-colors">
               {editor.name}
             </p>
             {editor.instagram_handle && (
@@ -124,7 +128,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
 
         {/* One-line description / headline */}
         {editor.headline ? (
-          <p className="text-xs text-zinc-400 truncate leading-relaxed font-normal">
+          <p className="text-xs text-gray-400 truncate leading-relaxed font-normal">
             {editor.headline}
           </p>
         ) : (
@@ -133,8 +137,27 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           </p>
         )}
 
+        {/* Niche + software badges */}
+        {(editor.specialty || softwareTags.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {editor.specialty && (
+              <span className="inline-flex items-center max-w-[140px] truncate text-[10px] font-semibold px-2 py-0.5 rounded-full bg-lime-400/10 text-lime-300 border border-lime-400/20">
+                {editor.specialty}
+              </span>
+            )}
+            {softwareTags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-zinc-300 border border-white/10"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Format tag + rate row */}
-        <div className="flex items-center justify-between gap-2 pt-0.5 border-t border-zinc-800/60">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800/60">
           {editor.format_tag ? (
             <span
               className={`inline-flex items-center text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border ${FORMAT_TAG_STYLES[editor.format_tag]}`}
