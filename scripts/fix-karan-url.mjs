@@ -19,7 +19,7 @@ async function main() {
     console.log('Delete status:', err.message);
   }
 
-  const cleanReelUrl = 'https://www.instagram.com/reel/Db8fE2QTjQP/';
+  const cleanReelUrl = 'https://youtube.com/shorts/nGvHEryEhW0';
 
   const payload = {
     user_id: '6a7b5e985183c5aef31b',
