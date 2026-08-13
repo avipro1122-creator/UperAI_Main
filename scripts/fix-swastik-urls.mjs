@@ -33,8 +33,8 @@ async function main() {
     youtube_url1: vimeoUrl,
     youtube_url2: netlifyUrl,
     youtube_url3: '',
-    whatsapp_number: '919016047119',
-    whatsapp: '919016047119',
+    whatsapp_number: '919046855338',
+    whatsapp: '919046855338',
     open_to_work: true,
     is_hidden: false,
   };
