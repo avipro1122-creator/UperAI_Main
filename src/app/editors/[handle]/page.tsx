@@ -28,58 +28,74 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
       setHasServerError(false)
       try {
         const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
+        const collectionId = APPWRITE_CONFIG.collections.editor_profiles
         const rawTarget = targetId ? decodeURIComponent(targetId).trim() : ''
         let doc: any = null
 
-        console.log('Starting fetchPublicEditor for target:', rawTarget)
+        console.log('Starting getEditorProfile lookup for ID/target:', rawTarget)
 
-        // 1. Try direct fetch with databases.getDocument(dbId, collectionId, rawTarget)
+        // 1. Try direct getDocument lookup by ID
         if (rawTarget) {
           try {
-            console.log('Attempting direct getDocument with ID:', rawTarget)
-            doc = await databases.getDocument(
-              dbId,
-              APPWRITE_CONFIG.collections.editor_profiles,
-              rawTarget
-            )
-            if (doc) console.log('Successfully fetched editor profile via getDocument:', doc.$id)
+            console.log('1. Attempting direct getDocument with ID:', rawTarget)
+            doc = await databases.getDocument(dbId, collectionId, rawTarget)
+            if (doc) console.log('Direct getDocument succeeded:', doc.$id)
           } catch (err: any) {
-            console.log('Direct getDocument failed for target:', rawTarget, err?.message || err)
+            console.log(`Direct getDocument failed for ID "${rawTarget}", trying query fallbacks...`, err?.message || err)
             doc = null
           }
         }
 
-        // 2. If direct fetch fails or target is a custom slug/handle/user_id, try Query.equal
+        // 2. Fall back to searching custom fields ($id, slug, userId, user_id, handle) via Query.or
+        if (!doc && rawTarget) {
+          try {
+            console.log('2. Trying Query.or fallback for custom fields...')
+            const queries = [
+              Query.or([
+                Query.equal('$id', rawTarget),
+                Query.equal('slug', rawTarget),
+                Query.equal('userId', rawTarget),
+                Query.equal('user_id', rawTarget),
+                Query.equal('handle', rawTarget),
+              ]),
+              Query.limit(1)
+            ]
+            const response = await databases.listDocuments(dbId, collectionId, queries)
+            if (response.documents && response.documents.length > 0) {
+              doc = response.documents[0]
+              console.log('Query.or fallback succeeded:', doc.$id)
+            }
+          } catch (err: any) {
+            console.log(`Query.or listDocuments query failed for ID "${rawTarget}":`, err?.message || err)
+          }
+        }
+
+        // 3. Fall back to individual Query.equal searches if Query.or is not indexed
         if (!doc && rawTarget) {
           const fieldsToQuery = ['$id', 'slug', 'user_id', 'handle']
           for (const field of fieldsToQuery) {
             try {
-              console.log(`Querying listDocuments with Query.equal("${field}", "${rawTarget}")`)
               const queryRes = await databases.listDocuments(
                 dbId,
-                APPWRITE_CONFIG.collections.editor_profiles,
-                [Query.equal(field, rawTarget)]
+                collectionId,
+                [Query.equal(field, rawTarget), Query.limit(1)]
               )
               if (queryRes.documents && queryRes.documents.length > 0) {
                 doc = queryRes.documents[0]
-                console.log(`Successfully matched editor document via Query.equal("${field}"):`, doc.$id)
+                console.log(`Query.equal("${field}") fallback succeeded:`, doc.$id)
                 break
               }
             } catch (err: any) {
-              console.log(`Query.equal("${field}") failed:`, err?.message || err)
+              // Ignore unindexed field errors
             }
           }
         }
 
-        // 3. Fall back to listing documents and matching in memory
+        // 4. Final fallback: List documents and match in memory
         if (!doc) {
           try {
-            console.log('Fallback: Listing documents to match slug/handle/name in memory...')
-            const listRes = await databases.listDocuments(
-              dbId,
-              APPWRITE_CONFIG.collections.editor_profiles,
-              [Query.limit(100)]
-            )
+            console.log('3. Final fallback: Listing documents to match in memory...')
+            const listRes = await databases.listDocuments(dbId, collectionId, [Query.limit(100)])
             const docs = listRes.documents || []
             if (docs.length > 0) {
               if (rawTarget) {
@@ -106,12 +122,10 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                   )
                 })
               }
-              if (!doc) {
-                doc = docs[0]
-              }
+              if (!doc) doc = docs[0]
             }
           } catch (err: any) {
-            console.error('Fallback listDocuments in memory failed:', err?.message || err)
+            console.error('Final fallback listDocuments failed:', err?.message || err)
           }
         }
 
