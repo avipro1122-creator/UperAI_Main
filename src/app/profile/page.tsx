@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import RoleGuard from '@/components/RoleGuard'
 import { useAuth } from '@/context/AuthContext'
 import { parseVideoUrl } from '@/lib/video-parser'
-import { databases } from '@/lib/appwrite/client'
+import { databases, safeListDocuments } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { Query, ID, Permission, Role } from 'appwrite'
 
@@ -68,14 +68,14 @@ function ProfileDashboardContent() {
     async function loadProfile() {
       try {
         const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
-        let response = await databases.listDocuments(
+        let response = await safeListDocuments(
           dbId,
           APPWRITE_CONFIG.collections.editor_profiles,
           [Query.equal('user_id', user.$id)]
         ).catch(() => ({ documents: [] }))
 
         if (response.documents.length === 0) {
-          response = await databases.listDocuments(
+          response = await safeListDocuments(
             dbId,
             APPWRITE_CONFIG.collections.editor_profiles,
             [Query.equal('$id', user.$id)]

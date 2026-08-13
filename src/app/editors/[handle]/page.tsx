@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Instagram, Video } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { databases } from '@/lib/appwrite/client'
+import { databases, safeGetDocument, safeListDocuments } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
@@ -38,7 +38,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
         if (rawTarget) {
           try {
             console.log('1. Attempting direct getDocument with ID:', rawTarget)
-            doc = await databases.getDocument(dbId, collectionId, rawTarget)
+            doc = await safeGetDocument(dbId, collectionId, rawTarget)
             if (doc) console.log('Direct getDocument succeeded:', doc.$id)
           } catch (err: any) {
             console.log(`Direct getDocument failed for ID "${rawTarget}", trying query fallbacks...`, err?.message || err)
@@ -60,7 +60,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
               ]),
               Query.limit(1)
             ]
-            const response = await databases.listDocuments(dbId, collectionId, queries)
+            const response = await safeListDocuments(dbId, collectionId, queries)
             if (response.documents && response.documents.length > 0) {
               doc = response.documents[0]
               console.log('Query.or fallback succeeded:', doc.$id)
@@ -75,7 +75,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
           const fieldsToQuery = ['$id', 'slug', 'user_id', 'handle']
           for (const field of fieldsToQuery) {
             try {
-              const queryRes = await databases.listDocuments(
+              const queryRes = await safeListDocuments(
                 dbId,
                 collectionId,
                 [Query.equal(field, rawTarget), Query.limit(1)]
@@ -95,7 +95,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
         if (!doc) {
           try {
             console.log('3. Final fallback: Listing documents to match in memory...')
-            const listRes = await databases.listDocuments(dbId, collectionId, [Query.limit(100)])
+            const listRes = await safeListDocuments(dbId, collectionId, [Query.limit(100)])
             const docs = listRes.documents || []
             if (docs.length > 0) {
               if (rawTarget) {
@@ -135,7 +135,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
           console.log('Final resolved editor profile document:', doc.$id, doc.full_name || doc.name)
           const editorUserId = doc.user_id || doc.$id
           try {
-            const itemsRes = await databases.listDocuments(
+            const itemsRes = await safeListDocuments(
               dbId,
               APPWRITE_CONFIG.collections.portfolio_items,
               [Query.equal('editor_id', editorUserId)]
@@ -143,7 +143,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
             setPortfolioItems(itemsRes.documents || [])
           } catch {
             try {
-              const itemsRes = await databases.listDocuments(
+              const itemsRes = await safeListDocuments(
                 dbId,
                 APPWRITE_CONFIG.collections.portfolio_items,
                 [Query.equal('editor_id', doc.$id)]

@@ -1,8 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { account } from '@/lib/appwrite/client'
-import { client } from '@/lib/appwrite'
+import { account, client, clearSession } from '@/lib/appwrite/client'
 import { OAuthProvider } from 'appwrite'
 
 export type Role = 'CREATOR' | 'EDITOR'
@@ -41,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('[AuthContext Debug] account.get() FAILED:', err)
+      clearSession()
       setUser(null)
       localStorage.removeItem('uperai_user')
     } finally {
@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error(err)
     }
+    clearSession()
     localStorage.removeItem('uperai_user')
     setUser(null)
     window.location.href = '/'

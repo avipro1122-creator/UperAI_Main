@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import EditorCard, { EditorCardData } from '@/components/EditorCard'
-import { databases } from '@/lib/appwrite/client'
+import { databases, safeListDocuments } from '@/lib/appwrite/client'
 import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import SetupNotice from '@/components/SetupNotice'
 import { Query } from 'appwrite'
@@ -27,13 +27,13 @@ export default function DirectoryPage() {
         const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
         let response: any
         try {
-          response = await databases.listDocuments(
+          response = await safeListDocuments(
             dbId,
             APPWRITE_CONFIG.collections.editor_profiles,
             [Query.limit(100), Query.orderDesc('$createdAt')]
           )
         } catch {
-          response = await databases.listDocuments(
+          response = await safeListDocuments(
             dbId,
             APPWRITE_CONFIG.collections.editor_profiles,
             [Query.limit(100)]

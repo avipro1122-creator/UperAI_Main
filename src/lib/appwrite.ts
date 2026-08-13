@@ -1,11 +1,16 @@
-import { Client, Account, Databases } from "appwrite";
-import { APPWRITE_CONFIG } from "./appwrite/config";
+export {
+  client,
+  account,
+  databases,
+  storage,
+  guestClient,
+  guestDatabases,
+  guestStorage,
+  clearSession,
+  safeSetSession,
+  getPublicDatabases,
+  safeListDocuments,
+  safeGetDocument,
+  createBrowserClient,
+} from './appwrite/client'
 
-const client = new Client()
-    .setEndpoint(APPWRITE_CONFIG.endpoint)
-    .setProject(APPWRITE_CONFIG.projectId);
-
-const account = new Account(client);
-const databases = new Databases(client);
-
-export { client, account, databases };
