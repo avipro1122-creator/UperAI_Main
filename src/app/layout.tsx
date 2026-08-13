@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import { GoogleTagManager } from '@next/third-parties/google'
+import { Analytics } from '@vercel/analytics/next'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { OnboardingProvider } from '@/context/OnboardingContext'
@@ -11,6 +12,9 @@ export const metadata: Metadata = {
   title: 'UperAI — Indian editors. Rates upfront.',
   description:
     'A marketplace for YouTube creators and video editors to find each other, audition real work, and agree on upfront rates in INR.',
+  other: {
+    'google-adsense-account': 'ca-pub-9701077184398829',
+  },
   openGraph: {
     title: 'UperAI — Indian editors. Rates upfront.',
     description:
@@ -65,7 +69,7 @@ export default function RootLayout({
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9701077184398829"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-purple-500 selection:text-white">
@@ -77,6 +81,7 @@ export default function RootLayout({
           </OnboardingProvider>
         </AuthProvider>
         {gtmId && <GoogleTagManager gtmId={gtmId} />}
+        <Analytics />
       </body>
     </html>
   )
