@@ -11,6 +11,7 @@ import { Query } from 'appwrite'
 export default function DirectoryPage() {
   const [editors, setEditors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
@@ -21,6 +22,7 @@ export default function DirectoryPage() {
   // Fetch Editor Profiles from Appwrite
   useEffect(() => {
     async function fetchEditors() {
+      setHasError(false)
       try {
         const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
         let response: any
@@ -78,7 +80,9 @@ export default function DirectoryPage() {
 
         setEditors(mapped)
       } catch (err) {
-        console.error('Failed to load directory:', err)
+        console.error('Failed to load directory (Downtime/Network):', err)
+        setHasError(true)
+        setEditors([])
       } finally {
         setLoading(false)
       }
@@ -165,9 +169,19 @@ export default function DirectoryPage() {
         </div>
       </div>
 
-      {/* Directory Grid OR Empty State */}
+      {/* Directory Grid OR Empty / Server Error State */}
       {loading ? (
         <div className="text-center py-20 text-zinc-500 text-sm">Loading editors directory...</div>
+      ) : hasError ? (
+        <div className="bg-amber-950/20 border border-amber-800/40 rounded-3xl p-12 text-center space-y-4 max-w-2xl mx-auto my-12">
+          <div className="w-16 h-16 bg-amber-950/80 border border-amber-800/50 rounded-2xl flex items-center justify-center mx-auto text-amber-400 text-2xl">
+            ⚡
+          </div>
+          <h2 className="text-2xl font-black text-amber-200 font-display">Backend Maintenance</h2>
+          <p className="text-zinc-400 text-sm leading-relaxed max-w-md mx-auto">
+            We are currently undergoing brief backend maintenance. Please refresh in a few minutes.
+          </p>
+        </div>
       ) : filteredEditors.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEditors.map((editor) => (

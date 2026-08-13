@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { Instagram, Video } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { databases } from '@/lib/appwrite/client'
@@ -10,19 +11,21 @@ import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
 
-
-
 export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
+  const routeParams = useParams()
+  const targetId = (params?.handle || params?.id || routeParams?.handle) as string
   const { user, loginWithGoogle } = useAuth()
-  const targetId = params?.handle || params?.id || ''
+
   const [editor, setEditor] = useState<any | null>(null)
   const [portfolioItems, setPortfolioItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasServerError, setHasServerError] = useState(false)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     async function fetchPublicEditor() {
+      setHasServerError(false)
       try {
         const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
         const rawTarget = targetId ? decodeURIComponent(targetId).trim() : ''
@@ -100,7 +103,9 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
           }
         }
       } catch (err) {
-        console.error('Failed to load public editor profile:', err)
+        console.error('Failed to load public editor profile (Downtime/Network):', err)
+        setHasServerError(true)
+        setEditor(null)
       } finally {
         setLoading(false)
       }
@@ -110,12 +115,12 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
 
   useEffect(() => {
     const processInsta = () => {
-      try {
-        if ((window as any).instgrm?.Embeds?.process) {
+      if (typeof window !== 'undefined' && (window as any).instgrm) {
+        try {
           (window as any).instgrm.Embeds.process();
+        } catch (e) {
+          console.log('Insta embed process error:', e);
         }
-      } catch (err) {
-        console.warn('Instagram Embed processing notice:', err);
       }
     };
 
@@ -147,6 +152,23 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
     return (
       <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (hasServerError && !editor) {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center space-y-4 p-6 text-center">
+        <div className="w-14 h-14 bg-amber-950/80 border border-amber-800/50 rounded-2xl flex items-center justify-center text-amber-400 text-2xl">
+          ⚡
+        </div>
+        <h2 className="text-xl font-bold font-display text-amber-200">Backend Maintenance</h2>
+        <p className="text-zinc-400 text-xs max-w-sm leading-relaxed">
+          We are currently undergoing brief backend maintenance. Please refresh in a few minutes.
+        </p>
+        <Link className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-lime-400 rounded-xl" href="/">
+          ← Back to Marketplace
+        </Link>
       </div>
     )
   }

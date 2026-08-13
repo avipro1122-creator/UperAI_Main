@@ -12,9 +12,10 @@ export interface ExtendedEditorCardData extends EditorCardData {
 
 interface RecentlyActiveEditorsProps {
   editors: ExtendedEditorCardData[]
+  isServerError?: boolean
 }
 
-export default function RecentlyActiveEditors({ editors }: RecentlyActiveEditorsProps) {
+export default function RecentlyActiveEditors({ editors, isServerError = false }: RecentlyActiveEditorsProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredEditors = useMemo(() => {
@@ -41,7 +42,7 @@ export default function RecentlyActiveEditors({ editors }: RecentlyActiveEditors
     })
   }, [editors, searchQuery])
 
-  if (editors.length === 0) return null
+  if (editors.length === 0 && !isServerError) return null
 
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -86,8 +87,17 @@ export default function RecentlyActiveEditors({ editors }: RecentlyActiveEditors
         </div>
       </div>
 
-      {/* Editor Grid or Empty Search Result */}
-      {filteredEditors.length > 0 ? (
+      {/* Editor Grid, Server Maintenance Notice, or Empty Search Result */}
+      {isServerError ? (
+        <div className="bg-amber-950/20 border border-amber-800/40 rounded-2xl p-8 text-center space-y-2">
+          <p className="text-sm font-semibold text-amber-300">
+            ⚡ We are currently undergoing brief backend maintenance.
+          </p>
+          <p className="text-xs text-zinc-400">
+            Please refresh in a few minutes.
+          </p>
+        </div>
+      ) : filteredEditors.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {filteredEditors.map((editor) => (
             <EditorCard key={editor.handle} editor={editor} />

@@ -33,9 +33,10 @@ export interface BentoEditorItem {
 
 interface BentoMarketplaceProps {
   dbEditors?: BentoEditorItem[]
+  isServerError?: boolean
 }
 
-export default function BentoMarketplace({ dbEditors = [] }: BentoMarketplaceProps) {
+export default function BentoMarketplace({ dbEditors = [], isServerError = false }: BentoMarketplaceProps) {
   // Global Filters State
   const [selectedFormat, setSelectedFormat] = useState<'all' | 'shorts' | 'long' | 'vfx'>('all')
   const [maxRate, setMaxRate] = useState<number>(15000)
@@ -190,8 +191,20 @@ export default function BentoMarketplace({ dbEditors = [] }: BentoMarketplacePro
           </h2>
         </div>
 
-        {/* HIDE ALL CARDS IF ZERO EDITORS */}
-        {filteredEditors.length === 0 ? (
+        {/* HIDE ALL CARDS IF ZERO EDITORS OR SHOW SOFT MAINTENANCE NOTICE */}
+        {isServerError ? (
+          <div className="p-12 rounded-3xl bg-amber-950/10 border border-amber-800/30 text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto text-xl font-bold">
+              ⚡
+            </div>
+            <h3 className="font-display text-xl font-bold text-zinc-900">
+              Brief Backend Maintenance
+            </h3>
+            <p className="text-xs text-zinc-600 max-w-md mx-auto leading-relaxed">
+              We are currently undergoing brief backend maintenance. Please refresh in a few minutes.
+            </p>
+          </div>
+        ) : filteredEditors.length === 0 ? (
           /* EMPTY STATE WHEN NO EDITORS IN DB */
           <div className="p-12 rounded-3xl bg-white border border-zinc-200 text-center space-y-4 shadow-sm">
             <h3 className="font-display text-2xl font-bold text-zinc-900">
