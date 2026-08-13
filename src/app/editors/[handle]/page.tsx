@@ -29,50 +29,76 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
       try {
         const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
         const collectionId = APPWRITE_CONFIG.collections.editor_profiles
-        const rawTarget = targetId ? decodeURIComponent(targetId).trim() : ''
+        const paramId = targetId ? decodeURIComponent(targetId).trim() : ''
         let doc: any = null
 
-        console.log('Starting getEditorProfile lookup for ID/target:', rawTarget)
+        console.log('Starting getEditorProfile lookup for ID/param:', paramId)
 
-        // 1. Try direct getDocument lookup by ID
-        if (rawTarget) {
+        if (paramId) {
+          // Step 1: Execute listDocuments with Query.equal('user_id', paramId) or Query.equal('userId', paramId)
           try {
-            console.log('1. Attempting direct getDocument with ID:', rawTarget)
-            doc = await safeGetDocument(dbId, collectionId, rawTarget)
-            if (doc) console.log('Direct getDocument succeeded:', doc.$id)
-          } catch (err: any) {
-            console.log(`Direct getDocument failed for ID "${rawTarget}":`, err?.message || err)
-            doc = null
-          }
-        }
-
-        // 2. Query by user_id equal search (user_id is a known indexed field)
-        if (!doc && rawTarget) {
-          try {
-            const queryRes = await safeListDocuments(
+            console.log(`Executing listDocuments for userId/user_id with param: "${paramId}"`)
+            let res = await safeListDocuments(
               dbId,
               collectionId,
-              [Query.equal('user_id', rawTarget), Query.limit(1)]
-            )
-            if (queryRes.documents && queryRes.documents.length > 0) {
-              doc = queryRes.documents[0]
-              console.log('Query.equal("user_id") succeeded:', doc.$id)
+              [Query.equal('user_id', paramId), Query.limit(1)]
+            ).catch(() => null)
+
+            if (!res || !res.documents || res.documents.length === 0) {
+              res = await safeListDocuments(
+                dbId,
+                collectionId,
+                [Query.equal('userId', paramId), Query.limit(1)]
+              ).catch(() => null)
+            }
+
+            if (res && res.documents && res.documents.length > 0) {
+              doc = res.documents[0]
             }
           } catch (err: any) {
-            // Ignore if user_id query fails
+            console.log('user_id / userId query failed:', err?.message || err)
           }
-        }
 
-        // 3. Fallback: Fetch list of editor profiles and match in memory
-        if (!doc) {
-          try {
-            console.log('3. Fallback: Listing documents to match in memory...')
-            const listRes = await safeListDocuments(dbId, collectionId, [Query.limit(100)])
-            const docs = (listRes.documents || []).filter((d: any) => !d.is_hidden)
+          // Step 2: If that returns no results, execute listDocuments with Query.equal('$id', paramId)
+          if (!doc) {
+            try {
+              console.log(`Executing listDocuments for $id with param: "${paramId}"`)
+              const res = await safeListDocuments(
+                dbId,
+                collectionId,
+                [Query.equal('$id', paramId), Query.limit(1)]
+              ).catch(() => null)
 
-            if (docs.length > 0) {
-              if (rawTarget) {
-                const lowerTarget = rawTarget.toLowerCase()
+              if (res && res.documents && res.documents.length > 0) {
+                doc = res.documents[0]
+              }
+            } catch (err: any) {
+              console.log('$id query failed:', err?.message || err)
+            }
+          }
+
+          // Step 3: Direct getDocument lookup fallback
+          if (!doc) {
+            try {
+              console.log(`Executing getDocument("${paramId}")`)
+              const directDoc = await safeGetDocument(dbId, collectionId, paramId).catch(() => null)
+              if (directDoc) {
+                doc = directDoc
+              }
+            } catch (err: any) {
+              console.log('direct getDocument failed:', err?.message || err)
+            }
+          }
+
+          // Step 4: Fallback memory matching for slugs / handles / names
+          if (!doc) {
+            try {
+              console.log(`Fallback: Listing documents to match in memory for "${paramId}"`)
+              const listRes = await safeListDocuments(dbId, collectionId, [Query.limit(100)])
+              const docs = (listRes.documents || []).filter((d: any) => !d.is_hidden)
+
+              if (docs.length > 0) {
+                const lowerTarget = paramId.toLowerCase()
                 const cleanTarget = lowerTarget.replace(/[^a-z0-9]/g, '')
                 const slugTarget = lowerTarget.replace(/\s+/g, '-')
 
@@ -97,21 +123,19 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                     dUserId.includes(lowerTarget)
                   )
                 })
+
+                if (!doc) doc = docs[0]
               }
-              // If still no specific match, default to first available profile
-              if (!doc) {
-                doc = docs[0]
-              }
+            } catch (err: any) {
+              console.error('Fallback listDocuments failed:', err?.message || err)
             }
-          } catch (err: any) {
-            console.error('Fallback listDocuments failed:', err?.message || err)
           }
         }
 
         setEditor(doc)
 
         if (doc) {
-          console.log('Final resolved editor profile document:', doc.$id, doc.full_name || doc.name)
+          console.log("Fetched Editor Data:", doc)
           const editorUserId = doc.user_id || doc.$id
           try {
             const itemsRes = await safeListDocuments(
@@ -133,7 +157,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
             }
           }
         } else {
-          console.warn('No editor profile document found matching target:', rawTarget)
+          console.warn('No editor profile document found matching target:', paramId)
         }
       } catch (err: any) {
         console.error('Unhandled error in fetchPublicEditor:', err)
