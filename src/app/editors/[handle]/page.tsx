@@ -225,6 +225,17 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
       }
     }
 
+    // 3. Vimeo Match
+    const vimeoMatch = cleanUrl.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]*\/videos\/|album\/\d+\/video\/|video\/|)(\d+)/i)
+    if (vimeoMatch && vimeoMatch[1]) {
+      return {
+        type: 'vimeo',
+        id: vimeoMatch[1],
+        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+        url: cleanUrl
+      }
+    }
+
     return { type: 'unknown', url: cleanUrl }
   }
 
@@ -311,16 +322,29 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                     </div>
                   )}
 
+                  {/* VIMEO EMBED PLAYER */}
+                  {media.type === 'vimeo' && (
+                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
+                      <iframe
+                        src={media.embedUrl}
+                        className="w-full h-full border-0"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+
                   {/* UNKNOWN / FALLBACK MEDIA */}
                   {media.type === 'unknown' && (
-                    <div className="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl flex items-center justify-center p-4 text-center">
+                    <div className="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl flex flex-col items-center justify-center p-4 text-center space-y-2">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">External Portfolio Link</span>
                       <a
                         href={media.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-bold text-lime-400 underline"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
                       >
-                        View External Video Link ↗
+                        Open Portfolio Website ↗
                       </a>
                     </div>
                   )}
