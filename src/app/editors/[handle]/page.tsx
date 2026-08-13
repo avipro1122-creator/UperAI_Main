@@ -31,58 +31,94 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
         const rawTarget = targetId ? decodeURIComponent(targetId).trim() : ''
         let doc: any = null
 
-        // 1. Direct get document by ID if rawTarget looks like an Appwrite ID
+        console.log('Starting fetchPublicEditor for target:', rawTarget)
+
+        // 1. Try direct fetch with databases.getDocument(dbId, collectionId, rawTarget)
         if (rawTarget) {
           try {
+            console.log('Attempting direct getDocument with ID:', rawTarget)
             doc = await databases.getDocument(
               dbId,
               APPWRITE_CONFIG.collections.editor_profiles,
               rawTarget
             )
-          } catch {
+            if (doc) console.log('Successfully fetched editor profile via getDocument:', doc.$id)
+          } catch (err: any) {
+            console.log('Direct getDocument failed for target:', rawTarget, err?.message || err)
             doc = null
           }
         }
 
-        // 2. Comprehensive search across editor_profiles
-        if (!doc) {
-          const listRes = await databases.listDocuments(
-            dbId,
-            APPWRITE_CONFIG.collections.editor_profiles
-          ).catch(() => ({ documents: [] }))
-
-          const docs = listRes.documents || []
-          if (docs.length > 0) {
-            if (rawTarget) {
-              const lowerTarget = rawTarget.toLowerCase()
-              const slugTarget = lowerTarget.replace(/\s+/g, '-')
-
-              doc = docs.find((d: any) => {
-                const dId = (d.$id || '').toLowerCase()
-                const dUserId = (d.user_id || '').toLowerCase()
-                const dHandle = (d.handle || '').toLowerCase()
-                const dName = (d.full_name || d.name || d.display_name || '').toLowerCase()
-                const dNameSlug = dName.replace(/\s+/g, '-')
-
-                return (
-                  dId === lowerTarget ||
-                  dUserId === lowerTarget ||
-                  (dHandle && dHandle === lowerTarget) ||
-                  dName === lowerTarget ||
-                  dNameSlug === slugTarget ||
-                  dId.includes(lowerTarget) ||
-                  dUserId.includes(lowerTarget)
-                )
-              }) || docs[0]
-            } else {
-              doc = docs[0]
+        // 2. If direct fetch fails or target is a custom slug/handle/user_id, try Query.equal
+        if (!doc && rawTarget) {
+          const fieldsToQuery = ['$id', 'slug', 'user_id', 'handle']
+          for (const field of fieldsToQuery) {
+            try {
+              console.log(`Querying listDocuments with Query.equal("${field}", "${rawTarget}")`)
+              const queryRes = await databases.listDocuments(
+                dbId,
+                APPWRITE_CONFIG.collections.editor_profiles,
+                [Query.equal(field, rawTarget)]
+              )
+              if (queryRes.documents && queryRes.documents.length > 0) {
+                doc = queryRes.documents[0]
+                console.log(`Successfully matched editor document via Query.equal("${field}"):`, doc.$id)
+                break
+              }
+            } catch (err: any) {
+              console.log(`Query.equal("${field}") failed:`, err?.message || err)
             }
+          }
+        }
+
+        // 3. Fall back to listing documents and matching in memory
+        if (!doc) {
+          try {
+            console.log('Fallback: Listing documents to match slug/handle/name in memory...')
+            const listRes = await databases.listDocuments(
+              dbId,
+              APPWRITE_CONFIG.collections.editor_profiles,
+              [Query.limit(100)]
+            )
+            const docs = listRes.documents || []
+            if (docs.length > 0) {
+              if (rawTarget) {
+                const lowerTarget = rawTarget.toLowerCase()
+                const slugTarget = lowerTarget.replace(/\s+/g, '-')
+
+                doc = docs.find((d: any) => {
+                  const dId = (d.$id || '').toLowerCase()
+                  const dUserId = (d.user_id || '').toLowerCase()
+                  const dHandle = (d.handle || '').toLowerCase()
+                  const dSlug = (d.slug || '').toLowerCase()
+                  const dName = (d.full_name || d.name || d.display_name || '').toLowerCase()
+                  const dNameSlug = dName.replace(/\s+/g, '-')
+
+                  return (
+                    dId === lowerTarget ||
+                    dUserId === lowerTarget ||
+                    (dHandle && dHandle === lowerTarget) ||
+                    (dSlug && dSlug === lowerTarget) ||
+                    dName === lowerTarget ||
+                    dNameSlug === slugTarget ||
+                    dId.includes(lowerTarget) ||
+                    dUserId.includes(lowerTarget)
+                  )
+                })
+              }
+              if (!doc) {
+                doc = docs[0]
+              }
+            }
+          } catch (err: any) {
+            console.error('Fallback listDocuments in memory failed:', err?.message || err)
           }
         }
 
         setEditor(doc)
 
         if (doc) {
+          console.log('Final resolved editor profile document:', doc.$id, doc.full_name || doc.name)
           const editorUserId = doc.user_id || doc.$id
           try {
             const itemsRes = await databases.listDocuments(
@@ -99,11 +135,15 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                 [Query.equal('editor_id', doc.$id)]
               )
               setPortfolioItems(itemsRes.documents || [])
-            } catch {}
+            } catch (err: any) {
+              console.log('Failed to fetch portfolio items for editor:', err?.message || err)
+            }
           }
+        } else {
+          console.warn('No editor profile document found matching target:', rawTarget)
         }
-      } catch (err) {
-        console.error('Failed to load public editor profile (Downtime/Network):', err)
+      } catch (err: any) {
+        console.error('Unhandled error in fetchPublicEditor:', err)
         setHasServerError(true)
         setEditor(null)
       } finally {
