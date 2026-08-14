@@ -62,7 +62,7 @@ export default function AboutPage() {
                     </div>
                     <div>
                       <h3 className="text-base font-black text-white">Avanish Rai</h3>
-                      <p className="text-[10px] font-bold text-lime-400 uppercase tracking-wider">Co-Founder, Developer & Content Lead</p>
+                      <p className="text-[10px] font-bold text-lime-400 uppercase tracking-wider">Founder, Developer & Content Lead</p>
                     </div>
                   </div>
                 </div>
