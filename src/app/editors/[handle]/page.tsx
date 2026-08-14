@@ -316,6 +316,36 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
       }
     }
 
+    // 4. Google Drive Match
+    const driveFileMatch = cleanUrl.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/)
+    if (driveFileMatch && driveFileMatch[1]) {
+      const fileId = driveFileMatch[1]
+      return {
+        type: 'drive',
+        id: fileId,
+        embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
+        url: cleanUrl
+      }
+    }
+
+    // 5. Dropbox — convert share link to direct playable URL
+    if (/dropbox\.com\/s\//i.test(cleanUrl)) {
+      const directUrl = cleanUrl
+        .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+        .replace(/[?&]dl=0/, '')
+      return { type: 'direct', id: directUrl, directUrl, url: cleanUrl }
+    }
+
+    // 6. Direct video file URLs (.mp4, .webm, .mov, .mkv, .m4v, .avi)
+    if (/\.(mp4|webm|mov|mkv|m4v|avi)(\?.*)?$/i.test(cleanUrl)) {
+      return { type: 'direct', id: cleanUrl, directUrl: cleanUrl, url: cleanUrl }
+    }
+
+    // 7. Appwrite storage / CDN URLs that serve video (no extension but known hosts)
+    if (/appwrite\.io\/v1\/storage/i.test(cleanUrl) || /cloud\.appwrite\.io\/v1\/storage/i.test(cleanUrl)) {
+      return { type: 'direct', id: cleanUrl, directUrl: cleanUrl, url: cleanUrl }
+    }
+
     return { type: 'unknown', url: cleanUrl }
   }
 
@@ -410,6 +440,31 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                         className="w-full h-full border-0"
                         allow="autoplay; fullscreen; picture-in-picture"
                         allowFullScreen
+                      />
+                    </div>
+                  )}
+
+                  {/* GOOGLE DRIVE EMBED PLAYER */}
+                  {media.type === 'drive' && (
+                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
+                      <iframe
+                        src={media.embedUrl}
+                        className="w-full h-full border-0"
+                        allow="autoplay; fullscreen"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+
+                  {/* DIRECT VIDEO FILE PLAYER (mp4 / webm / mov / Dropbox / Appwrite) */}
+                  {media.type === 'direct' && (
+                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
+                      <video
+                        src={media.directUrl || media.url}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   )}
