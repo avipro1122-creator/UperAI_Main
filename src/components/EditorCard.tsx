@@ -71,8 +71,11 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             <span className="text-xs text-zinc-300 font-bold">Featured Showreel</span>
           </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-zinc-900/80">
-            <span className="text-zinc-600 text-xs">No preview video</span>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+            <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+              <Play className="w-4 h-4 fill-zinc-600 text-zinc-600 ml-0.5" />
+            </div>
+            <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Portfolio</span>
           </div>
         )}
 

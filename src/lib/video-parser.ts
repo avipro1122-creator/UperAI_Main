@@ -80,7 +80,7 @@ export function parseVideoUrl(rawUrl: string | null | undefined): ParsedVideoUrl
       videoId: drive.fileId,
       embedUrl: drive.previewUrl,
       isShortsUrl: false,
-      thumbnailUrl: null,
+      thumbnailUrl: `https://drive.google.com/thumbnail?id=${drive.fileId}&sz=w400-h225`,
       rawUrl: url,
     }
   }

@@ -106,7 +106,7 @@ export default async function HomePage() {
           `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
         const handle = p.handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
         const firstItem = editorItems[0]
-        const rawVideoUrl = p.youtube_url || p.youtube_url1 || p.youtube_url2 || p.youtube_url3 || firstItem?.video_url || firstItem?.youtube_url
+        const rawVideoUrl = p.youtube_url || p.youtube_url1 || p.youtube_url2 || p.youtube_url3 || p.showreel_url || p.video_url || p.video_url1 || p.video_url2 || p.video_url3 || firstItem?.video_url || firstItem?.youtube_url
         const parsedVideo = parseVideoUrl(rawVideoUrl)
         const previewImg = p.preview_img || firstItem?.thumbnail_url || parsedVideo?.thumbnailUrl || null
         const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long
@@ -131,7 +131,7 @@ export default async function HomePage() {
         const editorId = doc.user_id || doc.$id
         const editorItems = itemsByEditor.get(editorId) ?? []
         const firstItem = editorItems[0]
-        const rawVideoUrl = doc.youtube_url || doc.youtube_url1 || doc.youtube_url2 || doc.youtube_url3 || firstItem?.video_url || firstItem?.youtube_url
+        const rawVideoUrl = doc.youtube_url || doc.youtube_url1 || doc.youtube_url2 || doc.youtube_url3 || doc.showreel_url || doc.video_url || doc.video_url1 || doc.video_url2 || doc.video_url3 || firstItem?.video_url || firstItem?.youtube_url
         const parsedVideo = parseVideoUrl(rawVideoUrl)
 
         const hasShort = editorItems.some((i) => i.is_short || i.format?.toLowerCase().includes('short')) || parsedVideo?.sourceType === 'instagram' || parsedVideo?.isShortsUrl
