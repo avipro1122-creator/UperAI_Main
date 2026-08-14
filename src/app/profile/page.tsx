@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import RoleGuard from '@/components/RoleGuard'
 import { useAuth } from '@/context/AuthContext'
 import { parseVideoUrl } from '@/lib/video-parser'
-import { databases, safeListDocuments } from '@/lib/appwrite/client'
+import { databases, storage, safeListDocuments } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { Query, ID, Permission, Role } from 'appwrite'
+
+const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024
 
 const PREDEFINED_SPECIALTIES = [
   'Long Form Video Editor',
@@ -31,6 +33,70 @@ const normalizeMediaUrl = (url: string) => {
   
   return trimmed;
 };
+
+// Optional custom-thumbnail sub-field: paste a URL or upload an image, with
+// an instant inline preview. Rendered under each showreel input that supports it.
+function ThumbnailField({
+  slot,
+  value,
+  uploading,
+  onChange,
+  onUpload,
+}: {
+  slot: 1 | 2
+  value: string
+  uploading: boolean
+  onChange: (url: string) => void
+  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <div className="pl-3 border-l-2 border-zinc-800 space-y-1.5 mt-1.5">
+      <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">
+        Custom Thumbnail (Optional)
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          type="url"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Paste an image URL..."
+          className="flex-1 min-w-0 p-2.5 bg-black/40 border border-white/10 text-white rounded-lg text-xs placeholder-zinc-600 focus:outline-none focus:border-lime-400 transition-all"
+        />
+        <label className="shrink-0 px-3 py-2.5 bg-black/40 border border-white/10 hover:border-lime-400 text-zinc-300 hover:text-lime-400 rounded-lg text-[11px] font-bold cursor-pointer transition-all whitespace-nowrap">
+          {uploading ? 'Uploading…' : '⬆ Upload'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={uploading}
+            onChange={onUpload}
+          />
+        </label>
+      </div>
+
+      {value && (
+        <div className="flex items-center gap-2 pt-0.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt={`Video #${slot} custom thumbnail preview`}
+            className="w-16 h-9 object-cover rounded-md border border-zinc-700 bg-zinc-900"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="text-[10px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ProfilePage() {
   return (
@@ -59,8 +125,13 @@ function ProfileDashboardContent() {
     youtubeUrl1: '',
     youtubeUrl2: '',
     youtubeUrl3: '',
+    thumbnailUrl1: '',
+    thumbnailUrl2: '',
     whatsappNumber: '',
   })
+
+  // Per-slot upload-in-progress flags for the custom thumbnail file inputs
+  const [uploadingThumb, setUploadingThumb] = useState<{ 1: boolean; 2: boolean }>({ 1: false, 2: false })
 
   useEffect(() => {
     if (!user) return
@@ -103,6 +174,9 @@ function ProfileDashboardContent() {
             youtubeUrl1: doc.youtube_url1 || doc.youtube_url || '',
             youtubeUrl2: doc.youtube_url2 || '',
             youtubeUrl3: doc.youtube_url3 || '',
+            // Backwards-compatible: older documents won't have these attributes at all
+            thumbnailUrl1: doc.thumbnail_url1 || '',
+            thumbnailUrl2: doc.thumbnail_url2 || '',
             whatsappNumber: doc.whatsapp_number || doc.whatsapp || '',
           })
         } else {
@@ -122,6 +196,37 @@ function ProfileDashboardContent() {
     if (!url) return ''
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
     return match ? match[1] : ''
+  }
+
+  // Uploads a custom thumbnail image to Appwrite Storage and stores the resulting view URL
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file later
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (JPG, PNG, WEBP, or GIF).')
+      return
+    }
+    if (file.size > MAX_THUMBNAIL_BYTES) {
+      alert('Thumbnail image must be smaller than 5MB.')
+      return
+    }
+
+    setUploadingThumb((prev) => ({ ...prev, [slot]: true }))
+    try {
+      const uploaded = await storage.createFile(
+        APPWRITE_CONFIG.buckets.editor_thumbnails,
+        ID.unique(),
+        file
+      )
+      const url = storage.getFileView(APPWRITE_CONFIG.buckets.editor_thumbnails, uploaded.$id)
+      setFormData((prev) => ({ ...prev, [`thumbnailUrl${slot}`]: String(url) }))
+    } catch (err: any) {
+      alert(`Thumbnail upload failed: ${err.message || 'Unknown error'}`)
+    } finally {
+      setUploadingThumb((prev) => ({ ...prev, [slot]: false }))
+    }
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -149,7 +254,12 @@ function ProfileDashboardContent() {
     const cleanUrl3 = normalizeMediaUrl(formData.youtubeUrl3)
     const mainVideoUrl = (cleanUrl1 || cleanUrl2 || cleanUrl3 || '').trim()
     const parsedMain = parseVideoUrl(mainVideoUrl)
-    const previewImg = parsedMain?.thumbnailUrl || ''
+
+    // Thumbnail priority: custom upload/URL (video #1, then #2) > auto-detected
+    // YouTube thumbnail. Canvas frame-capture and the placeholder fallback are
+    // handled at render time in EditorCard.tsx when no thumbnail is saved here.
+    const customThumbnail = (formData.thumbnailUrl1 || formData.thumbnailUrl2 || '').trim()
+    const previewImg = customThumbnail || parsedMain?.thumbnailUrl || ''
 
     const payload: Record<string, any> = {
       user_id: user.$id,
@@ -161,6 +271,8 @@ function ProfileDashboardContent() {
       youtube_url1: cleanUrl1,
       youtube_url2: cleanUrl2,
       youtube_url3: cleanUrl3,
+      thumbnail_url1: formData.thumbnailUrl1.trim(),
+      thumbnail_url2: formData.thumbnailUrl2.trim(),
       preview_img: previewImg,
       whatsapp_number: cleanPhone,
       whatsapp: cleanPhone,
@@ -239,6 +351,14 @@ function ProfileDashboardContent() {
 
   const showreelUrls = [formData.youtubeUrl1, formData.youtubeUrl2, formData.youtubeUrl3]
   const activeParsedVideo = parseVideoUrl(showreelUrls[activePreviewIndex] || showreelUrls[0] || '')
+
+  // What EditorCard.tsx will actually render on the public directory/homepage
+  // card: custom thumbnail (video #1, then #2) > auto-detected YouTube thumbnail.
+  const mainParsedVideo = parseVideoUrl(
+    normalizeMediaUrl(formData.youtubeUrl1) || normalizeMediaUrl(formData.youtubeUrl2) || normalizeMediaUrl(formData.youtubeUrl3)
+  )
+  const resolvedCardThumbnail =
+    formData.thumbnailUrl1.trim() || formData.thumbnailUrl2.trim() || mainParsedVideo?.thumbnailUrl || null
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white selection:bg-lime-400 selection:text-black">
@@ -356,6 +476,13 @@ function ProfileDashboardContent() {
                     placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/..."
                     className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400"
                   />
+                  <ThumbnailField
+                    slot={1}
+                    value={formData.thumbnailUrl1}
+                    uploading={uploadingThumb[1]}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, thumbnailUrl1: url }))}
+                    onUpload={(e) => handleThumbnailUpload(e, 1)}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -366,6 +493,13 @@ function ProfileDashboardContent() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, youtubeUrl2: e.target.value }))}
                     placeholder="https://www.youtube.com/shorts/... or https://www.instagram.com/reel/..."
                     className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-lime-400"
+                  />
+                  <ThumbnailField
+                    slot={2}
+                    value={formData.thumbnailUrl2}
+                    uploading={uploadingThumb[2]}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, thumbnailUrl2: url }))}
+                    onUpload={(e) => handleThumbnailUpload(e, 2)}
                   />
                 </div>
 
@@ -437,6 +571,34 @@ function ProfileDashboardContent() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* CARD THUMBNAIL PREVIEW — exactly what appears on the public directory/homepage card */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 space-y-3 shadow-xl">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                  Card Thumbnail Preview
+                </p>
+                <div className="w-full aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/40 flex items-center justify-center">
+                  {resolvedCardThumbnail ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resolvedCardThumbnail}
+                      alt="Directory card thumbnail preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[10px] text-zinc-600 text-center px-4">
+                      No thumbnail yet — add a custom thumbnail or a YouTube link above
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  {formData.thumbnailUrl1.trim() || formData.thumbnailUrl2.trim()
+                    ? 'Using your custom thumbnail.'
+                    : mainParsedVideo?.thumbnailUrl
+                      ? 'Auto-detected from your YouTube link.'
+                      : 'This is what creators see on your card before clicking in.'}
+                </p>
               </div>
             </div>
           </div>

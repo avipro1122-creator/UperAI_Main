@@ -43,9 +43,9 @@ export default function DirectoryPage() {
 
         const validDocs = (response.documents || []).filter((d: any) => !d.is_hidden)
         const mapped = validDocs.map((doc: any) => {
-          const rawUrl = doc.youtube_url || ''
+          const rawUrl = doc.youtube_url || doc.youtube_url1 || doc.youtube_url2 || doc.youtube_url3 || ''
           const match = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
-          const videoId = match ? match[1] : 'L_LUpnjgPso'
+          const videoId = match ? match[1] : ''
           const editorId = doc.user_id || doc.$id
           const editorName = doc.full_name || doc.display_name || doc.name || 'Editor'
 
@@ -57,6 +57,15 @@ export default function DirectoryPage() {
 
           const formatTag = category === 'shorts' ? 'Shorts' : category === 'vfx' ? 'Both' : 'Long-form'
 
+          // Thumbnail priority: custom (video #1, then #2) > saved preview_img
+          // > auto-detected YouTube thumbnail. Canvas frame-capture and the
+          // placeholder fallback are handled at render time in EditorCard.tsx.
+          const thumbnailUrl =
+            doc.thumbnail_url1 ||
+            doc.thumbnail_url2 ||
+            doc.preview_img ||
+            (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+
           const cardData: EditorCardData = {
             id: editorId,
             handle: doc.handle || editorName.toLowerCase().replace(/[^a-z0-9]/g, '') || editorId,
@@ -65,9 +74,12 @@ export default function DirectoryPage() {
             headline: doc.specialty_tag || doc.headline || 'Video Editor',
             min_rate: Number(doc.base_rate || doc.min_rate || 1500),
             currency: doc.currency || 'INR',
-            thumbnail_url: doc.preview_img || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+            thumbnail_url: thumbnailUrl,
             format_tag: formatTag,
             instagram_handle: doc.instagram_handle || doc.instagram || null,
+            specialty: doc.specialty_tag || doc.headline || '',
+            softwareTags: doc.software || ['Premiere Pro', 'After Effects'],
+            raw_video_url: rawUrl || null,
           }
 
           return {

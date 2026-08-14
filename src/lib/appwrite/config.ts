@@ -18,6 +18,9 @@ export const APPWRITE_CONFIG = {
     messages: 'messages',
     contact_clicks: 'contact_clicks',
   },
+  buckets: {
+    editor_thumbnails: 'editor_thumbnails',
+  },
 }
 
 export function isAppwriteConfigured(): boolean {

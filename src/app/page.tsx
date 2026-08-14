@@ -108,7 +108,11 @@ export default async function HomePage() {
         const firstItem = editorItems[0]
         const rawVideoUrl = p.youtube_url || p.youtube_url1 || p.youtube_url2 || p.youtube_url3 || p.showreel_url || p.video_url || p.video_url1 || p.video_url2 || p.video_url3 || firstItem?.video_url || firstItem?.youtube_url
         const parsedVideo = parseVideoUrl(rawVideoUrl)
-        const previewImg = p.preview_img || firstItem?.thumbnail_url || parsedVideo?.thumbnailUrl || null
+        // Thumbnail priority: custom (video #1, then #2) > saved preview_img
+        // (already custom-first if set via the dashboard) > portfolio item >
+        // auto-detected YouTube/Drive/Vimeo thumbnail. Canvas frame-capture and
+        // the placeholder fallback are handled at render time in EditorCard.tsx.
+        const previewImg = p.thumbnail_url1 || p.thumbnail_url2 || p.preview_img || firstItem?.thumbnail_url || parsedVideo?.thumbnailUrl || null
         const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long
 
         return {
@@ -144,7 +148,7 @@ export default async function HomePage() {
         const googleAvatar =
           doc.avatar_url ||
           `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editorName)}`
-        const previewImg = doc.preview_img || firstItem?.thumbnail_url || parsedVideo?.thumbnailUrl || null
+        const previewImg = doc.thumbnail_url1 || doc.thumbnail_url2 || doc.preview_img || firstItem?.thumbnail_url || parsedVideo?.thumbnailUrl || null
         const badgeText = firstItem?.role_explanation || firstItem?.role_description || doc.specialty_tag || doc.headline || 'Verified Editor'
 
         return {
