@@ -15,7 +15,7 @@ const nextConfig = {
       base-uri 'self';
       form-action 'self';
       frame-ancestors 'self';
-      frame-src 'self' https://www.youtube.com https://consent.cookiebot.com;
+      frame-src 'self' https://www.youtube.com https://drive.google.com https://player.vimeo.com https://www.instagram.com https://consent.cookiebot.com;
       connect-src 'self' https://sgp.cloud.appwrite.io https://*.cloud.appwrite.io https://consent.cookiebot.com https://consentcdn.cookiebot.com https://www.googletagmanager.com https://www.google-analytics.com;
     `.replace(/\s{2,}/g, ' ').trim();
 

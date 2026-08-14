@@ -3,13 +3,123 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { Instagram, Video } from 'lucide-react'
+import { Instagram, Video, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { databases, safeGetDocument, safeListDocuments } from '@/lib/appwrite/client'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
+
+// Extracts a Google Drive file ID from common share/open URL formats and
+// returns Drive's working iframe preview URL, or null if the URL isn't Drive.
+//   https://drive.google.com/file/d/{FILE_ID}/view...  →  .../file/d/{FILE_ID}/preview
+//   https://drive.google.com/open?id={FILE_ID}         →  .../file/d/{FILE_ID}/preview
+function getGoogleDriveEmbedUrl(url: string): string | null {
+  const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/)
+  return match ? `https://drive.google.com/file/d/${match[1]}/preview` : null
+}
+
+// Multi-source video renderer — picks the right player for whatever URL type
+// was detected, inside a consistent container, with a persistent top-right
+// "open original link" button as a manual fallback if an embed fails to load
+// (private file permissions, blocked embeds, X-Frame-Options, etc.)
+function ShowreelPlayer({ media }: { media: any }) {
+  const containerClass =
+    'relative w-full aspect-[9/16] md:aspect-video rounded-xl overflow-hidden bg-black/60 border border-white/10'
+
+  if (media.type === 'instagram') {
+    return (
+      <div className="space-y-2">
+        <div className={`${containerClass} max-h-[480px]`}>
+          <iframe
+            src={`https://www.instagram.com/reel/${media.id}/embed/`}
+            className="w-full h-full border-0"
+            scrolling="no"
+            allowTransparency
+          />
+        </div>
+        <a
+          href={media.rawUrl || media.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full py-2 bg-gradient-to-r from-purple-600 via-rose-500 to-amber-500 hover:opacity-90 text-white font-black text-[11px] text-center rounded-xl uppercase tracking-wider transition-all shadow-md"
+        >
+          Open Reel on Instagram ↗
+        </a>
+      </div>
+    )
+  }
+
+  if (media.type === 'unknown') {
+    return (
+      <div className={`${containerClass} flex flex-col items-center justify-center p-4 text-center space-y-2`}>
+        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">External Portfolio Link</span>
+        <a
+          href={media.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
+        >
+          Open Portfolio Website ↗
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <div className={containerClass}>
+      {media.type === 'drive' && (
+        <iframe
+          src={media.embedUrl}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          className="w-full h-full rounded-xl border-0"
+        />
+      )}
+
+      {media.type === 'youtube' && (
+        <iframe
+          src={`https://www.youtube.com/embed/${media.id}`}
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full rounded-xl border-0"
+        />
+      )}
+
+      {media.type === 'vimeo' && (
+        <iframe
+          src={media.embedUrl}
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full rounded-xl border-0"
+        />
+      )}
+
+      {media.type === 'direct' && (
+        <video
+          src={media.directUrl || media.url}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-cover rounded-xl"
+        />
+      )}
+
+      {/* Persistent manual fallback — always present regardless of whether the embed above loads */}
+      <a
+        href={media.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open original link in a new tab"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-lg bg-black/70 backdrop-blur-sm border border-white/15 text-white/80 hover:text-lime-400 hover:border-lime-400/40 flex items-center justify-center transition-colors"
+      >
+        <ExternalLink className="w-3.5 h-3.5" />
+      </a>
+    </div>
+  )
+}
 
 export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
   const routeParams = useParams()
@@ -317,15 +427,9 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
     }
 
     // 4. Google Drive Match
-    const driveFileMatch = cleanUrl.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/)
-    if (driveFileMatch && driveFileMatch[1]) {
-      const fileId = driveFileMatch[1]
-      return {
-        type: 'drive',
-        id: fileId,
-        embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
-        url: cleanUrl
-      }
+    const driveEmbedUrl = getGoogleDriveEmbedUrl(cleanUrl)
+    if (driveEmbedUrl) {
+      return { type: 'drive', embedUrl: driveEmbedUrl, url: cleanUrl }
     }
 
     // 5. Dropbox — convert share link to direct playable URL
@@ -398,91 +502,7 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
                     </span>
                   </div>
 
-                  {/* YOUTUBE EMBED PLAYER */}
-                  {media.type === 'youtube' && (
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
-                      <iframe
-                        src={`https://www.youtube.com/embed/${media.id}`}
-                        className="w-full h-full border-0"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
-
-                  {/* PLAYABLE INSTAGRAM REEL CONTAINER WITH ACTION FALLBACK */}
-                  {media.type === 'instagram' && (
-                    <div className="space-y-2">
-                      <div className="w-full aspect-[9/16] max-h-[480px] bg-black rounded-xl overflow-hidden border border-zinc-800 relative">
-                        <iframe
-                          src={`https://www.instagram.com/reel/${media.id}/embed/`}
-                          className="w-full h-full border-0"
-                          scrolling="no"
-                          allowTransparency
-                        />
-                      </div>
-
-                      <a
-                        href={media.rawUrl || media.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full py-2 bg-gradient-to-r from-purple-600 via-rose-500 to-amber-500 hover:opacity-90 text-white font-black text-[11px] text-center rounded-xl uppercase tracking-wider transition-all shadow-md"
-                      >
-                        Open Reel on Instagram ↗
-                      </a>
-                    </div>
-                  )}
-
-                  {/* VIMEO EMBED PLAYER */}
-                  {media.type === 'vimeo' && (
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
-                      <iframe
-                        src={media.embedUrl}
-                        className="w-full h-full border-0"
-                        allow="autoplay; fullscreen; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
-
-                  {/* GOOGLE DRIVE EMBED PLAYER */}
-                  {media.type === 'drive' && (
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
-                      <iframe
-                        src={media.embedUrl}
-                        className="w-full h-full border-0"
-                        allow="autoplay; fullscreen"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
-
-                  {/* DIRECT VIDEO FILE PLAYER (mp4 / webm / mov / Dropbox / Appwrite) */}
-                  {media.type === 'direct' && (
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-zinc-800">
-                      <video
-                        src={media.directUrl || media.url}
-                        controls
-                        playsInline
-                        preload="metadata"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  )}
-
-                  {/* UNKNOWN / FALLBACK MEDIA */}
-                  {media.type === 'unknown' && (
-                    <div className="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl flex flex-col items-center justify-center p-4 text-center space-y-2">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">External Portfolio Link</span>
-                      <a
-                        href={media.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
-                      >
-                        Open Portfolio Website ↗
-                      </a>
-                    </div>
-                  )}
+                  <ShowreelPlayer media={media} />
                 </div>
               ))
             ) : (
