@@ -124,6 +124,7 @@ export default async function HomePage() {
           instagram_handle: p.instagram_handle || p.instagram || null,
           specialty: p.specialty_tag || p.headline || '',
           softwareTags: p.software || ['Premiere Pro', 'After Effects'],
+          raw_video_url: rawVideoUrl || null,
         } satisfies ExtendedEditorCardData
       })
 

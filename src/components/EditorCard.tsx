@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Play, Instagram } from 'lucide-react'
 
@@ -18,6 +19,7 @@ export interface EditorCardData {
   instagram_handle?: string | null
   specialty?: string | null
   softwareTags?: string[]
+  raw_video_url?: string | null
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -33,6 +35,77 @@ const FORMAT_TAG_STYLES: Record<FormatTag, string> = {
   Shorts: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
   'Long-form': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
   Both: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+}
+
+// Detects if a URL points to a direct playable video file
+function isDirectVideoUrl(url: string): boolean {
+  return (
+    /\.(mp4|webm|mov|mkv|m4v|avi)(\?.*)?$/i.test(url) ||
+    /dropbox\.com\/s\//i.test(url) ||
+    /appwrite\.io\/v1\/storage/i.test(url) ||
+    /cloud\.appwrite\.io\/v1\/storage/i.test(url)
+  )
+}
+
+// Captures a frame from the middle of a video via canvas
+function VideoFrameCapture({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [frameUrl, setFrameUrl] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const video = document.createElement('video')
+    video.crossOrigin = 'anonymous'
+    video.preload = 'metadata'
+    video.muted = true
+    video.playsInline = true
+
+    video.addEventListener('loadedmetadata', () => {
+      // Random point in the middle stretch (30%–70% of duration) — avoids
+      // blank open/close frames while not always grabbing the same instant.
+      video.currentTime = video.duration > 0 ? video.duration * (0.3 + Math.random() * 0.4) : 0
+    })
+
+    video.addEventListener('seeked', () => {
+      if (cancelled) return
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = video.videoWidth || 640
+        canvas.height = video.videoHeight || 360
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { setFailed(true); return }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
+        if (!cancelled) setFrameUrl(dataUrl)
+      } catch {
+        if (!cancelled) setFailed(true)
+      }
+    })
+
+    video.addEventListener('error', () => { if (!cancelled) setFailed(true) })
+    video.src = src
+
+    return () => { cancelled = true; video.src = '' }
+  }, [src])
+
+  if (failed) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+        <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+          <Play className="w-4 h-4 fill-zinc-600 text-zinc-600 ml-0.5" />
+        </div>
+        <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Portfolio</span>
+      </div>
+    )
+  }
+
+  if (!frameUrl) {
+    // Loading shimmer while capturing
+    return <div className="w-full h-full bg-zinc-900 animate-pulse" />
+  }
+
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={frameUrl} alt={alt} className={className} />
 }
 
 export default function EditorCard({ editor }: { editor: EditorCardData }) {
@@ -61,6 +134,13 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             onError={(e) => {
               e.currentTarget.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
             }}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          />
+        ) : editor.raw_video_url && isDirectVideoUrl(editor.raw_video_url) ? (
+          // Capture mid-frame from direct video file
+          <VideoFrameCapture
+            src={editor.raw_video_url}
+            alt={`${editor.name} portfolio thumbnail`}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
         ) : isInstagram ? (
