@@ -20,13 +20,25 @@ function getGoogleDriveEmbedUrl(url: string): string | null {
   return match ? `https://drive.google.com/file/d/${match[1]}/preview` : null
 }
 
+// Picks a fixed aspect ratio per source so embeds don't get pillar/letterboxed
+// inside a mismatched box — cross-origin iframes (Drive, YouTube, Vimeo) can't
+// be forced to crop-to-fill from our CSS, so the container has to match the
+// video's real orientation instead. Most showreels on this platform are
+// vertical (Shorts/Reels), so ambiguous sources (Drive, direct files without
+// known dimensions) default to portrait; only known-landscape embeds (regular
+// YouTube videos, Vimeo) get the wide box.
+function getAspectClass(media: any): string {
+  if (media.type === 'youtube') return media.isVertical ? 'aspect-[9/16]' : 'aspect-video'
+  if (media.type === 'vimeo') return 'aspect-video'
+  return 'aspect-[9/16]' // drive, direct — orientation unknown from the URL alone
+}
+
 // Multi-source video renderer — picks the right player for whatever URL type
-// was detected, inside a consistent container, with a persistent top-right
-// "open original link" button as a manual fallback if an embed fails to load
-// (private file permissions, blocked embeds, X-Frame-Options, etc.)
+// was detected, inside a consistently-shaped container, with a persistent
+// top-right "open original link" button as a manual fallback if an embed
+// fails to load (private file permissions, blocked embeds, X-Frame-Options, etc.)
 function ShowreelPlayer({ media }: { media: any }) {
-  const containerClass =
-    'relative w-full aspect-[9/16] md:aspect-video rounded-xl overflow-hidden bg-black/60 border border-white/10'
+  const containerClass = `relative w-full ${getAspectClass(media)} rounded-xl overflow-hidden bg-black/60 border border-white/10`
 
   if (media.type === 'instagram') {
     return (
@@ -399,7 +411,8 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
     // 1. YouTube Match (Long form, Shorts, or short links)
     const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
     if (ytMatch && ytMatch[1]) {
-      return { type: 'youtube', id: ytMatch[1], url: cleanUrl }
+      const isShorts = /youtube\.com\/shorts\//i.test(cleanUrl)
+      return { type: 'youtube', id: ytMatch[1], url: cleanUrl, isVertical: isShorts }
     }
 
     // 2. Instagram Match (Reels or Posts)
