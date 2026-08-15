@@ -1,0 +1,51 @@
+// UperAI brand mark — a glowing lime video/camera icon in a dark glass tile.
+// LogoMark is the icon alone (navbar, footer, favicon); Logo is the full
+// lockup with the "UPER•AI" wordmark for wider placements (hero, loading screens).
+
+export function LogoMark({ className = 'w-8 h-8' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect x="10" y="10" width="100" height="100" rx="30" fill="#0E121E" stroke="rgba(204,255,0,0.3)" strokeWidth="2" />
+      <circle cx="60" cy="60" r="30" fill="#CCFF00" fillOpacity="0.08" />
+      <rect x="34" y="41" width="32" height="38" rx="8" stroke="#CCFF00" strokeWidth="4" fill="none" />
+      <path d="M66 52L84 41V79L66 68" stroke="#CCFF00" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" fill="none" />
+      <circle cx="50" cy="60" r="4.5" fill="#CCFF00" />
+    </svg>
+  )
+}
+
+export function Logo({ className = 'h-10 w-auto' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 400 120"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="UperAI"
+    >
+      <rect x="10" y="10" width="100" height="100" rx="30" fill="#0E121E" stroke="rgba(204,255,0,0.3)" strokeWidth="2" />
+      <circle cx="60" cy="60" r="30" fill="#CCFF00" fillOpacity="0.08" />
+      <rect x="34" y="41" width="32" height="38" rx="8" stroke="#CCFF00" strokeWidth="4" fill="none" />
+      <path d="M66 52L84 41V79L66 68" stroke="#CCFF00" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" fill="none" />
+      <circle cx="50" cy="60" r="4.5" fill="#CCFF00" />
+      <text
+        x="135"
+        y="74"
+        fill="#FFFFFF"
+        fontFamily="system-ui, -apple-system, sans-serif"
+        fontWeight="900"
+        fontSize="44"
+        letterSpacing="-0.04em"
+      >
+        UPER<tspan fill="#CCFF00">AI</tspan>
+      </text>
+    </svg>
+  )
+}

@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Video, Menu, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { LogoMark } from '@/components/Logo'
 
 export default function Navbar() {
   const { user, loading, activeRole, setActiveRole, loginWithGoogle, logout } = useAuth()
@@ -42,9 +43,7 @@ export default function Navbar() {
     <nav className="bg-[#0E1017] border-b border-zinc-800 px-4 sm:px-6 py-3.5 flex items-center justify-between text-gray-100 sticky top-0 z-50">
       {/* Brand Logo */}
       <Link className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2 font-display" href="/">
-        <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-950 shadow-sm transition-transform hover:scale-105">
-          <Video className="w-4 h-4 text-zinc-950" />
-        </div>
+        <LogoMark className="w-8 h-8 transition-transform hover:scale-105" />
         <span>UPERAI</span>
       </Link>
 

@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { Video, Mail, MessageSquareHeart } from 'lucide-react'
+import { Mail, MessageSquareHeart } from 'lucide-react'
 import ListYourWorkButton from '@/components/ListYourWorkButton'
+import { LogoMark } from '@/components/Logo'
 
 export default function Footer() {
   return (
@@ -10,9 +11,7 @@ export default function Footer() {
           {/* Logo & Tagline */}
           <div className="space-y-3 max-w-sm flex flex-col items-center md:items-start">
             <div className="flex items-center space-x-2.5">
-              <div className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center">
-                <Video className="w-3.5 h-3.5 text-zinc-950" />
-              </div>
+              <LogoMark className="w-7 h-7" />
               <span className="font-display font-bold text-sm text-white">UperAI</span>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed">
