@@ -31,21 +31,22 @@ export default async function HomePage() {
       const avatar =
         p.avatar_url ||
         `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
-      const handle = p.handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
-      const previewImg = p.thumbnail_url1 || p.thumbnail_url2 || p.preview_img || parsedVideo?.thumbnailUrl || null
+      const rawHandle = p.handle || p.instagram_handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
+      const videoThumb = parsedVideo?.thumbnailUrl || p.thumbnail_url1 || p.thumbnail_url2 || p.preview_img || null
       const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long
 
       return {
         id: editorId,
-        handle,
+        handle: cleanHandle,
         name,
         avatar_url: avatar,
         headline: p.headline || p.specialty_tag || 'Video Editor',
         min_rate: minRate,
         currency: p.currency ?? 'INR',
-        thumbnail_url: previewImg,
+        thumbnail_url: videoThumb,
         format_tag,
-        instagram_handle: p.instagram_handle || p.instagram || null,
+        instagram_handle: cleanHandle,
         specialty: p.specialty_tag || p.headline || '',
         softwareTags: p.software || ['Premiere Pro', 'After Effects'],
         raw_video_url: rawVideoUrl || null,
@@ -70,7 +71,7 @@ export default async function HomePage() {
       const googleAvatar =
         doc.avatar_url ||
         `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editorName)}`
-      const previewImg = doc.thumbnail_url1 || doc.thumbnail_url2 || doc.preview_img || parsedVideo?.thumbnailUrl || null
+      const videoThumb = parsedVideo?.thumbnailUrl || doc.thumbnail_url1 || doc.thumbnail_url2 || doc.preview_img || null
       const badgeText = doc.specialty_tag || doc.headline || 'Verified Editor'
 
       return {

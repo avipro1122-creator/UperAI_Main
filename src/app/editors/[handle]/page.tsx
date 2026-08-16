@@ -94,10 +94,10 @@ function ShowreelPlayer({ media }: { media: any }) {
 
       {media.type === 'youtube' && (
         <iframe
-          src={`https://www.youtube.com/embed/${media.id}`}
+          src={`https://www.youtube-nocookie.com/embed/${media.id}?rel=0&modestbranding=1`}
           loading="lazy"
           title="YouTube Video Preview"
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           className="w-full h-full rounded-xl border-0"
         />

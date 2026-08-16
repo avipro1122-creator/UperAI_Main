@@ -27,15 +27,18 @@ export default async function DirectoryPage() {
 
       const formatTag = category === 'shorts' ? 'Shorts' : category === 'vfx' ? 'Both' : 'Long-form'
 
+      const rawHandle = doc.handle || doc.instagram_handle || editorName.toLowerCase().replace(/[^a-z0-9]/g, '') || editorId
+      const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
+
       const thumbnailUrl =
+        (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null) ||
         doc.thumbnail_url1 ||
         doc.thumbnail_url2 ||
-        doc.preview_img ||
-        (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+        doc.preview_img
 
       const cardData: EditorCardData = {
         id: editorId,
-        handle: doc.handle || editorName.toLowerCase().replace(/[^a-z0-9]/g, '') || editorId,
+        handle: cleanHandle,
         name: editorName,
         avatar_url: doc.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editorName)}`,
         headline: doc.specialty_tag || doc.headline || 'Video Editor',
@@ -43,7 +46,7 @@ export default async function DirectoryPage() {
         currency: doc.currency || 'INR',
         thumbnail_url: thumbnailUrl,
         format_tag: formatTag,
-        instagram_handle: doc.instagram_handle || doc.instagram || null,
+        instagram_handle: cleanHandle,
         specialty: doc.specialty_tag || doc.headline || '',
         softwareTags: doc.software || ['Premiere Pro', 'After Effects'],
         raw_video_url: rawUrl || null,

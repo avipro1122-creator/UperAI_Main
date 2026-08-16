@@ -2,7 +2,8 @@
 
 import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Play, Instagram } from 'lucide-react'
+import { Play, Instagram, Video } from 'lucide-react'
+import { parseVideoUrl } from '@/lib/video-parser'
 
 export type FormatTag = 'Shorts' | 'Long-form' | 'Both'
 
@@ -37,7 +38,6 @@ const FORMAT_TAG_STYLES: Record<FormatTag, string> = {
   Both: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
 }
 
-// Detects if a URL points to a direct playable video file
 function isDirectVideoUrl(url: string): boolean {
   return (
     /\.(mp4|webm|mov|mkv|m4v|avi)(\?.*)?$/i.test(url) ||
@@ -47,7 +47,6 @@ function isDirectVideoUrl(url: string): boolean {
   )
 }
 
-// Captures a frame from the middle of a video via canvas
 function VideoFrameCapture({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [frameUrl, setFrameUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
@@ -61,8 +60,6 @@ function VideoFrameCapture({ src, alt, className }: { src: string; alt: string; 
     video.playsInline = true
 
     video.addEventListener('loadedmetadata', () => {
-      // Random point in the middle stretch (30%–70% of duration) — avoids
-      // blank open/close frames while not always grabbing the same instant.
       video.currentTime = video.duration > 0 ? video.duration * (0.3 + Math.random() * 0.4) : 0
     })
 
@@ -94,13 +91,12 @@ function VideoFrameCapture({ src, alt, className }: { src: string; alt: string; 
         <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
           <Play className="w-4 h-4 fill-zinc-600 text-zinc-600 ml-0.5" />
         </div>
-        <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Portfolio</span>
+        <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Portfolio Video</span>
       </div>
     )
   }
 
   if (!frameUrl) {
-    // Loading shimmer while capturing
     return <div className="w-full h-full bg-zinc-900 animate-pulse" />
   }
 
@@ -115,7 +111,18 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
   const hasRate = editor.min_rate != null
   const targetIdOrHandle = editor.id || editor.handle
 
-  const isInstagram = editor.thumbnail_url?.includes('instagram.com') || (editor.format_tag === 'Shorts' && !editor.thumbnail_url?.includes('youtube'))
+  // Clean handle: Never show raw email address (@gmail.com, etc.)
+  const rawHandle = editor.instagram_handle || editor.handle || ''
+  const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
+
+  // Video Thumbnail extraction (Highest priority: real submitted video thumbnail)
+  const parsedVideo = parseVideoUrl(editor.raw_video_url)
+  const effectiveThumbnail =
+    parsedVideo?.thumbnailUrl ||
+    (editor.thumbnail_url && !editor.thumbnail_url.includes('unsplash.com') ? editor.thumbnail_url : null) ||
+    editor.thumbnail_url
+
+  const isInstagram = editor.thumbnail_url?.includes('instagram.com') || (editor.format_tag === 'Shorts' && !effectiveThumbnail?.includes('youtube'))
 
   const softwareTags = (editor.softwareTags || []).filter(Boolean).slice(0, 2)
 
@@ -124,13 +131,13 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
       href={`/editors/${targetIdOrHandle}`}
       className="group block rounded-2xl overflow-hidden glass-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50 will-change-transform"
     >
-      {/* ── Thumbnail ────────────────────────────────────────── */}
+      {/* ── Video Thumbnail ────────────────────────────────── */}
       <div className="relative w-full aspect-video bg-zinc-950 overflow-hidden">
-        {editor.thumbnail_url && editor.thumbnail_url.startsWith('http') && !editor.thumbnail_url.includes('instagram.com') ? (
+        {effectiveThumbnail && effectiveThumbnail.startsWith('http') && !effectiveThumbnail.includes('instagram.com') ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={editor.thumbnail_url}
-            alt={`${editor.name} portfolio thumbnail`}
+            src={effectiveThumbnail}
+            alt={`${editor.name} video thumbnail`}
             loading="lazy"
             decoding="async"
             width={380}
@@ -141,10 +148,9 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
         ) : editor.raw_video_url && isDirectVideoUrl(editor.raw_video_url) ? (
-          // Capture mid-frame from direct video file
           <VideoFrameCapture
             src={editor.raw_video_url}
-            alt={`${editor.name} portfolio thumbnail`}
+            alt={`${editor.name} video thumbnail`}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
         ) : isInstagram ? (
@@ -152,18 +158,18 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             <span className="text-[10px] font-bold uppercase tracking-wider text-pink-400 bg-pink-950/80 border border-pink-800/50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
               <Instagram className="w-3 h-3" /> Instagram Reel
             </span>
-            <span className="text-xs text-zinc-300 font-bold">Featured Showreel</span>
+            <span className="text-xs text-zinc-300 font-bold">Featured Video</span>
           </div>
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
             <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
               <Play className="w-4 h-4 fill-zinc-600 text-zinc-600 ml-0.5" />
             </div>
-            <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Portfolio</span>
+            <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Video Portfolio</span>
           </div>
         )}
 
-        {/* Play overlay — only shows on hover (desktop) */}
+        {/* Play overlay */}
         <div
           className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
           aria-hidden="true"
@@ -176,9 +182,9 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
 
       {/* ── Card body ────────────────────────────────────────── */}
       <div className="p-3.5 space-y-2.5">
-        {/* Avatar + name + instagram handle */}
+        {/* Avatar + Name + Clean Handle (No Email) */}
         <div className="flex items-center gap-2.5">
-          {editor.avatar_url ? (
+          {editor.avatar_url && !editor.avatar_url.includes('dicebear.com') ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={editor.avatar_url}
@@ -188,30 +194,34 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
               width={32}
               height={32}
               onError={(e) => {
-                e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editor.name)}`
+                e.currentTarget.style.display = 'none'
               }}
               className="w-8 h-8 rounded-full object-cover border border-zinc-700/80 shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700/80 shrink-0" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-lime-400 to-emerald-500 text-black font-extrabold text-xs flex items-center justify-center border border-lime-300 shrink-0 shadow-sm">
+              {editor.name?.[0]?.toUpperCase() || 'U'}
+            </div>
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-gray-100 truncate leading-tight group-hover:text-lime-300 transition-colors">
               {editor.name}
             </p>
-            {editor.instagram_handle && (
+            {cleanHandle && (
               <span
                 role="button"
                 tabIndex={0}
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  const cleanHandle = editor.instagram_handle!.replace(/^@/, '')
-                  window.open(`https://instagram.com/${cleanHandle}`, '_blank', 'noopener,noreferrer')
+                  if (editor.instagram_handle) {
+                    const inst = editor.instagram_handle.replace(/^@/, '')
+                    window.open(`https://instagram.com/${inst}`, '_blank', 'noopener,noreferrer')
+                  }
                 }}
-                className="inline-flex text-xs text-zinc-400 hover:text-pink-400 transition-colors items-center gap-1 mt-1 cursor-pointer"
+                className="inline-flex text-xs text-zinc-400 hover:text-lime-400 transition-colors items-center gap-1 mt-0.5 cursor-pointer font-medium"
               >
-                <span>@{editor.instagram_handle.replace(/^@/, '')}</span>
+                <span>@{cleanHandle}</span>
               </span>
             )}
           </div>
