@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import {
@@ -13,8 +13,6 @@ import {
   Send,
   Sliders,
   Filter,
-  ChevronUp,
-  Flame,
 } from 'lucide-react'
 
 const VideoPlayerModal = dynamic(() => import('@/components/VideoPlayerModal'), { ssr: false })
@@ -44,24 +42,6 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
   // Global Filters State
   const [selectedFormat, setSelectedFormat] = useState<'all' | 'shorts' | 'long' | 'vfx'>('all')
   const [maxRate, setMaxRate] = useState<number>(15000)
-  const [isStickyVisible, setIsStickyVisible] = useState(false)
-  const [isStickyDismissed, setIsStickyDismissed] = useState(false)
-  const sectionRef = useRef<HTMLElement>(null)
-
-  // Track scroll position to show Sticky CTA when scrolling past hero
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!sectionRef.current) return
-      const rect = sectionRef.current.getBoundingClientRect()
-      // Show sticky CTA when section starts entering/passing top
-      const shouldShow = rect.top < 100
-      setIsStickyVisible(shouldShow)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   // Preview & Audition Modal State
   const [selectedEditor, setSelectedEditor] = useState<BentoEditorItem | null>(null)
@@ -204,7 +184,6 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
 
   return (
     <section
-      ref={sectionRef}
       id="marketplace-section"
       className="relative w-full bg-[#0E1017] text-gray-100 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden border-b border-white/5"
     >
@@ -559,87 +538,6 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
             )}
           </div>
         </div>
-      )}
-      {/* ── STICKY MARKETPLACE CTA FLOATING BAR ────────────────────────── */}
-      {isStickyVisible && !isStickyDismissed && !isServerError && (
-        <aside
-          aria-label="Marketplace Quick Filter & Actions"
-          className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-[#14161F]/90 backdrop-blur-xl border border-lime-400/30 hover:border-lime-400/60 rounded-2xl sm:rounded-full p-2.5 sm:px-5 sm:py-2.5 shadow-[0_10px_35px_rgba(0,0,0,0.85)] flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 sm:gap-4 transition-all duration-300 animate-in slide-in-from-bottom-5"
-        >
-          {/* Left: Brand Badge & Title */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="w-2 h-2 rounded-full bg-lime-400 animate-ping" />
-            <div className="leading-tight">
-              <p className="text-xs font-black text-white font-display flex items-center gap-1.5">
-                Indian Editors · <span className="text-lime-400">Rates Upfront</span>
-              </p>
-              <p className="text-[10px] text-zinc-400 hidden md:block">
-                Choose format, lock budget, or audition clips
-              </p>
-            </div>
-          </div>
-
-          {/* Center: Quick Format Pills */}
-          <div className="flex items-center gap-1 bg-black/40 p-1 rounded-full border border-white/10 shrink-0">
-            <button
-              onClick={() => setSelectedFormat('all')}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${
-                selectedFormat === 'all'
-                  ? 'bg-lime-400 text-zinc-950 shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setSelectedFormat('shorts')}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${
-                selectedFormat === 'shorts'
-                  ? 'bg-lime-400 text-zinc-950 shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Shorts (9:16)
-            </button>
-            <button
-              onClick={() => setSelectedFormat('long')}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${
-                selectedFormat === 'long'
-                  ? 'bg-lime-400 text-zinc-950 shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Long (16:9)
-            </button>
-          </div>
-
-          {/* Right Action CTA Buttons */}
-          <div className="flex items-center gap-2 ml-auto shrink-0">
-            {featuredEditor && featuredEditor.videoId && (
-              <button
-                onClick={() => handleOpenPreview(featuredEditor)}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-[11px] font-bold transition-all shadow-sm"
-              >
-                <Play className="w-3 h-3 fill-sky-300" /> Audition Reel
-              </button>
-            )}
-
-            <Link
-              href="/editors"
-              className="px-4 py-1.5 rounded-full bg-lime-400 hover:bg-lime-300 text-zinc-950 text-xs font-black transition-all shadow-md shadow-lime-400/20 inline-flex items-center gap-1"
-            >
-              All Editors ({filteredEditors.length}) <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-
-            <button
-              onClick={() => setIsStickyDismissed(true)}
-              title="Dismiss sticky filter"
-              className="w-6 h-6 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 flex items-center justify-center text-xs ml-0.5 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-        </aside>
       )}
     </section>
   )
