@@ -24,16 +24,16 @@ const nextConfig = {
   async headers() {
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://consent.cookiebot.com https://consentcdn.cookiebot.com https://www.googletagmanager.com https://pagead2.googlesyndication.com;
-      style-src 'self' 'unsafe-inline';
-      img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com https://api.dicebear.com https://consent.cookiebot.com https://consentcdn.cookiebot.com https://images.unsplash.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://consent.cookiebot.com https://consentcdn.cookiebot.com https://www.googletagmanager.com https://pagead2.googlesyndication.com;
+      style-src 'self' 'unsafe-inline' https://accounts.google.com;
+      img-src 'self' data: blob: https://*.googleusercontent.com https://i.ytimg.com https://img.youtube.com https://api.dicebear.com https://consent.cookiebot.com https://consentcdn.cookiebot.com https://images.unsplash.com;
       font-src 'self' data:;
       object-src 'none';
       base-uri 'self';
       form-action 'self';
       frame-ancestors 'self';
-      frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com https://player.vimeo.com https://www.instagram.com https://consent.cookiebot.com https://googleads.g.doubleclick.net;
-      connect-src 'self' https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://*.firebaseio.com https://sgp.cloud.appwrite.io https://*.cloud.appwrite.io https://consent.cookiebot.com https://consentcdn.cookiebot.com https://www.googletagmanager.com https://www.google-analytics.com;
+      frame-src 'self' https://accounts.google.com https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com https://player.vimeo.com https://www.instagram.com https://consent.cookiebot.com https://googleads.g.doubleclick.net;
+      connect-src 'self' https://accounts.google.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://*.firebaseio.com https://sgp.cloud.appwrite.io https://*.cloud.appwrite.io https://consent.cookiebot.com https://consentcdn.cookiebot.com https://www.googletagmanager.com https://www.google-analytics.com;
     `.replace(/\s{2,}/g, ' ').trim();
 
     return [

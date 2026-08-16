@@ -5,6 +5,7 @@ import { auth, db } from '@/lib/firebase/client'
 import {
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithCredential,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User as FirebaseUser,
@@ -36,6 +37,10 @@ interface AuthContextType {
   checkSession: () => Promise<void>
   refreshUser: () => Promise<void>
 }
+
+const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+  '120227432324-4366g11qtufcuipj56aneknrtmsreucm.apps.googleusercontent.com'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -102,6 +107,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const handleCredentialResponse = useCallback(
+    async (response: any) => {
+      try {
+        if (!response || !response.credential) return
+        const credential = GoogleAuthProvider.credential(response.credential)
+        const result = await signInWithCredential(auth, credential)
+        if (result.user) {
+          await fetchUserData(result.user)
+        }
+      } catch (err) {
+        console.error('[AuthContext] Google One Tap sign-in error:', err)
+      }
+    },
+    [fetchUserData]
+  )
+
   const checkSession = useCallback(async () => {
     setLoading(true)
     const currentUser = auth.currentUser
@@ -117,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchUserData])
 
+  // Auth State Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setRawUser(fbUser)
@@ -136,7 +158,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe()
   }, [fetchUserData])
 
+  // Google One Tap Native Prompt Initializer
+  useEffect(() => {
+    if (user || loading) return
+
+    let intervalId: any = null
+    const tryInitOneTap = () => {
+      if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
+        try {
+          ;(window as any).google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          })
+          ;(window as any).google.accounts.id.prompt()
+          clearInterval(intervalId)
+        } catch (err) {
+          console.warn('[AuthContext] One Tap prompt exception:', err)
+        }
+      }
+    }
+
+    intervalId = setInterval(tryInitOneTap, 1000)
+    const timeoutId = setTimeout(() => clearInterval(intervalId), 8000)
+
+    return () => {
+      clearInterval(intervalId)
+      clearTimeout(timeoutId)
+    }
+  }, [user, loading, handleCredentialResponse])
+
   const loginWithGoogle = async () => {
+    // If Google Identity prompt is available, open native prompt
+    if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
+      try {
+        ;(window as any).google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        })
+        ;(window as any).google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // Fallback to popup if One Tap is dismissed/blocked
+            const provider = new GoogleAuthProvider()
+            provider.setCustomParameters({ prompt: 'select_account' })
+            signInWithPopup(auth, provider).then((result) => {
+              if (result.user) fetchUserData(result.user)
+            })
+          }
+        })
+        return
+      } catch {
+        // Fallback below
+      }
+    }
+
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
@@ -159,6 +237,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
+        ;(window as any).google.accounts.id.disableAutoSelect()
+      }
       await firebaseSignOut(auth)
     } catch (err) {
       console.error('[AuthContext] Sign-out error:', err)
