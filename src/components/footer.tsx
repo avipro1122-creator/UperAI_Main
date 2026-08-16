@@ -23,6 +23,7 @@ export default function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-zinc-400">
             <Link href="/about" className="hover:text-lime-400 transition-colors">About</Link>
             <Link href="/editors" className="hover:text-lime-400 transition-colors">Browse Editors</Link>
+            <Link href="/sitemap" className="hover:text-lime-400 transition-colors">Sitemap</Link>
             <Link href="/terms" className="hover:text-lime-400 transition-colors">Terms &amp; Conditions</Link>
             <ListYourWorkButton className="hover:text-lime-400 transition-colors">List Your Work</ListYourWorkButton>
           </div>
@@ -50,6 +51,10 @@ export default function Footer() {
         <div className="border-t border-zinc-800/60 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-zinc-500">
           <div className="flex items-center gap-4">
             <p>© {new Date().getFullYear()} UperAI. All rights reserved.</p>
+            <span className="text-zinc-700">•</span>
+            <Link href="/sitemap" className="hover:text-lime-400 transition-colors underline underline-offset-4 decoration-zinc-800 hover:decoration-lime-400">
+              Sitemap
+            </Link>
             <span className="text-zinc-700">•</span>
             <Link href="/terms" className="hover:text-lime-400 transition-colors underline underline-offset-4 decoration-zinc-800 hover:decoration-lime-400">
               Terms &amp; Conditions
