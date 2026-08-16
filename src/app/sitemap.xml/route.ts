@@ -4,20 +4,27 @@ import { getPublicEditors } from '@/lib/firebase/firestore'
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // 1 hour
 
+interface SitemapEntry {
+  loc: string
+  priority: string
+  changefreq: string
+  lastmod?: string
+}
+
 export async function GET() {
   const baseUrl = 'https://www.uperai.in'
 
-  const staticPages = [
-    { loc: `${baseUrl}/`, priority: '1.0', changefreq: 'daily' },
-    { loc: `${baseUrl}/editors`, priority: '0.9', changefreq: 'daily' },
-    { loc: `${baseUrl}/about`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${baseUrl}/sitemap`, priority: '0.6', changefreq: 'weekly' },
-    { loc: `${baseUrl}/terms`, priority: '0.4', changefreq: 'yearly' },
-    { loc: `${baseUrl}/onboarding`, priority: '0.6', changefreq: 'monthly' },
-    { loc: `${baseUrl}/login`, priority: '0.5', changefreq: 'monthly' },
+  const staticPages: SitemapEntry[] = [
+    { loc: `${baseUrl}/`, priority: '1.0', changefreq: 'daily', lastmod: new Date().toISOString() },
+    { loc: `${baseUrl}/editors`, priority: '0.9', changefreq: 'daily', lastmod: new Date().toISOString() },
+    { loc: `${baseUrl}/about`, priority: '0.7', changefreq: 'monthly', lastmod: new Date().toISOString() },
+    { loc: `${baseUrl}/sitemap`, priority: '0.6', changefreq: 'weekly', lastmod: new Date().toISOString() },
+    { loc: `${baseUrl}/terms`, priority: '0.4', changefreq: 'yearly', lastmod: new Date().toISOString() },
+    { loc: `${baseUrl}/onboarding`, priority: '0.6', changefreq: 'monthly', lastmod: new Date().toISOString() },
+    { loc: `${baseUrl}/login`, priority: '0.5', changefreq: 'monthly', lastmod: new Date().toISOString() },
   ]
 
-  let dynamicPages: Array<{ loc: string; priority: string; changefreq: string; lastmod?: string }> = []
+  let dynamicPages: SitemapEntry[] = []
 
   try {
     const editors = await getPublicEditors(200)
