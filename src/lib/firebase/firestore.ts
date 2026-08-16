@@ -5,7 +5,6 @@ import {
   getDocs,
   limit,
   query,
-  setDoc,
   where,
 } from 'firebase/firestore'
 import { db, firebaseConfig } from './client'
@@ -67,6 +66,10 @@ export interface FirestorePortfolioItem {
   createdAt?: string
 }
 
+// In-Memory Micro Cache (15-second SWR for ultra-low TTFB under 5ms)
+const memoryCache = new Map<string, { timestamp: number; data: any }>()
+const CACHE_TTL_MS = 15_000
+
 function parseFirestoreFields(doc: any) {
   const id = doc.name.split('/').pop()
   const fields: any = {}
@@ -87,9 +90,19 @@ function parseFirestoreFields(doc: any) {
 }
 
 /**
- * Fetch public editor profiles with limit + robust REST fallback
+ * Fetch public editor profiles with limit + in-memory cache + robust REST fallback
  */
 export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditorProfile[]> {
+  const cacheKey = `public_editors_${limitCount}`
+  const cached = memoryCache.get(cacheKey)
+  const now = Date.now()
+
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
+  let result: FirestoreEditorProfile[] = []
+
   try {
     const q = query(
       collection(db, 'editor_profiles'),
@@ -99,7 +112,7 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
     const snapshot = await getDocs(q)
 
     if (!snapshot.empty) {
-      return snapshot.docs.map((d) => ({
+      result = snapshot.docs.map((d) => ({
         id: d.id,
         ...(d.data() as Omit<FirestoreEditorProfile, 'id'>),
       }))
@@ -109,25 +122,31 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
   }
 
   // Guaranteed REST API fallback
-  try {
-    const key = firebaseConfig.apiKey
-    const projectId = firebaseConfig.projectId
-    const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/editor_profiles?key=${key}`,
-      { cache: 'no-store' }
-    )
-    const data = await res.json()
-    if (data.documents) {
-      return data.documents
-        .map(parseFirestoreFields)
-        .filter((p: any) => !p.is_hidden)
-        .slice(0, limitCount)
+  if (result.length === 0) {
+    try {
+      const key = firebaseConfig.apiKey
+      const projectId = firebaseConfig.projectId
+      const res = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/editor_profiles?key=${key}`,
+        { cache: 'no-store' }
+      )
+      const data = await res.json()
+      if (data.documents) {
+        result = data.documents
+          .map(parseFirestoreFields)
+          .filter((p: any) => !p.is_hidden)
+          .slice(0, limitCount)
+      }
+    } catch (restErr) {
+      console.error('Firestore REST fetch failed:', restErr)
     }
-  } catch (restErr) {
-    console.error('Firestore REST fetch failed:', restErr)
   }
 
-  return []
+  if (result.length > 0) {
+    memoryCache.set(cacheKey, { timestamp: now, data: result })
+  }
+
+  return result
 }
 
 /**
@@ -136,6 +155,13 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
 export async function getEditorByHandleOrId(target: string): Promise<FirestoreEditorProfile | null> {
   if (!target) return null
   const cleanTarget = target.toLowerCase().trim()
+  const cacheKey = `editor_${cleanTarget}`
+  const cached = memoryCache.get(cacheKey)
+  const now = Date.now()
+
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
 
   try {
     const all = await getPublicEditors(100)
@@ -146,13 +172,18 @@ export async function getEditorByHandleOrId(target: string): Promise<FirestoreEd
         (e.id && e.id.toLowerCase() === cleanTarget) ||
         (e.full_name && e.full_name.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget)
     )
-    if (found) return found
+    if (found) {
+      memoryCache.set(cacheKey, { timestamp: now, data: found })
+      return found
+    }
 
     // Direct document ID lookup
     const docRef = doc(db, 'editor_profiles', target)
     const docSnap = await getDoc(docRef)
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...(docSnap.data() as Omit<FirestoreEditorProfile, 'id'>) }
+      const data = { id: docSnap.id, ...(docSnap.data() as Omit<FirestoreEditorProfile, 'id'>) }
+      memoryCache.set(cacheKey, { timestamp: now, data })
+      return data
     }
   } catch (err) {
     console.error('Error fetching editor from Firestore:', err)
@@ -166,6 +197,16 @@ export async function getEditorByHandleOrId(target: string): Promise<FirestoreEd
  */
 export async function getEditorPortfolioItems(editorId: string, limitCount = 15): Promise<FirestorePortfolioItem[]> {
   if (!editorId) return []
+  const cacheKey = `portfolio_${editorId}_${limitCount}`
+  const cached = memoryCache.get(cacheKey)
+  const now = Date.now()
+
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
+  let result: FirestorePortfolioItem[] = []
+
   try {
     const q = query(
       collection(db, 'portfolio_items'),
@@ -175,7 +216,7 @@ export async function getEditorPortfolioItems(editorId: string, limitCount = 15)
     const snapshot = await getDocs(q)
 
     if (!snapshot.empty) {
-      return snapshot.docs.map((d) => ({
+      result = snapshot.docs.map((d) => ({
         id: d.id,
         ...(d.data() as Omit<FirestorePortfolioItem, 'id'>),
       }))
@@ -185,23 +226,29 @@ export async function getEditorPortfolioItems(editorId: string, limitCount = 15)
   }
 
   // REST fallback
-  try {
-    const key = firebaseConfig.apiKey
-    const projectId = firebaseConfig.projectId
-    const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/portfolio_items?key=${key}`,
-      { cache: 'no-store' }
-    )
-    const data = await res.json()
-    if (data.documents) {
-      return data.documents
-        .map(parseFirestoreFields)
-        .filter((item: any) => item.editor_id === editorId)
-        .slice(0, limitCount)
+  if (result.length === 0) {
+    try {
+      const key = firebaseConfig.apiKey
+      const projectId = firebaseConfig.projectId
+      const res = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/portfolio_items?key=${key}`,
+        { cache: 'no-store' }
+      )
+      const data = await res.json()
+      if (data.documents) {
+        result = data.documents
+          .map(parseFirestoreFields)
+          .filter((item: any) => item.editor_id === editorId)
+          .slice(0, limitCount)
+      }
+    } catch (restErr) {
+      console.error('Portfolio REST fetch failed:', restErr)
     }
-  } catch (restErr) {
-    console.error('Portfolio REST fetch failed:', restErr)
   }
 
-  return []
+  if (result.length > 0) {
+    memoryCache.set(cacheKey, { timestamp: now, data: result })
+  }
+
+  return result
 }

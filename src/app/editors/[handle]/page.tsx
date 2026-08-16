@@ -84,6 +84,8 @@ function ShowreelPlayer({ media }: { media: any }) {
       {media.type === 'drive' && (
         <iframe
           src={media.embedUrl}
+          loading="lazy"
+          title="Google Drive Video Preview"
           allow="autoplay; encrypted-media"
           allowFullScreen
           className="w-full h-full rounded-xl border-0"
@@ -93,6 +95,8 @@ function ShowreelPlayer({ media }: { media: any }) {
       {media.type === 'youtube' && (
         <iframe
           src={`https://www.youtube.com/embed/${media.id}`}
+          loading="lazy"
+          title="YouTube Video Preview"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
           className="w-full h-full rounded-xl border-0"
@@ -102,6 +106,8 @@ function ShowreelPlayer({ media }: { media: any }) {
       {media.type === 'vimeo' && (
         <iframe
           src={media.embedUrl}
+          loading="lazy"
+          title="Vimeo Video Preview"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
           className="w-full h-full rounded-xl border-0"

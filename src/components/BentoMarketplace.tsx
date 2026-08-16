@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import {
   ArrowUpRight,
   Play,
@@ -13,7 +14,8 @@ import {
   Sliders,
   Filter,
 } from 'lucide-react'
-import VideoPlayerModal from '@/components/VideoPlayerModal'
+
+const VideoPlayerModal = dynamic(() => import('@/components/VideoPlayerModal'), { ssr: false })
 
 export interface BentoEditorItem {
   id: string

@@ -131,6 +131,10 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           <img
             src={editor.thumbnail_url}
             alt={`${editor.name} portfolio thumbnail`}
+            loading="lazy"
+            decoding="async"
+            width={380}
+            height={214}
             onError={(e) => {
               e.currentTarget.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
             }}
@@ -179,6 +183,10 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             <img
               src={editor.avatar_url}
               alt={editor.name}
+              loading="lazy"
+              decoding="async"
+              width={32}
+              height={32}
               onError={(e) => {
                 e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editor.name)}`
               }}
