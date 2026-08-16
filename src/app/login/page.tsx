@@ -1,31 +1,21 @@
-import { redirect } from 'next/navigation'
-import { createSessionClient } from '@/lib/appwrite/server'
-import { isAppwriteConfigured } from '@/lib/appwrite/config'
-import { safeRedirectPath } from '@/lib/safe-redirect'
+'use client'
+
+import React, { useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
-import SetupNotice from '@/components/SetupNotice'
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: { next?: string; error?: string; message?: string; type?: string }
-}) {
-  if (!isAppwriteConfigured()) return <SetupNotice />
+export default function LoginPage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') || '/'
 
-  const next = safeRedirectPath(searchParams.next)
-
-  try {
-    const { account } = await createSessionClient()
-    const user = await account.get()
-
-    if (user) {
-      redirect(next ?? '/')
+  useEffect(() => {
+    if (!loading && user) {
+      router.push(next)
     }
-  } catch {
-    // User is not authenticated
-  }
-
-  const isProviderDisabled = searchParams.error?.includes('provider_disabled') || searchParams.error?.includes('412')
+  }, [user, loading, router, next])
 
   return (
     <div className="max-w-sm mx-auto px-4 py-24">
@@ -37,22 +27,7 @@ export default async function LoginPage({
           </p>
         </div>
 
-        {searchParams.error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-left space-y-1">
-            <p className="text-xs font-semibold text-red-400">
-              {isProviderDisabled
-                ? 'Google OAuth Provider is disabled in your Appwrite Console.'
-                : 'Authentication failed. Please check your Appwrite & Google OAuth credentials.'}
-            </p>
-            {(searchParams.error || searchParams.message) && (
-              <p className="text-[11px] font-mono text-zinc-400 break-all">
-                Details: {searchParams.error} {searchParams.message ? `- ${searchParams.message}` : ''}
-              </p>
-            )}
-          </div>
-        )}
-
-        <GoogleSignInButton next={next ?? undefined} />
+        <GoogleSignInButton next={next} />
       </div>
     </div>
   )

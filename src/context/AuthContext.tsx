@@ -146,6 +146,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('[AuthContext] Google Sign-In error:', err)
+      if (err.code === 'auth/unauthorized-domain') {
+        alert('Login domain not authorized. In Firebase Console -> Authentication -> Settings -> Authorized domains, please add this domain.')
+      } else if (err.code === 'auth/popup-blocked') {
+        alert('Sign-in popup was blocked by your browser. Please allow popups for this site.')
+      } else if (err.code !== 'auth/popup-closed-by-user') {
+        alert(`Login error: ${err.message || err.code}`)
+      }
+      throw err
     }
   }
 
