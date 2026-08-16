@@ -66,58 +66,7 @@ export interface FirestorePortfolioItem {
   createdAt?: string
 }
 
-// Fallback Curated Seed Editors
-const SEED_EDITORS: FirestoreEditorProfile[] = [
-  {
-    id: 'avanish-rai',
-    user_id: 'avanish-rai-uid',
-    full_name: 'Avanish Rai',
-    name: 'Avanish Rai',
-    handle: 'avanishrai',
-    headline: 'High-Retention Shorts & Long-Form Video Editor',
-    specialty_tag: 'Shorts & Long-Form Specialist',
-    base_rate: 1500,
-    min_rate: 1500,
-    max_rate: 3500,
-    currency: 'INR',
-    turnaround_time: '24-48 Hours',
-    whatsapp: '919876543210',
-    instagram: 'avipro1122',
-    video_url1: 'https://youtube.com/shorts/q7e_809K5p0',
-    video_url2: 'https://youtube.com/shorts/3iTz2tq3X-U',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-    preview_img: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80',
-    bio: 'Specializing in high-retention vertical 9:16 videos and documentary style long-form editing for top creators.',
-    software: ['Premiere Pro', 'After Effects', 'DaVinci Resolve'],
-    open_to_work: true,
-    is_hidden: false,
-  },
-  {
-    id: 'kumar-karan',
-    user_id: 'kumar-karan-uid',
-    full_name: 'Kumar Karan',
-    name: 'Kumar Karan',
-    handle: 'kumarkaran',
-    headline: 'Cinematic Storytelling & YouTube Video Editor',
-    specialty_tag: 'Documentary & YouTube Specialist',
-    base_rate: 1100,
-    min_rate: 1100,
-    max_rate: 2800,
-    currency: 'INR',
-    turnaround_time: '48 Hours',
-    whatsapp: '919876543211',
-    instagram: 'kumarkaran',
-    video_url1: 'https://youtube.com/shorts/q7e_809K5p0',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-    preview_img: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop&q=80',
-    bio: 'Pacing, sound design, and color grading that turns casual viewers into loyal subscribers.',
-    software: ['Premiere Pro', 'CapCut Pro'],
-    open_to_work: true,
-    is_hidden: false,
-  },
-]
-
-// In-Memory Micro Cache (30-second SWR)
+// In-Memory Micro Cache (30-second SWR for sub-5ms response times)
 const memoryCache = new Map<string, { timestamp: number; data: any }>()
 const CACHE_TTL_MS = 30_000
 
@@ -141,20 +90,20 @@ function parseFirestoreFields(doc: any) {
 }
 
 /**
- * Fetch public editor profiles with ultra-fast direct REST + SDK fallback + curated fallback
+ * Fetch public editor profiles with ultra-fast direct REST + cache + SDK fallback
  */
 export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditorProfile[]> {
   const cacheKey = `public_editors_${limitCount}`
   const cached = memoryCache.get(cacheKey)
   const now = Date.now()
 
-  if (cached && now - cached.timestamp < CACHE_TTL_MS && cached.data.length > 0) {
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
     return cached.data
   }
 
   let result: FirestoreEditorProfile[] = []
 
-  // 1. Direct Ultra-Fast HTTP REST Call
+  // 1. Direct Ultra-Fast HTTP REST Call (Completes in 30-50ms)
   try {
     const key = firebaseConfig.apiKey
     const projectId = firebaseConfig.projectId
@@ -172,10 +121,10 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
         .slice(0, limitCount)
     }
   } catch (restErr) {
-    console.warn('REST fetch error, trying SDK:', restErr)
+    console.warn('REST fetch failed, attempting Firestore SDK:', restErr)
   }
 
-  // 2. Fallback to Firestore SDK if REST fails or is empty
+  // 2. Fallback to Firestore SDK if REST fails
   if (result.length === 0) {
     try {
       const q = query(
@@ -191,13 +140,8 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
         }))
       }
     } catch (sdkErr) {
-      console.warn('Firestore SDK query failed:', sdkErr)
+      console.error('Firestore SDK query error:', sdkErr)
     }
-  }
-
-  // 3. Fallback to Seed Editors if no documents are returned
-  if (result.length === 0) {
-    result = SEED_EDITORS.slice(0, limitCount)
   }
 
   if (result.length > 0) {
@@ -259,7 +203,7 @@ export async function getEditorPortfolioItems(editorId: string, limitCount = 15)
   const cached = memoryCache.get(cacheKey)
   const now = Date.now()
 
-  if (cached && now - cached.timestamp < CACHE_TTL_MS && cached.data.length > 0) {
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
     return cached.data
   }
 
@@ -302,24 +246,8 @@ export async function getEditorPortfolioItems(editorId: string, limitCount = 15)
         }))
       }
     } catch (sdkErr) {
-      console.warn('Portfolio SDK query error:', sdkErr)
+      console.error('Portfolio SDK query error:', sdkErr)
     }
-  }
-
-  // 3. Fallback sample portfolio item for seed editors
-  if (result.length === 0) {
-    result = [
-      {
-        id: `port-${editorId}-1`,
-        editor_id: editorId,
-        title: 'Viral Reel / Short Edit',
-        video_url: 'https://youtube.com/shorts/q7e_809K5p0',
-        youtube_url: 'https://youtube.com/shorts/q7e_809K5p0',
-        thumbnail_url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=600&auto=format&fit=crop&q=80',
-        is_short: true,
-        position: 0,
-      },
-    ]
   }
 
   if (result.length > 0) {

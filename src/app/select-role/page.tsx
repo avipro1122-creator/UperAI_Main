@@ -19,13 +19,7 @@ export default function SelectRolePage() {
         if (uid) {
           await setDoc(
             doc(db, 'users', uid),
-            {
-              uid,
-              email: user.email || '',
-              displayName: user.displayName || user.name || '',
-              role: selectedRole,
-              updatedAt: new Date().toISOString(),
-            },
+            { role: selectedRole, updatedAt: new Date().toISOString() },
             { merge: true }
           )
         }
