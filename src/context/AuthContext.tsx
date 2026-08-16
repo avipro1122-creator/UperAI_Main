@@ -4,6 +4,8 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { auth, db } from '@/lib/firebase/client'
 import {
   GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithPopup,
   signInWithCredential,
   signOut as firebaseSignOut,
@@ -138,6 +140,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchUserData])
 
+  // Handle Redirect Result on Page Return
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          fetchUserData(result.user)
+        }
+      })
+      .catch((err) => {
+        console.error('[AuthContext] Redirect login error:', err)
+      })
+  }, [fetchUserData])
+
   // Auth State Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
@@ -190,48 +205,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, loading, handleCredentialResponse])
 
   const loginWithGoogle = async () => {
-    // If Google Identity prompt is available, open native prompt
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
-      try {
-        ;(window as any).google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        })
-        ;(window as any).google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Fallback to popup if One Tap is dismissed/blocked
-            const provider = new GoogleAuthProvider()
-            provider.setCustomParameters({ prompt: 'select_account' })
-            signInWithPopup(auth, provider).then((result) => {
-              if (result.user) fetchUserData(result.user)
-            })
-          }
-        })
-        return
-      } catch {
-        // Fallback below
-      }
-    }
-
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
-      const result = await signInWithPopup(auth, provider)
-      if (result.user) {
-        await fetchUserData(result.user)
-      }
+      // Use in-tab full-screen redirect for seamless full-page login
+      await signInWithRedirect(auth, provider)
     } catch (err: any) {
-      console.error('[AuthContext] Google Sign-In error:', err)
-      if (err.code === 'auth/unauthorized-domain') {
-        alert('Login domain not authorized. In Firebase Console -> Authentication -> Settings -> Authorized domains, please add this domain.')
-      } else if (err.code === 'auth/popup-blocked') {
-        alert('Sign-in popup was blocked by your browser. Please allow popups for this site.')
-      } else if (err.code !== 'auth/popup-closed-by-user') {
-        alert(`Login error: ${err.message || err.code}`)
+      console.warn('[AuthContext] Redirect failed, falling back to popup:', err)
+      try {
+        const provider = new GoogleAuthProvider()
+        provider.setCustomParameters({ prompt: 'select_account' })
+        const result = await signInWithPopup(auth, provider)
+        if (result.user) {
+          await fetchUserData(result.user)
+        }
+      } catch (popupErr: any) {
+        console.error('[AuthContext] Google Sign-In error:', popupErr)
+        alert(`Login error: ${popupErr.message || popupErr.code}`)
       }
-      throw err
     }
   }
 
