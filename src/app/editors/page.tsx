@@ -3,7 +3,8 @@ import DirectoryView, { DirectoryEditor } from '@/components/DirectoryView'
 import { EditorCardData } from '@/components/EditorCard'
 import { getPublicEditors } from '@/lib/firebase/firestore'
 
-export const revalidate = 300
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function DirectoryPage() {
   let mapped: DirectoryEditor[] = []

@@ -4,7 +4,8 @@ import RecentlyActiveEditors, { ExtendedEditorCardData } from '@/components/Rece
 import { getPublicEditors } from '@/lib/firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
 
-export const revalidate = 300
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function HomePage() {
   let featured: ExtendedEditorCardData[] = []
