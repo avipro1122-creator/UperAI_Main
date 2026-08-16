@@ -86,7 +86,7 @@ export default async function HomePage() {
         turnaround: doc.turnaround_time || (doc.turnaround_days ? `${doc.turnaround_days} Days Turnaround` : '2 Days'),
         badgeText,
         videoId: parsedVideo?.videoId || '',
-        previewImg: previewImg || '',
+        previewImg: videoThumb || '',
         softwareTags: doc.software || ['Premiere Pro', 'After Effects'],
       } satisfies BentoEditorItem
     })
