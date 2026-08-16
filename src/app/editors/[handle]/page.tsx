@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Instagram, Video, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { databases, safeGetDocument, safeListDocuments } from '@/lib/appwrite/client'
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
-import { Query, ID } from 'appwrite'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
+import { getEditorByHandleOrId, getEditorPortfolioItems } from '@/lib/firebase/firestore'
+import { db } from '@/lib/firebase/client'
+import { collection, addDoc } from 'firebase/firestore'
 
 // Extracts a Google Drive file ID from common share/open URL formats and
 // returns Drive's working iframe preview URL, or null if the URL isn't Drive.
@@ -135,8 +135,8 @@ function ShowreelPlayer({ media }: { media: any }) {
 
 export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
   const routeParams = useParams()
-  const targetId = (params?.handle || params?.id || (routeParams as any)?.handle || (routeParams as any)?.id || '') as string
   const { user, loginWithGoogle } = useAuth()
+  const targetId = (params?.handle || params?.id || (routeParams as any)?.handle || (routeParams as any)?.id || '') as string
 
   const [editor, setEditor] = useState<any | null>(null)
   const [portfolioItems, setPortfolioItems] = useState<any[]>([])
@@ -149,138 +149,18 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
     async function fetchPublicEditor() {
       setHasServerError(false)
       try {
-        const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
-        const collectionId = APPWRITE_CONFIG.collections.editor_profiles
         const paramId = targetId ? decodeURIComponent(targetId).trim() : ''
-        let doc: any = null
-
-        console.log('Starting getEditorProfile lookup for ID/param:', paramId)
-
-        // Step 1: Execute listDocuments with Query.equal('user_id', paramId) or Query.equal('userId', paramId)
-        if (paramId) {
-          try {
-            console.log(`Executing listDocuments for userId/user_id with param: "${paramId}"`)
-            let res = await safeListDocuments(
-              dbId,
-              collectionId,
-              [Query.equal('user_id', paramId), Query.limit(1)]
-            ).catch(() => null)
-
-            if (!res || !res.documents || res.documents.length === 0) {
-              res = await safeListDocuments(
-                dbId,
-                collectionId,
-                [Query.equal('userId', paramId), Query.limit(1)]
-              ).catch(() => null)
-            }
-
-            if (res && res.documents && res.documents.length > 0) {
-              doc = res.documents[0]
-            }
-          } catch (err: any) {
-            console.log('user_id / userId query failed:', err?.message || err)
-          }
-
-          // Step 2: If that returns no results, execute listDocuments with Query.equal('$id', paramId)
-          if (!doc) {
-            try {
-              console.log(`Executing listDocuments for $id with param: "${paramId}"`)
-              const res = await safeListDocuments(
-                dbId,
-                collectionId,
-                [Query.equal('$id', paramId), Query.limit(1)]
-              ).catch(() => null)
-
-              if (res && res.documents && res.documents.length > 0) {
-                doc = res.documents[0]
-              }
-            } catch (err: any) {
-              console.log('$id query failed:', err?.message || err)
-            }
-          }
-
-          // Step 3: Direct getDocument lookup fallback
-          if (!doc) {
-            try {
-              console.log(`Executing getDocument("${paramId}")`)
-              const directDoc = await safeGetDocument(dbId, collectionId, paramId).catch(() => null)
-              if (directDoc) {
-                doc = directDoc
-              }
-            } catch (err: any) {
-              console.log('direct getDocument failed:', err?.message || err)
-            }
-          }
+        if (!paramId) {
+          setLoading(false)
+          return
         }
 
-        // Step 4: Fallback memory matching for slugs / handles / names (or if paramId is empty / not found directly)
-        if (!doc) {
-          try {
-            console.log(`Fallback: Listing documents to match in memory for "${paramId}"`)
-            const listRes = await safeListDocuments(dbId, collectionId, [Query.limit(100)])
-            const docs = (listRes.documents || []).filter((d: any) => !d.is_hidden)
-
-            if (docs.length > 0) {
-              if (paramId) {
-                const lowerTarget = paramId.toLowerCase()
-                const cleanTarget = lowerTarget.replace(/[^a-z0-9]/g, '')
-                const slugTarget = lowerTarget.replace(/\s+/g, '-')
-
-                doc = docs.find((d: any) => {
-                  const dId = (d.$id || '').toLowerCase()
-                  const dUserId = (d.user_id || '').toLowerCase()
-                  const dHandle = (d.handle || '').toLowerCase()
-                  const dName = (d.full_name || d.name || d.display_name || '').toLowerCase()
-                  const dCleanName = dName.replace(/[^a-z0-9]/g, '')
-                  const dSlugName = dName.replace(/\s+/g, '-')
-
-                  return (
-                    dId === lowerTarget ||
-                    dUserId === lowerTarget ||
-                    (dHandle && (dHandle === lowerTarget || dHandle === cleanTarget)) ||
-                    dName === lowerTarget ||
-                    dSlugName === slugTarget ||
-                    dCleanName === cleanTarget ||
-                    dName.includes(lowerTarget) ||
-                    (cleanTarget && dCleanName.includes(cleanTarget)) ||
-                    dId.includes(lowerTarget) ||
-                    dUserId.includes(lowerTarget)
-                  )
-                })
-              }
-              if (!doc) doc = docs[0]
-            }
-          } catch (err: any) {
-            console.error('Fallback listDocuments failed:', err?.message || err)
-          }
-        }
-
+        const doc = await getEditorByHandleOrId(paramId)
         setEditor(doc)
 
         if (doc) {
-          console.log("Fetched Editor Data:", doc)
-          const editorUserId = doc.user_id || doc.$id
-          try {
-            const itemsRes = await safeListDocuments(
-              dbId,
-              APPWRITE_CONFIG.collections.portfolio_items,
-              [Query.equal('editor_id', editorUserId)]
-            )
-            setPortfolioItems(itemsRes.documents || [])
-          } catch {
-            try {
-              const itemsRes = await safeListDocuments(
-                dbId,
-                APPWRITE_CONFIG.collections.portfolio_items,
-                [Query.equal('editor_id', doc.$id)]
-              )
-              setPortfolioItems(itemsRes.documents || [])
-            } catch (err: any) {
-              console.log('Failed to fetch portfolio items for editor:', err?.message || err)
-            }
-          }
-        } else {
-          console.warn('No editor profile document found matching target:', paramId)
+          const items = await getEditorPortfolioItems(doc.user_id || doc.id)
+          setPortfolioItems(items)
         }
       } catch (err: any) {
         console.error('Unhandled error in fetchPublicEditor:', err)
@@ -384,19 +264,15 @@ export default function PublicEditorProfilePage({ params }: { params?: { handle?
 
   const handleTrackLead = async () => {
     try {
-      const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
-      await databases.createDocument(
-        dbId,
-        'contact_clicks',
-        ID.unique(),
-        {
-          editor_id: editor.$id,
-          editor_name: editor.full_name || 'Editor',
-          creator_id: user?.$id || 'guest',
-          creator_name: user?.name || 'Guest User',
+      if (editor) {
+        await addDoc(collection(db, 'contact_clicks'), {
+          editor_id: editor.user_id || editor.id || 'unknown',
+          editor_name: editor.full_name || editor.name || 'Editor',
+          creator_id: user?.uid || user?.$id || 'guest',
+          creator_name: user?.displayName || user?.name || 'Guest User',
           timestamp: new Date().toISOString(),
-        }
-      )
+        })
+      }
     } catch (e) {
       console.log('Lead event logged')
     }

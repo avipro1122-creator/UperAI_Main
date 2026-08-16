@@ -1,34 +1,12 @@
-import { redirect } from 'next/navigation'
-import { createSessionClient } from '@/lib/appwrite/server'
-import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
+'use client'
+
+import React from 'react'
+import { useAuth } from '@/context/AuthContext'
 import SwitchRoleButton from '@/components/SwitchRoleButton'
-import { Query } from 'node-appwrite'
 
-export const metadata = {
-  title: 'Switch role — UperAI',
-}
-
-export default async function SwitchRolePage() {
-  if (!isAppwriteConfigured()) redirect('/login')
-
-  let currentRole: string | null = null
-
-  try {
-    const { account, databases } = await createSessionClient()
-    const user = await account.get()
-
-    if (!user) redirect('/login')
-
-    const userDocs = await databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.users,
-      [Query.equal('$id', user.$id)]
-    )
-    const profile = userDocs.documents[0]
-    currentRole = profile?.role ?? null
-  } catch {
-    redirect('/login')
-  }
+export default function SwitchRolePage() {
+  const { activeRole } = useAuth()
+  const currentRole = activeRole?.toLowerCase() || 'creator'
 
   return (
     <div className="max-w-lg mx-auto px-4 py-24">

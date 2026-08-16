@@ -27,10 +27,9 @@ export default function Navbar() {
 
   // Derive dynamic user avatar with initials fallback
   const userAvatar =
-    user?.prefs?.avatar ||
-    user?.user_metadata?.avatar_url ||
-    user?.avatar_url ||
-    `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.name || user?.email || 'User')}`
+    user?.photoURL ||
+    (user as any)?.avatar_url ||
+    `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.displayName || user?.name || user?.email || 'User')}`
 
   const toggleRole = () => {
     const nextRole = activeRole === 'CREATOR' ? 'EDITOR' : 'CREATOR'

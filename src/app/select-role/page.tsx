@@ -3,7 +3,8 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { account } from '@/lib/appwrite/client'
+import { db } from '@/lib/firebase/client'
+import { doc, setDoc } from 'firebase/firestore'
 
 export default function SelectRolePage() {
   const router = useRouter()
@@ -13,24 +14,27 @@ export default function SelectRolePage() {
   const handleSelectRole = async (selectedRole: 'CREATOR' | 'EDITOR') => {
     setLoading(true)
     try {
-      // 1. Update Appwrite user preferences with the selected role
       if (user) {
-        await account.updatePrefs({ role: selectedRole })
+        const uid = user.uid || user.$id
+        if (uid) {
+          await setDoc(
+            doc(db, 'users', uid),
+            { role: selectedRole, updatedAt: new Date().toISOString() },
+            { merge: true }
+          )
+        }
       }
 
-      // 2. Persist in local storage and auth context
       setActiveRole(selectedRole)
       localStorage.setItem('uperai_role', selectedRole)
 
-      // 3. Route user based on their choice
       if (selectedRole === 'EDITOR') {
-        router.push('/profile') // Redirect editors to complete their listing
+        router.push('/profile')
       } else {
-        router.push('/') // Redirect creators straight to marketplace browsing
+        router.push('/')
       }
     } catch (err) {
       console.error('Failed to set role preference:', err)
-      // Fallback redirection
       setActiveRole(selectedRole)
       router.push('/')
     } finally {

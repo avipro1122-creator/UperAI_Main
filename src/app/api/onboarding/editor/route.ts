@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { createAdminClient, createSessionClient } from '@/lib/appwrite/server'
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
+import { db } from '@/lib/firebase/client'
+import { doc, setDoc, collection, addDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
-import { fetchYoutubeOEmbed, parseYouTubeVideoId, getYouTubeThumbnail } from '@/lib/youtube'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
-import { ID, Query, Permission, Role } from 'node-appwrite'
 import { z } from 'zod'
 
 const portfolioItemSchema = z.object({
@@ -16,6 +14,7 @@ const portfolioItemSchema = z.object({
 })
 
 const onboardingSchema = z.object({
+  userId: z.string().optional(),
   fullName: z.string().max(255).optional(),
   name: z.string().max(255).optional(),
   headline: z.string().max(500).nullable().optional(),
@@ -46,122 +45,73 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
   }
 
-  let userId: string = ''
+  let body: any
   try {
-    const { account } = await createSessionClient(req)
-    const user = await account.get()
-    if (user) userId = user.$id
+    body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Please sign in to complete onboarding' }, { status: 401 })
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Please sign in to complete onboarding' }, { status: 401 })
-  }
-
-  let jsonBody: any
-  try {
-    jsonBody = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 })
-  }
-
-  const parsed = onboardingSchema.safeParse(jsonBody)
+  const parsed = onboardingSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation error', details: parsed.error.format() }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Validation failed', details: parsed.error.format() },
+      { status: 400 }
+    )
   }
 
-  const body = parsed.data
+  const userId = body.userId || body.user_id || 'editor-' + Date.now()
 
-  const admin = await createAdminClient()
-  const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || APPWRITE_CONFIG.databaseId
-
-  const documentPermissions = [
-    Permission.read(Role.any()),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-  ]
-
-  const rawPortfolio = Array.isArray(body.portfolio) && body.portfolio.length > 0
+  const rawPortfolio = Array.isArray(body.portfolio)
     ? body.portfolio
     : Array.isArray(body.clips)
-      ? body.clips
-      : []
+    ? body.clips
+    : []
 
-  const processedItems: Array<{
-    editor_id: string
-    title: string
-    video_url: string
-    youtube_url: string
-    video_id: string
-    role_description: string
-    position: number
-    thumbnail_url: string | null
-    is_short: boolean
-    is_available: boolean
-  }> = []
+  const processedItems = []
+  let primaryYoutubeUrl = body.youtubeUrl || body.youtube_url || null
 
-  for (let i = 0; i < rawPortfolio.length; i++) {
-    const item = rawPortfolio[i]
-    const url = (item.youtubeUrl || item.url || '').trim()
-    const roleDesc = (item.roleDescription || item.roleExplanation || '').trim()
-    if (!url) continue
+  for (let idx = 0; idx < rawPortfolio.length; idx++) {
+    const item = rawPortfolio[idx]
+    const rawUrl = (item.youtubeUrl || item.url || '').trim()
+    if (!rawUrl) continue
 
-    const parsedVideo = parseVideoUrl(url)
-    const videoId = parsedVideo?.videoId || parseYouTubeVideoId(url) || ''
-    let title: string | null = null
-    let thumbnailUrl: string | null = getYouTubeThumbnail(url)
-    let isShort = false
-
-    if (parsedVideo?.sourceType === 'instagram') {
-      title = title || 'Instagram Reel'
-      thumbnailUrl = null
-      isShort = true
-    } else if (parsedVideo?.sourceType === 'youtube' || url.includes('youtu')) {
-      try {
-        const oembed = await fetchYoutubeOEmbed(url, !!parsedVideo?.isShortsUrl)
-        if (oembed.available) {
-          title = oembed.title ?? null
-          thumbnailUrl = oembed.thumbnailUrl ?? thumbnailUrl
-          isShort = !!oembed.isShort
-        }
-      } catch {
-        // Fallback
-      }
+    if (!primaryYoutubeUrl) {
+      primaryYoutubeUrl = rawUrl
     }
+
+    const parsedVideo = parseVideoUrl(rawUrl)
+    const isShort = parsedVideo?.isShortsUrl || parsedVideo?.sourceType === 'instagram'
 
     processedItems.push({
       editor_id: userId,
-      title: title || roleDesc || `Portfolio Video ${i + 1}`,
-      video_url: url,
-      youtube_url: url,
-      video_id: videoId,
-      role_description: roleDesc,
-      position: i,
-      thumbnail_url: thumbnailUrl,
+      title: item.roleDescription || item.roleExplanation || `Project #${idx + 1}`,
+      video_url: rawUrl,
+      youtube_url: rawUrl,
+      video_id: parsedVideo?.videoId || '',
+      role_description: item.roleDescription || item.roleExplanation || '',
+      role_explanation: item.roleExplanation || item.roleDescription || '',
+      position: idx,
+      thumbnail_url: parsedVideo?.thumbnailUrl || '',
       is_short: isShort,
       is_available: true,
+      createdAt: new Date().toISOString(),
     })
   }
 
-  const firstRawUrl = (rawPortfolio[0]?.youtubeUrl || rawPortfolio[0]?.url || body.youtubeUrl || body.youtube_url || '').trim()
-  const primaryYoutubeUrl = processedItems.length > 0 ? processedItems[0].youtube_url : firstRawUrl
-  const instagramRaw = (body.instagramHandle || body.instagram || body.instagram_handle || '').trim().replace(/^@/, '')
-  const instagramVal = instagramRaw || null
-
-  const whatsappRaw = (body.whatsapp || body.whatsappNumber || body.whatsapp_number || '').trim()
-  const cleanDigits = whatsappRaw.replace(/[^0-9+]/g, '')
-  const whatsappVal = cleanDigits && cleanDigits.length >= 10 ? (cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits) : '919016047119'
-
   const nameVal = (body.fullName || body.name || 'Editor').trim()
   const handle = nameVal.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30) || userId
+  const instagramRaw = (body.instagram || body.instagramHandle || body.instagram_handle || '').trim().replace(/^@/, '')
+  const whatsappRaw = (body.whatsapp || body.whatsappNumber || body.whatsapp_number || '').trim().replace(/[^0-9+]/g, '')
+  const whatsappVal = whatsappRaw && whatsappRaw.length >= 10 ? (whatsappRaw.length === 10 ? `91${whatsappRaw}` : whatsappRaw) : '919016047119'
 
-  const payload = {
+  const profilePayload = {
     user_id: userId,
     full_name: nameVal,
     display_name: nameVal,
     name: nameVal,
-    avatar_url: body.avatarUrl || '',
+    handle,
+    avatar_url: body.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nameVal)}`,
     specialty_tag: body.specialtyTag || body.headline || 'Video Editor',
     base_rate: Number(body.baseRate) || Number(body.rateShort) || Number(body.rateLong) || 1500,
     rate_short: body.rateShort ? Number(body.rateShort) : null,
@@ -172,63 +122,38 @@ export async function POST(req: Request) {
     bio: body.bio || null,
     whatsapp: whatsappVal,
     whatsapp_number: whatsappVal,
-    instagram: instagramVal,
-    instagram_handle: instagramVal,
+    instagram: instagramRaw || null,
+    instagram_handle: instagramRaw || null,
     turnaround_time: body.turnaroundTime || (body.turnaroundDays ? `${body.turnaroundDays} Days` : '2 Days'),
     turnaround_days: body.turnaroundDays ? Number(body.turnaroundDays) : 2,
     youtube_url: primaryYoutubeUrl,
     open_to_work: true,
     is_hidden: false,
+    updatedAt: new Date().toISOString(),
   }
 
-  let document
-  try {
-    document = await admin.databases.createDocument(
-      dbId,
-      APPWRITE_CONFIG.collections.editor_profiles,
-      userId,
-      payload,
-      documentPermissions
-    )
-  } catch {
-    document = await admin.databases.updateDocument(
-      dbId,
-      APPWRITE_CONFIG.collections.editor_profiles,
-      userId,
-      payload
-    )
-  }
+  // Save to Firestore editor_profiles
+  const editorRef = doc(db, 'editor_profiles', userId)
+  await setDoc(editorRef, profilePayload, { merge: true })
 
+  // Also update user role to EDITOR in users/{userId}
+  const userRef = doc(db, 'users', userId)
+  await setDoc(userRef, { role: 'EDITOR', handle, name: nameVal, updatedAt: new Date().toISOString() }, { merge: true })
+
+  // Save portfolio items
   if (processedItems.length > 0) {
     try {
-      const existing = await admin.databases.listDocuments(
-        dbId,
-        APPWRITE_CONFIG.collections.portfolio_items,
-        [Query.equal('editor_id', userId)]
-      )
-      for (const doc of existing.documents) {
-        await admin.databases.deleteDocument(
-          dbId,
-          APPWRITE_CONFIG.collections.portfolio_items,
-          doc.$id
-        )
+      const q = query(collection(db, 'portfolio_items'), where('editor_id', '==', userId))
+      const oldDocs = await getDocs(q)
+      for (const d of oldDocs.docs) {
+        await deleteDoc(d.ref)
       }
     } catch {
-      // Cleanup error ignore
+      // ignore
     }
 
     for (const pItem of processedItems) {
-      try {
-        await admin.databases.createDocument(
-          dbId,
-          APPWRITE_CONFIG.collections.portfolio_items,
-          ID.unique(),
-          pItem,
-          documentPermissions
-        )
-      } catch (pErr) {
-        console.error('Error creating portfolio item document:', pErr)
-      }
+      await addDoc(collection(db, 'portfolio_items'), pItem)
     }
   }
 
@@ -236,8 +161,8 @@ export async function POST(req: Request) {
     revalidatePath('/')
     revalidatePath('/editors')
   } catch {
-    // Revalidation
+    // ignore
   }
 
-  return NextResponse.json({ success: true, document })
+  return NextResponse.json({ success: true, document: profilePayload })
 }

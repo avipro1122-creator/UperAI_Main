@@ -59,7 +59,7 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
 
   useEffect(() => {
     if (isOpen && user?.name) {
-      setName((prev) => prev || user.name)
+      setName((prev) => prev || user.name || '')
     }
   }, [isOpen, user])
 

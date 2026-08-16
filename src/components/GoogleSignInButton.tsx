@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { account } from '@/lib/appwrite/client'
-import { getAuthRedirectOrigin } from '@/lib/appwrite/config'
-import { OAuthProvider } from 'appwrite'
+import { useAuth } from '@/context/AuthContext'
+import { useRouter } from 'next/navigation'
 
 export default function GoogleSignInButton({
   label = 'Continue with Google',
@@ -12,6 +11,8 @@ export default function GoogleSignInButton({
   label?: string
   next?: string
 }) {
+  const { loginWithGoogle } = useAuth()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,20 +20,15 @@ export default function GoogleSignInButton({
     setLoading(true)
     setError(null)
     try {
-      const baseOrigin = getAuthRedirectOrigin()
-      const successUrl = new URL('/auth/callback', baseOrigin)
-      if (next) successUrl.searchParams.set('next', next)
-
-      const failureUrl = new URL('/login', baseOrigin)
-      failureUrl.searchParams.set('error', 'appwrite_oauth_failed')
-
-      account.createOAuth2Token(
-        OAuthProvider.Google,
-        successUrl.toString(),
-        failureUrl.toString()
-      )
+      await loginWithGoogle()
+      if (next) {
+        router.push(next)
+      } else {
+        router.push('/select-role')
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to initiate Google sign in')
+    } finally {
       setLoading(false)
     }
   }
@@ -62,7 +58,7 @@ export default function GoogleSignInButton({
             d="M12 4.77c1.76 0 3.34.6 4.59 1.79l3.44-3.44C17.94 1.19 15.24 0 12 0 7.31 0 3.29 2.7 1.32 6.56l4.01 3.11C6.27 6.86 8.9 4.77 12 4.77z"
           />
         </svg>
-        {loading ? 'Redirecting…' : label}
+        {loading ? 'Signing in…' : label}
       </button>
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
