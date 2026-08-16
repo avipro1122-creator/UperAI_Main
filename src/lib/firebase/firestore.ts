@@ -8,7 +8,7 @@ import {
   setDoc,
   where,
 } from 'firebase/firestore'
-import { db } from './client'
+import { db, firebaseConfig } from './client'
 
 export interface FirestoreEditorProfile {
   id: string
@@ -67,8 +67,27 @@ export interface FirestorePortfolioItem {
   createdAt?: string
 }
 
+function parseFirestoreFields(doc: any) {
+  const id = doc.name.split('/').pop()
+  const fields: any = {}
+  for (const key of Object.keys(doc.fields || {})) {
+    const valObj = doc.fields[key]
+    const type = Object.keys(valObj)[0]
+    if (type === 'integerValue') {
+      fields[key] = Number(valObj[type])
+    } else if (type === 'booleanValue') {
+      fields[key] = Boolean(valObj[type])
+    } else if (type === 'arrayValue') {
+      fields[key] = (valObj[type].values || []).map((v: any) => Object.values(v)[0])
+    } else {
+      fields[key] = valObj[type]
+    }
+  }
+  return { id, ...fields }
+}
+
 /**
- * Fetch public editor profiles with limit
+ * Fetch public editor profiles with limit + robust REST fallback
  */
 export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditorProfile[]> {
   try {
@@ -79,14 +98,36 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
     )
     const snapshot = await getDocs(q)
 
-    return snapshot.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<FirestoreEditorProfile, 'id'>),
-    }))
+    if (!snapshot.empty) {
+      return snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<FirestoreEditorProfile, 'id'>),
+      }))
+    }
   } catch (err) {
-    console.error('Error fetching editor profiles from Firestore:', err)
-    return []
+    console.warn('Firestore SDK query failed, switching to direct REST:', err)
   }
+
+  // Guaranteed REST API fallback
+  try {
+    const key = firebaseConfig.apiKey
+    const projectId = firebaseConfig.projectId
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/editor_profiles?key=${key}`,
+      { cache: 'no-store' }
+    )
+    const data = await res.json()
+    if (data.documents) {
+      return data.documents
+        .map(parseFirestoreFields)
+        .filter((p: any) => !p.is_hidden)
+        .slice(0, limitCount)
+    }
+  } catch (restErr) {
+    console.error('Firestore REST fetch failed:', restErr)
+  }
+
+  return []
 }
 
 /**
@@ -97,44 +138,27 @@ export async function getEditorByHandleOrId(target: string): Promise<FirestoreEd
   const cleanTarget = target.toLowerCase().trim()
 
   try {
-    // 1. Try finding by handle
-    const handleQ = query(
-      collection(db, 'editor_profiles'),
-      where('handle', '==', cleanTarget),
-      limit(1)
+    const all = await getPublicEditors(100)
+    const found = all.find(
+      (e) =>
+        (e.handle && e.handle.toLowerCase() === cleanTarget) ||
+        (e.user_id && e.user_id.toLowerCase() === cleanTarget) ||
+        (e.id && e.id.toLowerCase() === cleanTarget) ||
+        (e.full_name && e.full_name.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget)
     )
-    const handleSnap = await getDocs(handleQ)
+    if (found) return found
 
-    if (!handleSnap.empty) {
-      const d = handleSnap.docs[0]
-      return { id: d.id, ...(d.data() as Omit<FirestoreEditorProfile, 'id'>) }
-    }
-
-    // 2. Try finding by user_id
-    const userQ = query(
-      collection(db, 'editor_profiles'),
-      where('user_id', '==', target),
-      limit(1)
-    )
-    const userSnap = await getDocs(userQ)
-
-    if (!userSnap.empty) {
-      const d = userSnap.docs[0]
-      return { id: d.id, ...(d.data() as Omit<FirestoreEditorProfile, 'id'>) }
-    }
-
-    // 3. Try direct document ID lookup
+    // Direct document ID lookup
     const docRef = doc(db, 'editor_profiles', target)
     const docSnap = await getDoc(docRef)
     if (docSnap.exists()) {
       return { id: docSnap.id, ...(docSnap.data() as Omit<FirestoreEditorProfile, 'id'>) }
     }
-
-    return null
   } catch (err) {
-    console.error('Error fetching editor by handle from Firestore:', err)
-    return null
+    console.error('Error fetching editor from Firestore:', err)
   }
+
+  return null
 }
 
 /**
@@ -150,12 +174,34 @@ export async function getEditorPortfolioItems(editorId: string, limitCount = 15)
     )
     const snapshot = await getDocs(q)
 
-    return snapshot.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<FirestorePortfolioItem, 'id'>),
-    }))
+    if (!snapshot.empty) {
+      return snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<FirestorePortfolioItem, 'id'>),
+      }))
+    }
   } catch (err) {
-    console.error('Error fetching portfolio items from Firestore:', err)
-    return []
+    console.warn('Portfolio SDK query failed, trying REST:', err)
   }
+
+  // REST fallback
+  try {
+    const key = firebaseConfig.apiKey
+    const projectId = firebaseConfig.projectId
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/portfolio_items?key=${key}`,
+      { cache: 'no-store' }
+    )
+    const data = await res.json()
+    if (data.documents) {
+      return data.documents
+        .map(parseFirestoreFields)
+        .filter((item: any) => item.editor_id === editorId)
+        .slice(0, limitCount)
+    }
+  } catch (restErr) {
+    console.error('Portfolio REST fetch failed:', restErr)
+  }
+
+  return []
 }
