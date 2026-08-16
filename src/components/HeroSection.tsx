@@ -82,7 +82,7 @@ export default function HeroSection({
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                 </span>
                 <span className="text-zinc-200 font-extrabold">
-                  {visitorCount !== null ? `${visitorCount.toLocaleString()}+` : '...'}
+                  {visitorCount !== null ? visitorCount.toLocaleString() : '...'}
                 </span>{' '}
                 Creators & Editors visited
               </div>

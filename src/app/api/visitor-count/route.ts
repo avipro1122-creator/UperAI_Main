@@ -1,26 +1,48 @@
 import { NextResponse } from 'next/server'
-
-// In-memory / lightweight cached visitor count to prevent DB read exhaustion
-let cachedCount = 1248
-let lastIncrement = Date.now()
+import { doc, getDoc, setDoc, increment, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase/client'
 
 export async function GET() {
-  return NextResponse.json({
-    success: true,
-    count: cachedCount,
-  })
+  try {
+    const statsRef = doc(db, 'site_stats', 'visitors')
+    const snap = await getDoc(statsRef)
+    const count = snap.exists() ? Number(snap.data()?.count || 0) : 0
+    return NextResponse.json({
+      success: true,
+      count,
+    })
+  } catch (err: any) {
+    console.error('Error fetching visitor count:', err)
+    return NextResponse.json({
+      success: true,
+      count: 0,
+    })
+  }
 }
 
 export async function POST() {
-  // Rate-limit in-memory count increments (at most once every 10s)
-  const now = Date.now()
-  if (now - lastIncrement > 10000) {
-    cachedCount += 1
-    lastIncrement = now
-  }
+  try {
+    const statsRef = doc(db, 'site_stats', 'visitors')
+    await setDoc(
+      statsRef,
+      {
+        count: increment(1),
+        lastVisitedAt: serverTimestamp(),
+      },
+      { merge: true }
+    )
+    const snap = await getDoc(statsRef)
+    const count = snap.exists() ? Number(snap.data()?.count || 1) : 1
 
-  return NextResponse.json({
-    success: true,
-    count: cachedCount,
-  })
+    return NextResponse.json({
+      success: true,
+      count,
+    })
+  } catch (err: any) {
+    console.error('Error updating visitor count:', err)
+    return NextResponse.json({
+      success: true,
+      count: 1,
+    })
+  }
 }
