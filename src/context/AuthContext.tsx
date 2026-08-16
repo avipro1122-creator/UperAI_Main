@@ -4,8 +4,6 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { auth, db } from '@/lib/firebase/client'
 import {
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
   signInWithPopup,
   signInWithCredential,
   signOut as firebaseSignOut,
@@ -140,19 +138,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchUserData])
 
-  // Handle Redirect Result on Page Return
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user) {
-          fetchUserData(result.user)
-        }
-      })
-      .catch((err) => {
-        console.error('[AuthContext] Redirect login error:', err)
-      })
-  }, [fetchUserData])
-
   // Auth State Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
@@ -173,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe()
   }, [fetchUserData])
 
-  // Google One Tap Native Prompt Initializer
+  // Google One Tap Native In-Page Prompt Initializer
   useEffect(() => {
     if (user || loading) return
 
@@ -205,6 +190,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, loading, handleCredentialResponse])
 
   const loginWithGoogle = async () => {
+    // 1. Try In-Page Native Google Prompt (Zero Popups)
+    if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
+      try {
+        ;(window as any).google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        })
+        ;(window as any).google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // Fallback to popup if One Tap is dismissed/blocked
+            const provider = new GoogleAuthProvider()
+            provider.setCustomParameters({ prompt: 'select_account' })
+            signInWithPopup(auth, provider).then((result) => {
+              if (result.user) fetchUserData(result.user)
+            }).catch((err) => {
+              if (err.code !== 'auth/popup-closed-by-user') {
+                console.error('[AuthContext] Popup sign-in error:', err)
+              }
+            })
+          }
+        })
+        return
+      } catch {
+        // Fallback below
+      }
+    }
+
+    // 2. Direct Popup Fallback
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })

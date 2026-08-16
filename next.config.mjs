@@ -21,6 +21,14 @@ const nextConfig = {
     serverComponentsExternalPackages: ['node-appwrite'],
     optimizePackageImports: ['lucide-react', 'firebase', 'firebase-admin'],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: 'https://uperai-ed941.firebaseapp.com/__/auth/:path*',
+      },
+    ];
+  },
   async headers() {
     const cspHeader = `
       default-src 'self';
