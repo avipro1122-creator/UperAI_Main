@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { LogoMark } from '@/components/Logo'
+import LoginModal from '@/components/LoginModal'
 
 export default function Navbar() {
   const { user, loading, activeRole, setActiveRole, loginWithGoogle, logout } = useAuth()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -62,7 +64,12 @@ export default function Navbar() {
           <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />
         ) : !user ? (
           <button
-            onClick={loginWithGoogle}
+            onClick={() => {
+              if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
+                ;(window as any).google.accounts.id.prompt()
+              }
+              setIsLoginModalOpen(true)
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-xs font-bold transition-all text-white"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -217,6 +224,9 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* IN-PAGE LOGIN MODAL */}
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </nav>
   )
 }
