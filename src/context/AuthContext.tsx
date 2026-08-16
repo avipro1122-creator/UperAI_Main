@@ -290,7 +290,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    return {
+      user: null,
+      currentUser: null,
+      rawUser: null,
+      loading: false,
+      activeRole: 'CREATOR' as Role,
+      userRole: null,
+      setActiveRole: () => {},
+      setUserRole: () => {},
+      loginWithGoogle: async () => {},
+      logout: async () => {},
+      setUserState: () => {},
+      checkSession: async () => {},
+      refreshUser: async () => {},
+    } as unknown as AuthContextType
   }
   return context
 }

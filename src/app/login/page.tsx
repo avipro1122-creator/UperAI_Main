@@ -9,7 +9,7 @@ export default function LoginPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/'
+  const next = searchParams?.get('next') || '/'
 
   useEffect(() => {
     if (!loading && user) {

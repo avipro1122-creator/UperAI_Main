@@ -17,11 +17,11 @@ export default function BrowseFilters({ variant, open, onClose }: BrowseFiltersP
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
-  const [q, setQ] = useState(searchParams.get('q') ?? '')
-  const [format, setFormat] = useState(searchParams.get('format') ?? '')
-  const [rateMin, setRateMin] = useState(searchParams.get('rate_min') ?? '')
-  const [rateMax, setRateMax] = useState(searchParams.get('rate_max') ?? '')
-  const [sort, setSort] = useState(searchParams.get('sort') ?? 'newest')
+  const [q, setQ] = useState(searchParams?.get('q') ?? '')
+  const [format, setFormat] = useState(searchParams?.get('format') ?? '')
+  const [rateMin, setRateMin] = useState(searchParams?.get('rate_min') ?? '')
+  const [rateMax, setRateMax] = useState(searchParams?.get('rate_max') ?? '')
+  const [sort, setSort] = useState(searchParams?.get('sort') ?? 'newest')
 
   function applyFilters() {
     const params = new URLSearchParams()
