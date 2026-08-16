@@ -10,7 +10,7 @@ const firebaseConfig = {
   authDomain:
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
     process.env.REACT_APP_FIREBASE_AUTH_DOMAIN ||
-    'www.uperai.in',
+    'uperai-ed941.firebaseapp.com',
   projectId:
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     process.env.REACT_APP_FIREBASE_PROJECT_ID ||

@@ -190,36 +190,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, loading, handleCredentialResponse])
 
   const loginWithGoogle = async () => {
-    // 1. Try In-Page Native Google Prompt (Zero Popups)
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
-      try {
-        ;(window as any).google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        })
-        ;(window as any).google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Fallback to popup if One Tap is dismissed/blocked
-            const provider = new GoogleAuthProvider()
-            provider.setCustomParameters({ prompt: 'select_account' })
-            signInWithPopup(auth, provider).then((result) => {
-              if (result.user) fetchUserData(result.user)
-            }).catch((err) => {
-              if (err.code !== 'auth/popup-closed-by-user') {
-                console.error('[AuthContext] Popup sign-in error:', err)
-              }
-            })
-          }
-        })
-        return
-      } catch {
-        // Fallback below
-      }
-    }
-
-    // 2. Direct Popup Fallback
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
@@ -230,12 +200,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error('[AuthContext] Google Sign-In error:', err)
       if (err.code === 'auth/unauthorized-domain') {
-        alert('Login domain not authorized. In Firebase Console -> Authentication -> Settings -> Authorized domains, please add this domain.')
+        alert(
+          'Login domain not authorized. In Firebase Console -> Authentication -> Settings -> Authorized domains, please add this domain.'
+        )
       } else if (err.code === 'auth/popup-blocked') {
         alert('Sign-in popup was blocked by your browser. Please allow popups for this site.')
       } else if (err.code !== 'auth/popup-closed-by-user') {
         alert(`Login error: ${err.message || err.code}`)
       }
+      throw err
     }
   }
 

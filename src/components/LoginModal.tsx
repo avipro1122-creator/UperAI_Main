@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { LogoMark } from '@/components/Logo'
+import GoogleSignInButton from '@/components/GoogleSignInButton'
 
 interface LoginModalProps {
   isOpen: boolean
@@ -73,9 +74,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </p>
         </div>
 
-        {/* In-Page Native Google Sign-In Container */}
-        <div className="flex flex-col items-center justify-center pt-2 min-h-[50px]">
-          <div ref={googleBtnRef} id="google-inpage-signin-btn" />
+        {/* Direct Google Sign-In Button */}
+        <div className="flex flex-col items-center justify-center pt-2 w-full">
+          <GoogleSignInButton next="/select-role" />
         </div>
 
         {/* Terms footer */}
