@@ -208,20 +208,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
-      // Use in-tab full-screen redirect for seamless full-page login
-      await signInWithRedirect(auth, provider)
+      const result = await signInWithPopup(auth, provider)
+      if (result.user) {
+        await fetchUserData(result.user)
+      }
     } catch (err: any) {
-      console.warn('[AuthContext] Redirect failed, falling back to popup:', err)
-      try {
-        const provider = new GoogleAuthProvider()
-        provider.setCustomParameters({ prompt: 'select_account' })
-        const result = await signInWithPopup(auth, provider)
-        if (result.user) {
-          await fetchUserData(result.user)
-        }
-      } catch (popupErr: any) {
-        console.error('[AuthContext] Google Sign-In error:', popupErr)
-        alert(`Login error: ${popupErr.message || popupErr.code}`)
+      console.error('[AuthContext] Google Sign-In error:', err)
+      if (err.code === 'auth/unauthorized-domain') {
+        alert('Login domain not authorized. In Firebase Console -> Authentication -> Settings -> Authorized domains, please add this domain.')
+      } else if (err.code === 'auth/popup-blocked') {
+        alert('Sign-in popup was blocked by your browser. Please allow popups for this site.')
+      } else if (err.code !== 'auth/popup-closed-by-user') {
+        alert(`Login error: ${err.message || err.code}`)
       }
     }
   }
