@@ -185,97 +185,94 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
   return (
     <section
       id="marketplace-section"
-      className="relative w-full bg-[#0E1017] text-gray-100 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden border-b border-white/5"
+      className="relative w-full bg-[#FFFFFF] text-[#111111] py-8 sm:py-10 px-4 sm:px-6 lg:px-8 border-b border-gray-200"
     >
-      {/* Ambient glow — ties this section back to the hero */}
-      <div className="absolute top-0 left-1/4 w-[520px] h-[520px] ambient-glow-lime pointer-events-none blur-3xl opacity-40 -translate-y-1/2" />
-
-      <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
 
         {/* Section Header */}
-        <div className="pb-4 border-b border-white/10">
-          <span className="inline-block text-[11px] font-bold text-lime-300 uppercase tracking-widest bg-lime-400/10 px-3 py-1 rounded-full border border-lime-400/20 mb-3">
+        <div className="mb-6 pb-2 border-b border-gray-100">
+          <span className="inline-block text-[11px] font-bold text-[#15803D] uppercase tracking-wider bg-[#ECFDF5] px-3 py-1 rounded-full border border-emerald-200 mb-2">
             Marketplace
           </span>
-          <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-gray-100 tracking-tight">
-            Indian editors. <span className="text-gradient-lime">Rates upfront.</span>
+          <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#111111] tracking-tight">
+            Indian editors. <span className="text-[#16A34A]">Rates upfront.</span>
           </h2>
-          <p className="text-sm text-gray-400 mt-2 max-w-xl leading-relaxed">
+          <p className="text-sm text-[#6B7280] mt-1.5 max-w-xl leading-relaxed">
             Filter by format, audition real portfolio clips, and lock in a budget — before you message anyone.
           </p>
         </div>
 
         {/* HIDE ALL CARDS IF ZERO EDITORS OR SHOW SOFT MAINTENANCE NOTICE */}
         {isServerError ? (
-          <div className="p-12 rounded-3xl backdrop-blur-md bg-amber-400/5 border border-amber-400/20 text-center space-y-4 shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20 flex items-center justify-center mx-auto text-xl font-bold">
+          <div className="p-8 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-3 shadow-xs">
+            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 border border-amber-300 flex items-center justify-center mx-auto text-lg font-bold">
               ⚡
             </div>
-            <h3 className="font-display text-xl font-bold text-gray-100">
+            <h3 className="font-display text-lg font-bold text-amber-900">
               Brief Backend Maintenance
             </h3>
-            <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs text-amber-700 max-w-md mx-auto leading-relaxed">
               We are currently undergoing brief backend maintenance. Please refresh in a few minutes.
             </p>
           </div>
         ) : filteredEditors.length === 0 ? (
           /* EMPTY STATE WHEN NO EDITORS IN DB */
-          <div className="p-12 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 text-center space-y-4 shadow-sm">
-            <h3 className="font-display text-2xl font-bold text-gray-100">
+          <div className="p-8 rounded-2xl bg-[#F7F8FA] border border-[#E5E7EB] text-center space-y-3 shadow-xs">
+            <h3 className="font-display text-xl font-bold text-[#111111]">
               No Listed Editors Yet
             </h3>
-            <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs text-[#6B7280] max-w-md mx-auto leading-relaxed">
               Be the first editor to list your portfolio, YouTube videos, and rates on UperAI!
             </p>
-            <Link className="inline-block px-8 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-black rounded-xl transition-all shadow-lg text-xs uppercase tracking-wider" href="/profile">
+            <Link className="inline-block px-6 py-2.5 bg-[#16A34A] hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-sm text-xs uppercase tracking-wider" href="/profile">
               + List Your Work & Be The First ↗
             </Link>
           </div>
         ) : (
           <>
-            {/* ── TOP BANNER SECTION (4 BENTO FEATURE CARDS) ────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {/* ── COMPACT LIGHT BENTO FEATURE CARDS ────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
               {/* Card 1: Format Filter */}
-              <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-between space-y-4 shadow-sm hover:border-white/20 hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
-                <div className="space-y-2">
-                  <span className="text-xs font-extrabold tracking-widest text-lime-300 uppercase flex items-center justify-between">
-                    01. Filter by Format <Filter className="w-3.5 h-3.5" />
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F8FA] border border-[#E5E7EB] flex flex-col justify-between space-y-3.5 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-extrabold tracking-wider text-[#15803D] uppercase flex items-center justify-between">
+                    01. Filter by Format <Filter className="w-3.5 h-3.5 text-[#15803D]" />
                   </span>
-                  <h3 className="font-display text-xl font-extrabold text-gray-100">
+                  <h3 className="font-display text-base sm:text-lg font-bold text-[#111111]">
                     Choose Niche
                   </h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-xs text-[#6B7280] leading-relaxed">
                     Filter vertical 9:16 Shorts vs 16:9 Long-form or VFX edits.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-1.5 pt-2">
+                <div className="flex flex-wrap gap-1.5 pt-1">
                   <button
                     onClick={() => setSelectedFormat('all')}
-                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       selectedFormat === 'all'
-                        ? 'bg-lime-400 text-zinc-950 shadow-sm'
-                        : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
+                        ? 'bg-[#16A34A] text-white shadow-sm'
+                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     All
                   </button>
                   <button
                     onClick={() => setSelectedFormat('shorts')}
-                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       selectedFormat === 'shorts'
-                        ? 'bg-lime-400 text-zinc-950 shadow-sm'
-                        : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
+                        ? 'bg-[#16A34A] text-white shadow-sm'
+                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     Shorts (9:16)
                   </button>
                   <button
                     onClick={() => setSelectedFormat('long')}
-                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       selectedFormat === 'long'
-                        ? 'bg-lime-400 text-zinc-950 shadow-sm'
-                        : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
+                        ? 'bg-[#16A34A] text-white shadow-sm'
+                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     Long-Form (16:9)
@@ -285,54 +282,54 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
 
               {/* Card 2: Audition Player */}
               {featuredEditor && featuredEditor.videoId ? (
-                <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-between space-y-4 shadow-sm hover:border-white/20 hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
-                  <div className="space-y-2">
-                    <span className="text-xs font-extrabold tracking-widest text-sky-300 uppercase flex items-center justify-between">
-                      02. Audition Editors <Play className="w-3.5 h-3.5 fill-sky-300" />
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F8FA] border border-[#E5E7EB] flex flex-col justify-between space-y-3.5 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-extrabold tracking-wider text-sky-700 uppercase flex items-center justify-between">
+                      02. Audition Editors <Play className="w-3.5 h-3.5 fill-sky-700 text-sky-700" />
                     </span>
-                    <h3 className="font-display text-xl font-extrabold text-gray-100">
+                    <h3 className="font-display text-base sm:text-lg font-bold text-[#111111]">
                       Play Real Work
                     </h3>
-                    <p className="text-xs text-gray-400 leading-relaxed">
+                    <p className="text-xs text-[#6B7280] leading-relaxed">
                       Audition real video edits right in the player.
                     </p>
                   </div>
                   <button
                     onClick={() => handleOpenPreview(featuredEditor)}
-                    className="flex items-center gap-2 p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-left"
+                    className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-gray-200 hover:bg-sky-50/60 hover:border-sky-300 transition-all text-left shadow-2xs group"
                   >
-                    <div className="w-8 h-8 rounded-full bg-sky-400 text-zinc-950 flex items-center justify-center shrink-0">
-                      <Play className="w-4 h-4 fill-zinc-950 ml-0.5" />
+                    <div className="w-7 h-7 rounded-full bg-sky-600 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-gray-100 truncate">{featuredEditor.name}</p>
-                      <span className="text-[10px] text-sky-300 font-semibold">Click to play video</span>
+                      <p className="text-xs font-bold text-[#111111] truncate">{featuredEditor.name}</p>
+                      <span className="text-[10px] text-sky-700 font-semibold">Click to play video</span>
                     </div>
                   </button>
                 </div>
               ) : (
-                <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-center text-center">
-                  <p className="text-xs text-gray-500">Audition player active when videos are linked.</p>
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F8FA] border border-[#E5E7EB] flex flex-col justify-center text-center">
+                  <p className="text-xs text-[#6B7280]">Audition player active when videos are linked.</p>
                 </div>
               )}
 
               {/* Card 3: Lock Rates Slider */}
-              <div className="p-6 rounded-3xl backdrop-blur-md bg-[#14161F]/80 border border-white/10 flex flex-col justify-between space-y-4 shadow-sm hover:border-white/20 hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
-                <div className="space-y-2">
-                  <span className="text-xs font-extrabold tracking-widest text-pink-300 uppercase flex items-center justify-between">
-                    03. Lock Rates <Sliders className="w-3.5 h-3.5" />
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F8FA] border border-[#E5E7EB] flex flex-col justify-between space-y-3.5 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-extrabold tracking-wider text-pink-700 uppercase flex items-center justify-between">
+                    03. Lock Rates <Sliders className="w-3.5 h-3.5 text-pink-700" />
                   </span>
-                  <h3 className="font-display text-xl font-extrabold text-gray-100">
+                  <h3 className="font-display text-base sm:text-lg font-bold text-[#111111]">
                     Max Price Filter
                   </h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-xs text-[#6B7280] leading-relaxed">
                     Filter editors under your budget.
                   </p>
                 </div>
-                <div className="space-y-2 bg-white/5 p-3 rounded-2xl border border-white/10">
-                  <div className="flex items-center justify-between text-xs font-extrabold text-gray-100">
+                <div className="space-y-2 bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#111111]">
                     <span>Max Budget:</span>
-                    <span className="text-pink-300 font-black">₹{maxRate.toLocaleString()}</span>
+                    <span className="text-pink-600 font-black">₹{maxRate.toLocaleString()}</span>
                   </div>
                   <input
                     type="range"
@@ -341,32 +338,31 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                     step="500"
                     value={maxRate}
                     onChange={(e) => setMaxRate(Number(e.target.value))}
-                    className="w-full accent-pink-400 cursor-pointer"
+                    className="w-full accent-pink-600 cursor-pointer h-1.5 bg-gray-200 rounded-lg"
                   />
                 </div>
               </div>
 
               {/* Card 4: Featured Real Editor */}
               {featuredEditor ? (
-                <div className="relative p-6 rounded-3xl border border-white/10 hover:border-white/20 bg-zinc-950 text-gray-100 overflow-hidden flex flex-col justify-between space-y-4 shadow-xl hover:shadow-[0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
+                <div className="relative p-4 sm:p-5 rounded-2xl bg-[#F7F8FA] border border-[#E5E7EB] overflow-hidden flex flex-col justify-between space-y-3.5 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200">
                   {featuredEditor.previewImg && (
                     <div
-                      className="absolute inset-0 bg-cover bg-center opacity-45 mix-blend-overlay"
+                      className="absolute inset-0 bg-cover bg-center opacity-10"
                       style={{ backgroundImage: `url('${featuredEditor.previewImg}')` }}
                     />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
 
-                  <div className="relative z-10 space-y-2">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-lime-400 text-zinc-950 uppercase tracking-wider">
+                  <div className="relative z-10 space-y-1.5">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
                       <Sparkles className="w-3 h-3" /> Featured Editor
                     </span>
-                    <h3 className="font-display text-lg font-bold text-gray-100 leading-tight">
+                    <h3 className="font-display text-base sm:text-lg font-bold text-[#111111] leading-tight">
                       {featuredEditor.name}
                     </h3>
                   </div>
 
-                  <div className="relative z-10 pt-4 flex items-center justify-between">
+                  <div className="relative z-10 pt-2 flex items-center justify-between">
                     {featuredEditor.videoId && (
                       <button
                         onClick={() =>
@@ -379,15 +375,15 @@ export default function BentoMarketplace({ dbEditors = [], isServerError = false
                             rate: featuredEditor.rateLabel,
                           })
                         }
-                        className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all"
+                        className="w-8 h-8 rounded-full bg-white hover:bg-gray-100 border border-gray-300 text-[#111111] flex items-center justify-center transition-all shadow-sm"
                       >
-                        <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                        <Play className="w-3.5 h-3.5 fill-[#111111] ml-0.5" />
                       </button>
                     )}
 
                     <button
                       onClick={() => setSelectedFormat('all')}
-                      className="px-4 py-2 rounded-full bg-white text-zinc-950 text-xs font-bold hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5 shadow-md ml-auto"
+                      className="px-3.5 py-1.5 rounded-full bg-[#111111] hover:bg-black text-white text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-sm ml-auto"
                     >
                       All Editors ({filteredEditors.length}) <ArrowUpRight className="w-3.5 h-3.5" />
                     </button>
