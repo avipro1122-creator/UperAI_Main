@@ -2,14 +2,45 @@ import React from 'react'
 import Link from 'next/link'
 import { FileText, ArrowLeft } from 'lucide-react'
 
-export const metadata = {
+import type { Metadata } from 'next'
+import JsonLd from '@/components/JsonLd'
+
+export const metadata: Metadata = {
   title: 'Terms & Conditions — UperAI',
   description: 'Terms and Conditions for using UperAI marketplace.',
+  alternates: {
+    canonical: 'https://www.uperai.in/terms',
+  },
+  openGraph: {
+    title: 'Terms & Conditions — UperAI',
+    description: 'Terms and Conditions for using UperAI marketplace.',
+    url: 'https://www.uperai.in/terms',
+  },
 }
 
 export default function TermsPage() {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.uperai.in',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Terms & Conditions',
+        item: 'https://www.uperai.in/terms',
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-lime-400 selection:text-black">
+      <JsonLd data={breadcrumbSchema} id="terms-breadcrumb-schema" />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-8">
         {/* Navigation & Header */}
         <div className="space-y-4">

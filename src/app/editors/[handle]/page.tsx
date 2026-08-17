@@ -1,522 +1,145 @@
-'use client'
-
-import React, { useEffect, useState } from 'react'
+import React from 'react'
+import type { Metadata, ResolvingMetadata } from 'next'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { Instagram, Video, ExternalLink } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext'
-import { normalizeIndianPhone } from '@/lib/phone'
-import { parseVideoUrl, ParsedVideoUrl } from '@/lib/video-parser'
+import JsonLd from '@/components/JsonLd'
+import EditorProfileClient from '@/components/EditorProfileClient'
 import { getEditorByHandleOrId, getEditorPortfolioItems } from '@/lib/firebase/firestore'
-import { db } from '@/lib/firebase/client'
-import { collection, addDoc } from 'firebase/firestore'
 
-// Extracts a Google Drive file ID from common share/open URL formats and
-// returns Drive's working iframe preview URL, or null if the URL isn't Drive.
-//   https://drive.google.com/file/d/{FILE_ID}/view...  →  .../file/d/{FILE_ID}/preview
-//   https://drive.google.com/open?id={FILE_ID}         →  .../file/d/{FILE_ID}/preview
-function getGoogleDriveEmbedUrl(url: string): string | null {
-  const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/)
-  return match ? `https://drive.google.com/file/d/${match[1]}/preview` : null
+export const revalidate = 30
+
+interface EditorPageProps {
+  params: { handle?: string; id?: string }
 }
 
-// Picks a fixed aspect ratio per source so embeds don't get pillar/letterboxed
-// inside a mismatched box — cross-origin iframes (Drive, YouTube, Vimeo) can't
-// be forced to crop-to-fill from our CSS, so the container has to match the
-// video's real orientation instead. Most showreels on this platform are
-// vertical (Shorts/Reels), so ambiguous sources (Drive, direct files without
-// known dimensions) default to portrait; only known-landscape embeds (regular
-// YouTube videos, Vimeo) get the wide box.
-function getAspectClass(media: any): string {
-  if (media.type === 'youtube') return media.isVertical ? 'aspect-[9/16]' : 'aspect-video'
-  if (media.type === 'vimeo') return 'aspect-video'
-  return 'aspect-[9/16]' // drive, direct — orientation unknown from the URL alone
+export async function generateMetadata(
+  { params }: EditorPageProps,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const target = params.handle || params.id || ''
+  const editor = await getEditorByHandleOrId(target)
+
+  if (!editor) {
+    return {
+      title: 'Editor Profile Not Found',
+      description: 'The requested video editor profile could not be found on UperAI.',
+    }
+  }
+
+  const name = editor.full_name || editor.name || 'Video Editor'
+  const headline = editor.headline || editor.specialty_tag || 'Freelance Video Editor'
+  const rate = editor.base_rate || editor.min_rate || editor.rate_short || editor.rate_long || 1500
+  const title = `${name} (${headline}) — Hire Video Editor`
+  const description = `Hire ${name} on UperAI starting at ₹${Number(rate).toLocaleString()} / video. Audition real showreels, turnaround in ${editor.turnaround_time || '48 Hours'}, and connect directly on WhatsApp.`
+  const canonicalUrl = `https://www.uperai.in/editors/${editor.handle || target}`
+  const avatarUrl = editor.avatar_url || editor.preview_img || 'https://www.uperai.in/icon.svg'
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: `${title} | UperAI`,
+      description,
+      url: canonicalUrl,
+      type: 'profile',
+      images: [
+        {
+          url: avatarUrl,
+          width: 800,
+          height: 800,
+          alt: `${name} - Video Editor Portfolio`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | UperAI`,
+      description,
+      images: [avatarUrl],
+    },
+  }
 }
 
-// Multi-source video renderer — picks the right player for whatever URL type
-// was detected, inside a consistently-shaped container, with a persistent
-// top-right "open original link" button as a manual fallback if an embed
-// fails to load (private file permissions, blocked embeds, X-Frame-Options, etc.)
-function ShowreelPlayer({ media }: { media: any }) {
-  const containerClass = `relative w-full ${getAspectClass(media)} rounded-xl overflow-hidden bg-black/60 border border-white/10`
-
-  if (media.type === 'instagram') {
-    return (
-      <div className="space-y-2">
-        <div className={`${containerClass} max-h-[480px]`}>
-          <iframe
-            src={`https://www.instagram.com/reel/${media.id}/embed/`}
-            className="w-full h-full border-0"
-            scrolling="no"
-            allowTransparency
-          />
-        </div>
-        <a
-          href={media.rawUrl || media.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full py-2 bg-gradient-to-r from-purple-600 via-rose-500 to-amber-500 hover:opacity-90 text-white font-black text-[11px] text-center rounded-xl uppercase tracking-wider transition-all shadow-md"
-        >
-          Open Reel on Instagram ↗
-        </a>
-      </div>
-    )
+export default async function PublicEditorProfilePage({ params }: EditorPageProps) {
+  const targetId = params.handle || params.id || ''
+  if (!targetId) {
+    notFound()
   }
 
-  if (media.type === 'unknown') {
-    return (
-      <div className={`${containerClass} flex flex-col items-center justify-center p-4 text-center space-y-2`}>
-        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">External Portfolio Link</span>
-        <a
-          href={media.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
-        >
-          Open Portfolio Website ↗
-        </a>
-      </div>
-    )
-  }
-
-  return (
-    <div className={containerClass}>
-      {media.type === 'drive' && (
-        <iframe
-          src={media.embedUrl}
-          loading="lazy"
-          title="Google Drive Video Preview"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          className="w-full h-full rounded-xl border-0"
-        />
-      )}
-
-      {media.type === 'youtube' && (
-        <iframe
-          src={`https://www.youtube-nocookie.com/embed/${media.id}?rel=0&modestbranding=1`}
-          loading="lazy"
-          title="YouTube Video Preview"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          className="w-full h-full rounded-xl border-0"
-        />
-      )}
-
-      {media.type === 'vimeo' && (
-        <iframe
-          src={media.embedUrl}
-          loading="lazy"
-          title="Vimeo Video Preview"
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full rounded-xl border-0"
-        />
-      )}
-
-      {media.type === 'direct' && (
-        <video
-          src={media.directUrl || media.url}
-          controls
-          playsInline
-          preload="metadata"
-          className="w-full h-full object-cover rounded-xl"
-        />
-      )}
-
-      {/* Persistent manual fallback — always present regardless of whether the embed above loads */}
-      <a
-        href={media.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Open original link in a new tab"
-        onClick={(e) => e.stopPropagation()}
-        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-lg bg-black/70 backdrop-blur-sm border border-white/15 text-white/80 hover:text-lime-400 hover:border-lime-400/40 flex items-center justify-center transition-colors"
-      >
-        <ExternalLink className="w-3.5 h-3.5" />
-      </a>
-    </div>
-  )
-}
-
-export default function PublicEditorProfilePage({ params }: { params?: { handle?: string; id?: string } }) {
-  const routeParams = useParams()
-  const { user, loginWithGoogle } = useAuth()
-  const targetId = (params?.handle || params?.id || (routeParams as any)?.handle || (routeParams as any)?.id || '') as string
-
-  const [editor, setEditor] = useState<any | null>(null)
-  const [portfolioItems, setPortfolioItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hasServerError, setHasServerError] = useState(false)
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    async function fetchPublicEditor() {
-      setHasServerError(false)
-      try {
-        const paramId = targetId ? decodeURIComponent(targetId).trim() : ''
-        if (!paramId) {
-          setLoading(false)
-          return
-        }
-
-        const doc = await getEditorByHandleOrId(paramId)
-        setEditor(doc)
-
-        if (doc) {
-          const items = await getEditorPortfolioItems(doc.user_id || doc.id)
-          setPortfolioItems(items)
-        }
-      } catch (err: any) {
-        console.error('Unhandled error in fetchPublicEditor:', err)
-        setHasServerError(true)
-        setEditor(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchPublicEditor()
-  }, [targetId])
-
-  useEffect(() => {
-    const processInsta = () => {
-      if (typeof window !== 'undefined' && (window as any).instgrm) {
-        try {
-          (window as any).instgrm.Embeds.process();
-        } catch (e) {
-          console.log('Insta embed process error:', e);
-        }
-      }
-    };
-
-    if (!document.getElementById('instagram-embed-script')) {
-      const script = document.createElement('script');
-      script.id = 'instagram-embed-script';
-      script.src = 'https://www.instagram.com/embed.js';
-      script.async = true;
-      script.onload = () => setTimeout(processInsta, 100);
-      document.body.appendChild(script);
-    } else {
-      setTimeout(processInsta, 100);
-    }
-  }, [editor, portfolioItems]);
-
-  const formatTurnaround = (val?: string | number | null) => {
-    if (!val) return '2 Days'
-    const str = String(val).trim()
-    const numMatch = str.match(/\d+/)
-    if (numMatch) {
-      const num = numMatch[0]
-      return `${num} ${Number(num) === 1 ? 'Day' : 'Days'}`
-    }
-    if (/hour/i.test(str)) return str
-    return str.replace(/ays?/i, 'Days').replace(/days?/i, 'Days')
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (hasServerError && !editor) {
-    return (
-      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center space-y-4 p-6 text-center">
-        <div className="w-14 h-14 bg-amber-950/80 border border-amber-800/50 rounded-2xl flex items-center justify-center text-amber-400 text-2xl">
-          ⚡
-        </div>
-        <h2 className="text-xl font-bold font-display text-amber-200">Backend Maintenance</h2>
-        <p className="text-zinc-400 text-xs max-w-sm leading-relaxed">
-          We are currently undergoing brief backend maintenance. Please refresh in a few minutes.
-        </p>
-        <Link className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-lime-400 rounded-xl" href="/">
-          ← Back to Marketplace
-        </Link>
-      </div>
-    )
-  }
+  const editor = await getEditorByHandleOrId(targetId)
 
   if (!editor) {
     return (
       <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center space-y-4">
         <p className="text-zinc-400 text-sm font-bold">Editor profile not found.</p>
-        <Link className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-lime-400 rounded-xl" href="/">
-          ← Back to Marketplace
+        <Link className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-lime-400 rounded-xl" href="/editors">
+          ← Back to All Editors
         </Link>
       </div>
     )
   }
 
-  // Format Phone & WhatsApp Links
-  const rawDigits = (editor.whatsapp_number || editor.whatsapp || '').toString().replace(/\D/g, '')
-  const rawPhone = rawDigits.length >= 10 ? rawDigits : '919016047119'
-  const displayPhone = rawPhone.length === 10 ? `+91 ${rawPhone}` : `+${rawPhone}`
-  const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone
+  const portfolioItems = await getEditorPortfolioItems(editor.user_id || editor.id)
 
-  const whatsappMessage = encodeURIComponent(
-    `Hi ${editor.full_name || 'Editor'}, I saw your portfolio on UperAI and would like to discuss a video project with you.`
-  )
-  const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${whatsappMessage}` : '#'
-
-  const handleCopyNumber = () => {
-    if (!rawPhone) return
-    navigator.clipboard.writeText(displayPhone)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.uperai.in',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Video Editors Directory',
+        item: 'https://www.uperai.in/editors',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: editor.full_name || 'Editor Profile',
+        item: `https://www.uperai.in/editors/${editor.handle || targetId}`,
+      },
+    ],
   }
 
-  const handleTrackLead = async () => {
-    try {
-      if (editor) {
-        await addDoc(collection(db, 'contact_clicks'), {
-          editor_id: editor.user_id || editor.id || 'unknown',
-          editor_name: editor.full_name || editor.name || 'Editor',
-          creator_id: user?.uid || user?.$id || 'guest',
-          creator_name: user?.displayName || user?.name || 'Guest User',
-          timestamp: new Date().toISOString(),
-        })
-      }
-    } catch (e) {
-      console.log('Lead event logged')
-    }
+  const profileSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    name: `${editor.full_name} - Video Editor Portfolio`,
+    url: `https://www.uperai.in/editors/${editor.handle || targetId}`,
+    mainEntity: {
+      '@type': 'Person',
+      name: editor.full_name,
+      jobTitle: editor.headline || editor.specialty_tag || 'Video Editor',
+      description: editor.bio || `${editor.full_name} is a verified Indian video editor specializing in ${editor.specialty_tag || 'high-retention video editing'}.`,
+      image: editor.avatar_url,
+      sameAs: [
+        editor.instagram_handle ? `https://instagram.com/${editor.instagram_handle.replace(/^@/, '')}` : null,
+        editor.youtube_url || editor.youtube_url1,
+      ].filter(Boolean),
+      knowsAbout: editor.software || ['Adobe Premiere Pro', 'After Effects', 'Video Editing'],
+      offers: {
+        '@type': 'Offer',
+        price: editor.base_rate || editor.min_rate || 1500,
+        priceCurrency: editor.currency || 'INR',
+        availability: editor.open_to_work !== false ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        description: `Video editing services starting from ₹${Number(editor.base_rate || 1500).toLocaleString()}`,
+      },
+    },
   }
-
-  // Utility to parse YouTube vs Instagram URLs cleanly
-  const parseVideoMedia = (url?: string) => {
-    if (!url || typeof url !== 'string') return null
-    const cleanUrl = url.trim()
-    if (!cleanUrl) return null
-
-    // 1. YouTube Match (Long form, Shorts, or short links)
-    const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/)
-    if (ytMatch && ytMatch[1]) {
-      const isShorts = /youtube\.com\/shorts\//i.test(cleanUrl)
-      return { type: 'youtube', id: ytMatch[1], url: cleanUrl, isVertical: isShorts }
-    }
-
-    // 2. Instagram Match (Reels or Posts)
-    const instaMatch = cleanUrl.match(/(?:instagram\.com\/(?:reel|reels|p|tv|share\/reel)\/)([\w-]+)/i)
-    if (instaMatch && instaMatch[1]) {
-      const code = instaMatch[1]
-      return {
-        type: 'instagram',
-        id: code,
-        embedUrl: `https://www.instagram.com/reel/${code}/embed/captioned/`,
-        rawUrl: `https://www.instagram.com/reel/${code}/`,
-        url: `https://www.instagram.com/reel/${code}/`
-      }
-    }
-
-    // 3. Vimeo Match
-    const vimeoMatch = cleanUrl.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]*\/videos\/|album\/\d+\/video\/|video\/|)(\d+)/i)
-    if (vimeoMatch && vimeoMatch[1]) {
-      return {
-        type: 'vimeo',
-        id: vimeoMatch[1],
-        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
-        url: cleanUrl
-      }
-    }
-
-    // 4. Google Drive Match
-    const driveEmbedUrl = getGoogleDriveEmbedUrl(cleanUrl)
-    if (driveEmbedUrl) {
-      return { type: 'drive', embedUrl: driveEmbedUrl, url: cleanUrl }
-    }
-
-    // 5. Dropbox — convert share link to direct playable URL
-    if (/dropbox\.com\/s\//i.test(cleanUrl)) {
-      const directUrl = cleanUrl
-        .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-        .replace(/[?&]dl=0/, '')
-      return { type: 'direct', id: directUrl, directUrl, url: cleanUrl }
-    }
-
-    // 6. Direct video file URLs (.mp4, .webm, .mov, .mkv, .m4v, .avi)
-    if (/\.(mp4|webm|mov|mkv|m4v|avi)(\?.*)?$/i.test(cleanUrl)) {
-      return { type: 'direct', id: cleanUrl, directUrl: cleanUrl, url: cleanUrl }
-    }
-
-    // 7. Appwrite storage / CDN URLs that serve video (no extension but known hosts)
-    if (/appwrite\.io\/v1\/storage/i.test(cleanUrl) || /cloud\.appwrite\.io\/v1\/storage/i.test(cleanUrl)) {
-      return { type: 'direct', id: cleanUrl, directUrl: cleanUrl, url: cleanUrl }
-    }
-
-    return { type: 'unknown', url: cleanUrl }
-  }
-
-  const rawShowreelUrls = [
-    editor?.youtube_url1,
-    editor?.youtube_url,
-    editor?.youtube_url2,
-    editor?.youtube_url3,
-    editor?.showreel_url,
-    editor?.video_url,
-    editor?.video_url1,
-    editor?.video_url2,
-    editor?.video_url3,
-    ...(Array.isArray(portfolioItems) ? portfolioItems.map((pi: any) => pi?.youtube_url || pi?.video_url || pi?.url) : []),
-  ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
-
-  const uniqueShowreelUrls = Array.from(new Set(rawShowreelUrls))
-  const parsedVideos = uniqueShowreelUrls
-    .map(parseVideoMedia)
-    .filter((item): item is NonNullable<ReturnType<typeof parseVideoMedia>> => item !== null)
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white">
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        <Link className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs font-bold text-zinc-300 hover:text-white rounded-xl transition-all" href="/">
-          ← Back to Marketplace
-        </Link>
-
-        {/* Hero Banner */}
-        <div className="bg-gradient-to-r from-yellow-500 via-amber-600 to-lime-500 rounded-3xl p-8 text-black shadow-2xl space-y-2">
-          <span className="bg-black text-lime-400 text-[10px] font-black uppercase px-3 py-1 rounded-full">
-            {editor?.specialty_tag || 'VIDEO EDITOR'}
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor?.full_name?.toUpperCase() || 'EDITOR'}</h1>
-          <p className="font-bold text-sm opacity-90">Verified Indian Video Editor • High Impact Showreels</p>
-        </div>
-
-        {/* Featured Work Grid */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-black text-lime-400 font-display">Featured Work & Showreels ({parsedVideos.length})</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
-            {parsedVideos.length > 0 ? (
-              parsedVideos.map((media: any, index: number) => (
-                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase">Showreel #{index + 1}</span>
-                    <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2 py-0.5 rounded-full uppercase">
-                      {media.type}
-                    </span>
-                  </div>
-
-                  <ShowreelPlayer media={media} />
-                </div>
-              ))
-            ) : (
-              <div className="col-span-3 py-8 text-center text-zinc-500 text-xs bg-zinc-900 border border-zinc-800 rounded-2xl">
-                No showreels linked yet.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Selected Work & Rates Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
-            <p className="text-xs text-blue-200 uppercase tracking-wider">SPECIALTY</p>
-            <p className="text-base text-white mt-1">{editor.specialty_tag || 'Gaming Videos'}</p>
-          </div>
-          <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
-            <p className="text-xs text-blue-200 uppercase tracking-wider">BASE RATE</p>
-            <p className="text-xl text-yellow-300 font-black mt-1">₹{Number(editor.base_rate || 1500).toLocaleString()} / Video</p>
-          </div>
-          <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
-            <p className="text-xs text-blue-200 uppercase tracking-wider">TURNAROUND</p>
-            <p className="text-base text-white mt-1">{formatTurnaround(editor.turnaround_time)}</p>
-          </div>
-        </div>
-
-        {/* Contact CTA Block (Gated Behind Login) */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
-          <h3 className="text-2xl font-black font-display">LET'S CREATE SOMETHING GREAT!</h3>
-          <p className="text-xs text-zinc-400 max-w-md mx-auto">
-            {user
-              ? 'Have a project in mind? Connect directly with this editor.'
-              : 'Sign in to access direct WhatsApp contacts and hire verified editors.'}
-          </p>
-
-          {user ? (
-            /* Unlocked: Trigger Contact Modal & Lead Tracking */
-            <button
-              onClick={() => {
-                setIsContactModalOpen(true)
-                handleTrackLead()
-              }}
-              className="inline-block px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
-            >
-              CONTACT ME ON WHATSAPP →
-            </button>
-          ) : (
-            /* Locked: Google OAuth Trigger for Guest Users */
-            <button
-              onClick={loginWithGoogle}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#000" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#000" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#000" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#000" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-              </svg>
-              LOG IN TO CONTACT ON WHATSAPP 🔒
-            </button>
-          )}
-        </div>
-      </main>
-
-      {/* CONTACT DETAILS POP-UP MODAL */}
-      {isContactModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 space-y-6 relative shadow-2xl animate-in fade-in zoom-in-95">
-            {/* Close Button */}
-            <button
-              onClick={() => setIsContactModalOpen(false)}
-              className="absolute top-4 right-4 w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-white transition-all text-xs font-bold"
-            >
-              ✕
-            </button>
-
-            <div className="space-y-1 text-center">
-              <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2.5 py-1 rounded-full uppercase">
-                DIRECT CONTACT UNLOCKED
-              </span>
-              <h3 className="text-xl font-black text-white pt-2">{editor.full_name}</h3>
-              <p className="text-zinc-400 text-xs">Reach out directly via phone or WhatsApp</p>
-            </div>
-
-            {/* Phone Number Display Box */}
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase">WhatsApp / Phone Number</p>
-                <p className="text-base font-black text-white">{displayPhone}</p>
-              </div>
-              <button
-                onClick={handleCopyNumber}
-                className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-lime-400 text-xs font-bold rounded-xl transition-all border border-zinc-700"
-              >
-                {copied ? '✓ Copied' : '📋 Copy'}
-              </button>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="space-y-3 pt-1">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs text-center rounded-xl uppercase tracking-wider shadow-lg transition-all"
-              >
-                Open Chat on WhatsApp 💬
-              </a>
-
-              <button
-                onClick={() => setIsContactModalOpen(false)}
-                className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 font-bold text-xs rounded-xl transition-all"
-              >
-                Stay on UperAI Platform
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <>
+      <JsonLd data={breadcrumbSchema} id="editor-breadcrumb-schema" />
+      <JsonLd data={profileSchema} id="editor-profile-schema" />
+      <EditorProfileClient initialEditor={editor} initialPortfolioItems={portfolioItems} />
+    </>
   )
 }

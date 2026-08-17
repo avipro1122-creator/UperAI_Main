@@ -8,27 +8,71 @@ import { OnboardingProvider } from '@/context/OnboardingContext'
 import { AuthProvider } from '@/context/AuthContext'
 import './globals.css'
 
+import JsonLd from '@/components/JsonLd'
+
 export const metadata: Metadata = {
-  title: 'UperAI — Indian editors. Rates upfront.',
+  metadataBase: new URL('https://www.uperai.in'),
+  title: {
+    default: 'UperAI — Hire Verified Indian Video Editors | Rates Upfront in INR',
+    template: '%s | UperAI',
+  },
   description:
-    'A marketplace for YouTube creators and video editors to find each other, audition real work, and agree on upfront rates in INR.',
+    'The premier open marketplace to hire verified Indian video editors for YouTube, Shorts, and Reels. Audition real showreels, compare upfront pricing in INR, and hire on WhatsApp.',
+  keywords: [
+    'hire video editors',
+    'freelance video editor India',
+    'youtube video editor',
+    'short form video editor',
+    'reels video editor',
+    'video editing marketplace',
+    'freelance editor portfolio',
+    'hire editors in INR',
+    'gaming video editor',
+    'vfx artist India',
+  ],
+  authors: [{ name: 'UperAI Team', url: 'https://www.uperai.in' }],
+  creator: 'UperAI',
+  publisher: 'UperAI',
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   other: {
     'google-adsense-account': 'ca-pub-9701077184398829',
   },
   openGraph: {
-    title: 'UperAI — Indian editors. Rates upfront.',
+    title: 'UperAI — Hire Verified Indian Video Editors | Rates Upfront in INR',
     description:
       'Real portfolios you can play. Upfront rates in INR. Stop hiring in Instagram DMs.',
     url: 'https://www.uperai.in',
     siteName: 'UperAI',
     locale: 'en_IN',
     type: 'website',
+    images: [
+      {
+        url: '/icon.svg',
+        width: 512,
+        height: 512,
+        alt: 'UperAI - Video Editor Marketplace',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'UperAI — Indian editors. Rates upfront.',
+    title: 'UperAI — Hire Verified Indian Video Editors | Rates Upfront in INR',
     description:
       'Real portfolios you can play. Upfront rates in INR. Stop hiring in Instagram DMs.',
+    images: ['/icon.svg'],
   },
 }
 
@@ -39,9 +83,50 @@ export default function RootLayout({
 }) {
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID
 
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'UperAI',
+    url: 'https://www.uperai.in',
+    logo: 'https://www.uperai.in/icon.svg',
+    description:
+      'The open marketplace connecting India’s top video editors directly with content creators with transparent upfront rates in INR.',
+    founder: [
+      {
+        '@type': 'Person',
+        name: 'Avanish Rai',
+        jobTitle: 'Founder & Full-Stack Developer',
+        sameAs: 'https://www.linkedin.com/in/avanish-rai-proshot/',
+      },
+      {
+        '@type': 'Person',
+        name: 'Kumar Karan',
+        jobTitle: 'Co-Founder & Operations Lead',
+        sameAs: 'https://www.linkedin.com/in/karan-kr-v-83746b272/',
+      },
+    ],
+    sameAs: [
+      'https://www.linkedin.com/in/avanish-rai-proshot/',
+    ],
+  }
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'UperAI',
+    url: 'https://www.uperai.in',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://www.uperai.in/editors?q={search_term_string}',
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
   return (
     <html lang="en" className="dark">
       <head>
+        <JsonLd data={organizationSchema} id="organization-schema" />
+        <JsonLd data={websiteSchema} id="website-schema" />
         {/* Preconnect to critical asset & image origins */}
         <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="anonymous" />

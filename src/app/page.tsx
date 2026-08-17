@@ -1,10 +1,27 @@
+import type { Metadata } from 'next'
 import HeroSection from '@/components/HeroSection'
 import BentoMarketplace, { BentoEditorItem } from '@/components/BentoMarketplace'
 import RecentlyActiveEditors, { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
+import JsonLd from '@/components/JsonLd'
 import { getPublicEditors } from '@/lib/firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
 
 export const revalidate = 15
+
+export const metadata: Metadata = {
+  title: 'Hire Verified Indian Video Editors | Rates Upfront in INR',
+  description:
+    'Stop hiring in Instagram DMs. Audition real showreels, filter by vertical Shorts or 16:9 Long-Form, and hire top Indian video editors directly with transparent INR rates.',
+  alternates: {
+    canonical: 'https://www.uperai.in',
+  },
+  openGraph: {
+    title: 'Hire Verified Indian Video Editors | Rates Upfront in INR — UperAI',
+    description:
+      'Audition real portfolio clips and hire verified Indian video editors with upfront rates in INR. Direct WhatsApp connection.',
+    url: 'https://www.uperai.in',
+  },
+}
 
 export default async function HomePage() {
   let featured: ExtendedEditorCardData[] = []
@@ -97,8 +114,25 @@ export default async function HomePage() {
     bentoEditors = []
   }
 
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Featured Video Editors in India',
+    description: 'Top verified Indian freelance video editors on UperAI',
+    numberOfItems: featured.length,
+    itemListElement: featured.slice(0, 10).map((editor, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      name: editor.name,
+      url: `https://www.uperai.in/editors/${editor.handle}`,
+      description: editor.headline,
+      image: editor.avatar_url || editor.thumbnail_url,
+    })),
+  }
+
   return (
     <div className="bg-[#0E1017] text-gray-100 min-h-screen selection:bg-lime-400 selection:text-black">
+      <JsonLd data={itemListSchema} id="featured-editors-schema" />
       {/* Soft Server Maintenance Banner Notice */}
       {isServerError && (
         <div className="bg-amber-950/80 border-b border-amber-800/60 py-3 px-4 text-center text-amber-200 text-xs font-semibold flex items-center justify-center gap-2">

@@ -1,7 +1,8 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import PublicEditorProfilePage from '@/app/editors/[handle]/page'
-
-export default function SingleEditorPage({ params }: { params?: { id?: string; handle?: string } }) {
-  return <PublicEditorProfilePage params={params} />
+export default function SingleEditorPage({ params }: { params?: { id?: string } }) {
+  if (params?.id) {
+    redirect(`/editors/${params.id}`)
+  }
+  redirect('/editors')
 }

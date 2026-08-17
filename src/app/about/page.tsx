@@ -1,12 +1,77 @@
-'use client';
+import React from 'react'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { Linkedin } from 'lucide-react'
+import JsonLd from '@/components/JsonLd'
 
-import React from 'react';
-import Link from 'next/link';
-import { Linkedin } from 'lucide-react';
+export const metadata: Metadata = {
+  title: 'About UperAI — The Video Editor Marketplace for Creators',
+  description:
+    'Learn how UperAI eliminates friction between YouTube creators and verified Indian video editors with upfront rates in INR and direct WhatsApp hiring.',
+  alternates: {
+    canonical: 'https://www.uperai.in/about',
+  },
+  openGraph: {
+    title: 'About UperAI — The Video Editor Marketplace for Creators',
+    description:
+      'Connecting India’s finest video editors, motion designers, and VFX artists directly with content creators.',
+    url: 'https://www.uperai.in/about',
+  },
+}
 
 export default function AboutPage() {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.uperai.in',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'About UperAI',
+        item: 'https://www.uperai.in/about',
+      },
+    ],
+  }
+
+  const aboutPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: 'About UperAI',
+    description:
+      'The open marketplace connecting India’s finest video editors, motion designers, and VFX artists directly with content creators who are actively hiring.',
+    url: 'https://www.uperai.in/about',
+    mainEntity: {
+      '@type': 'Organization',
+      name: 'UperAI',
+      url: 'https://www.uperai.in',
+      founder: [
+        {
+          '@type': 'Person',
+          name: 'Avanish Rai',
+          jobTitle: 'Founder, Developer & Content Lead',
+          sameAs: 'https://www.linkedin.com/in/avanish-rai-proshot/',
+        },
+        {
+          '@type': 'Person',
+          name: 'Kumar Karan',
+          jobTitle: 'Co-Founder & Operations Lead',
+          sameAs: 'https://www.linkedin.com/in/karan-kr-v-83746b272/',
+        },
+      ],
+    },
+  }
+
   return (
     <div className="min-h-screen bg-[#09090b] text-white selection:bg-lime-400 selection:text-black">
+      <JsonLd data={breadcrumbSchema} id="about-breadcrumb-schema" />
+      <JsonLd data={aboutPageSchema} id="about-page-schema" />
+
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-12">
         {/* Header Badge */}
         <div className="space-y-4 text-center sm:text-left">
@@ -29,7 +94,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-6 space-y-3 shadow-xl">
             <span className="text-2xl">🎬</span>
-            <h3 className="text-lg font-black text-white">For Content Creators</h3>
+            <h2 className="text-lg font-black text-white">For Content Creators</h2>
             <p className="text-xs text-zinc-400 leading-relaxed">
               Skip the inbox clutter. Browse verified YouTube showreels, filter by niche or price, and connect directly with editors on WhatsApp—no hidden platform markups or slow agency delays.
             </p>
@@ -37,7 +102,7 @@ export default function AboutPage() {
 
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-6 space-y-3 shadow-xl">
             <span className="text-2xl">⚡</span>
-            <h3 className="text-lg font-black text-white">For Editors & Visual Artists</h3>
+            <h2 className="text-lg font-black text-white">For Editors & Visual Artists</h2>
             <p className="text-xs text-zinc-400 leading-relaxed">
               Show your work, set your own rates in INR, and get discovered by serious creators. Build your public portfolio page in minutes and get direct project leads on WhatsApp.
             </p>
@@ -118,7 +183,7 @@ export default function AboutPage() {
 
         {/* Call to Action Footer */}
         <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-8 text-center space-y-4">
-          <h3 className="text-xl font-black text-white">Ready to hire or showcase your work?</h3>
+          <h2 className="text-xl font-black text-white">Ready to hire or showcase your work?</h2>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <Link className="w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg" href="/#marketplace-section">
               Browse Marketplace ↗
@@ -130,5 +195,5 @@ export default function AboutPage() {
         </div>
       </main>
     </div>
-  );
+  )
 }

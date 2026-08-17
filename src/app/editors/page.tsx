@@ -1,9 +1,26 @@
 import React from 'react'
+import type { Metadata } from 'next'
 import DirectoryView, { DirectoryEditor } from '@/components/DirectoryView'
 import { EditorCardData } from '@/components/EditorCard'
+import JsonLd from '@/components/JsonLd'
 import { getPublicEditors } from '@/lib/firebase/firestore'
 
 export const revalidate = 15
+
+export const metadata: Metadata = {
+  title: 'Browse Verified Video Editors in India | Upfront Pricing',
+  description:
+    'Explore India’s curated directory of freelance video editors for YouTube Shorts, Reels, Documentaries, and Gaming. Compare upfront rates in INR and audition portfolios.',
+  alternates: {
+    canonical: 'https://www.uperai.in/editors',
+  },
+  openGraph: {
+    title: 'Browse Verified Video Editors in India | UperAI Directory',
+    description:
+      'Compare rates, filter by format (Shorts vs Long-form), and audition verified Indian video editor showreels.',
+    url: 'https://www.uperai.in/editors',
+  },
+}
 
 export default async function DirectoryPage() {
   let mapped: DirectoryEditor[] = []
@@ -66,5 +83,50 @@ export default async function DirectoryPage() {
     mapped = []
   }
 
-  return <DirectoryView initialEditors={mapped} isServerError={isServerError} />
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.uperai.in',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Video Editors Directory',
+        item: 'https://www.uperai.in/editors',
+      },
+    ],
+  }
+
+  const directorySchema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Browse Verified Video Editors in India',
+    description: 'Curated list of professional video editors in India with upfront pricing in INR.',
+    url: 'https://www.uperai.in/editors',
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: mapped.length,
+      itemListElement: mapped.slice(0, 20).map((editor, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: editor.name,
+        url: `https://www.uperai.in/editors/${editor.cardData.handle}`,
+        description: editor.cardData.headline,
+        image: editor.cardData.avatar_url,
+      })),
+    },
+  }
+
+  return (
+    <>
+      <JsonLd data={breadcrumbSchema} id="editors-breadcrumb-schema" />
+      <JsonLd data={directorySchema} id="editors-directory-schema" />
+      <DirectoryView initialEditors={mapped} isServerError={isServerError} />
+    </>
+  )
 }
