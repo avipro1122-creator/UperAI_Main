@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
-import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google'
+import { GoogleTagManager } from '@next/third-parties/google'
 import { Analytics } from '@vercel/analytics/next'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
@@ -51,29 +51,22 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://i.ytimg.com" />
         <link rel="dns-prefetch" href="https://api.dicebear.com" />
 
-        <Script id="consent-mode-default" strategy="afterInteractive">
+        {/* Google tag (gtag.js) */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-7WCGX60TSE"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
-            gtag('consent', 'default', {
-              ad_storage: 'denied',
-              ad_user_data: 'denied',
-              ad_personalization: 'denied',
-              analytics_storage: 'denied',
-              functionality_storage: 'denied',
-              personalization_storage: 'denied',
-              security_storage: 'granted',
-              wait_for_update: 500
+            gtag('js', new Date());
+            gtag('config', 'G-7WCGX60TSE', {
+              page_path: window.location.pathname,
+              send_page_view: true
             });
           `}
         </Script>
-        <Script
-          id="Cookiebot"
-          src="https://consent.cookiebot.com/uc.js"
-          data-cbid="d5c9bb0a-b958-4310-b7d3-3f9f5f4bb32b"
-          data-blockingmode="auto"
-          strategy="afterInteractive"
-        />
         <Script
           src="https://accounts.google.com/gsi/client"
           strategy="afterInteractive"
@@ -94,7 +87,6 @@ export default function RootLayout({
           </OnboardingProvider>
         </AuthProvider>
         {gtmId && <GoogleTagManager gtmId={gtmId} />}
-        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-7WCGX60TSE'} />
         <Analytics />
       </body>
     </html>
