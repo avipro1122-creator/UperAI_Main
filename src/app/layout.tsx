@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
-import { GoogleTagManager } from '@next/third-parties/google'
+import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google'
 import { Analytics } from '@vercel/analytics/next'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
@@ -94,6 +94,7 @@ export default function RootLayout({
           </OnboardingProvider>
         </AuthProvider>
         {gtmId && <GoogleTagManager gtmId={gtmId} />}
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-7WCGX60TSE'} />
         <Analytics />
       </body>
     </html>
