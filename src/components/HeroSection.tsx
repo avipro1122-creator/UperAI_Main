@@ -20,19 +20,8 @@ export default function HeroSection({
   const { openModal } = useOnboarding()
   const [visitorCount, setVisitorCount] = useState<number | null>(null)
 
-  // Real-time site visitor tracker that increments dynamically on every refresh
+  // Real-time site visitor tracker that records each visit
   useEffect(() => {
-    // Generate a progressive local refresh increment
-    let localBonus = 0
-    try {
-      const stored = parseInt(sessionStorage.getItem('uperai_refresh_count') || '0', 10)
-      const nextVal = stored + Math.floor(Math.random() * 2) + 1
-      sessionStorage.setItem('uperai_refresh_count', String(nextVal))
-      localBonus = nextVal
-    } catch {
-      localBonus = 1
-    }
-
     async function trackVisitor() {
       try {
         const res = await fetch(`/api/visitor-count?t=${Date.now()}`, {
@@ -40,24 +29,17 @@ export default function HeroSection({
           cache: 'no-store',
         })
         const data = await res.json()
-        if (data && typeof data.count === 'number' && data.count > 0) {
-          setVisitorCount(data.count + localBonus)
+        if (data && typeof data.count === 'number') {
+          setVisitorCount(data.count)
         } else {
-          setVisitorCount(1480 + localBonus)
+          setVisitorCount(0)
         }
       } catch {
-        setVisitorCount(1480 + localBonus)
+        setVisitorCount(0)
       }
     }
 
     trackVisitor()
-
-    // Subtle real-time increment while staying on page
-    const interval = setInterval(() => {
-      setVisitorCount((prev) => (prev !== null ? prev + 1 : 1480))
-    }, 45000)
-
-    return () => clearInterval(interval)
   }, [])
 
   const isCreators = activeRole === 'CREATOR'
@@ -106,7 +88,7 @@ export default function HeroSection({
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                 </span>
                 <span className="text-zinc-200 font-extrabold">
-                  {visitorCount !== null ? `${visitorCount.toLocaleString()}+` : '1,480+'}
+                  {visitorCount !== null ? visitorCount.toLocaleString() : '...'}
                 </span>{' '}
                 Creators & Editors visited
               </div>
