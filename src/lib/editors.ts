@@ -22,6 +22,7 @@ export async function getEditors() {
           min_rate: p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long,
           base_rate: p.base_rate ?? p.min_rate ?? p.rate_short ?? p.rate_long,
           turnaround_time: p.turnaround_time || (p.turnaround_days ? `${p.turnaround_days} Days` : '48 Hours'),
+          testimonials: p.testimonials || [],
           portfolio_items: items.map((item: any) => ({
             id: item.id,
             title: item.title,

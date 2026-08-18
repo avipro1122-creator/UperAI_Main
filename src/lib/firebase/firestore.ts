@@ -7,6 +7,7 @@ import {
   query,
   where,
 } from 'firebase/firestore'
+import { Testimonial } from '@/lib/types/appwrite.types'
 import { db, firebaseConfig } from './client'
 
 export interface FirestoreEditorProfile {
@@ -47,6 +48,7 @@ export interface FirestoreEditorProfile {
   software?: string[]
   open_to_work?: boolean
   is_hidden?: boolean
+  testimonials?: Testimonial[]
   createdAt?: string
   updatedAt?: string
 }
@@ -92,6 +94,22 @@ export const DEFAULT_EDITORS: FirestoreEditorProfile[] = [
     software: ['Premiere Pro', 'After Effects', 'DaVinci Resolve'],
     open_to_work: true,
     is_hidden: false,
+    testimonials: [
+      {
+        clientName: 'Tanmay Bhat',
+        channelOrBrand: 'Honestly by Tanmay Bhat',
+        clientLink: 'https://youtube.com',
+        quote: 'Avanish transformed our short-form pacing completely. Retention jumped by 35% within the first two weeks of working together.',
+        rating: 5,
+      },
+      {
+        clientName: 'Saurabh Sinha',
+        channelOrBrand: 'Curious Saurabh',
+        clientLink: 'https://instagram.com',
+        quote: 'Fast turnaround, zero hand-holding required. He understands visual storytelling and hook retention better than most senior editors.',
+        rating: 5,
+      },
+    ],
   },
   {
     id: 'kumarkaran',
@@ -117,6 +135,15 @@ export const DEFAULT_EDITORS: FirestoreEditorProfile[] = [
     software: ['Premiere Pro', 'CapCut Pro'],
     open_to_work: true,
     is_hidden: false,
+    testimonials: [
+      {
+        clientName: 'Nikhil Kamath',
+        channelOrBrand: 'WTF Podcast Clips',
+        clientLink: 'https://youtube.com',
+        quote: 'Exceptional documentary-style editing and sound design. Kumar turns raw audio and talking heads into cinematic masterpieces.',
+        rating: 5,
+      },
+    ],
   },
 ]
 
@@ -124,21 +151,33 @@ export const DEFAULT_EDITORS: FirestoreEditorProfile[] = [
 const memoryCache = new Map<string, { timestamp: number; data: any }>()
 const CACHE_TTL_MS = 30_000
 
+function parseFirestoreValue(valObj: any): any {
+  if (!valObj || typeof valObj !== 'object') return valObj
+  const type = Object.keys(valObj)[0]
+  if (!type) return null
+  if (type === 'integerValue') return Number(valObj[type])
+  if (type === 'doubleValue') return Number(valObj[type])
+  if (type === 'booleanValue') return Boolean(valObj[type])
+  if (type === 'stringValue') return valObj[type]
+  if (type === 'arrayValue') {
+    return (valObj[type].values || []).map((v: any) => parseFirestoreValue(v))
+  }
+  if (type === 'mapValue') {
+    const obj: any = {}
+    const fields = valObj[type].fields || {}
+    for (const k of Object.keys(fields)) {
+      obj[k] = parseFirestoreValue(fields[k])
+    }
+    return obj
+  }
+  return valObj[type]
+}
+
 function parseFirestoreFields(doc: any) {
   const id = doc.name.split('/').pop()
   const fields: any = {}
   for (const key of Object.keys(doc.fields || {})) {
-    const valObj = doc.fields[key]
-    const type = Object.keys(valObj)[0]
-    if (type === 'integerValue') {
-      fields[key] = Number(valObj[type])
-    } else if (type === 'booleanValue') {
-      fields[key] = Boolean(valObj[type])
-    } else if (type === 'arrayValue') {
-      fields[key] = (valObj[type].values || []).map((v: any) => Object.values(v)[0])
-    } else {
-      fields[key] = valObj[type]
-    }
+    fields[key] = parseFirestoreValue(doc.fields[key])
   }
   return { id, ...fields }
 }

@@ -16,6 +16,14 @@ export interface UserDocument extends Models.Document {
   is_admin?: boolean
 }
 
+export interface Testimonial {
+  clientName: string
+  channelOrBrand: string
+  clientLink: string
+  quote: string
+  rating: number
+}
+
 export interface EditorProfileDocument extends Models.Document {
   user_id: string
   full_name?: string | null
@@ -36,6 +44,7 @@ export interface EditorProfileDocument extends Models.Document {
   instagram_handle?: string | null
   youtube_url?: string | null
   is_hidden?: boolean
+  testimonials?: Testimonial[]
 }
 
 export interface PortfolioItemDocument extends Models.Document {

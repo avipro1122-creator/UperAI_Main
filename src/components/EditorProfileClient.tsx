@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Instagram, Video, ExternalLink } from 'lucide-react'
+import TestimonialsSection from '@/components/TestimonialsSection'
 import { useAuth } from '@/context/AuthContext'
 import { getEditorPortfolioItems } from '@/lib/firebase/firestore'
 import { db } from '@/lib/firebase/client'
@@ -342,6 +343,14 @@ export default function EditorProfileClient({
             )}
           </div>
         </div>
+
+        {/* Client Testimonials Section */}
+        {editor?.testimonials && editor.testimonials.length > 0 && (
+          <TestimonialsSection
+            testimonials={editor.testimonials}
+            editorName={editor?.full_name || editor?.name}
+          />
+        )}
 
         {/* Selected Work & Rates Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
