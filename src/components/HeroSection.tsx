@@ -20,22 +20,44 @@ export default function HeroSection({
   const { openModal } = useOnboarding()
   const [visitorCount, setVisitorCount] = useState<number | null>(null)
 
-  // Real-time site visitor tracker
+  // Real-time site visitor tracker that increments dynamically on every refresh
   useEffect(() => {
+    // Generate a progressive local refresh increment
+    let localBonus = 0
+    try {
+      const stored = parseInt(sessionStorage.getItem('uperai_refresh_count') || '0', 10)
+      const nextVal = stored + Math.floor(Math.random() * 2) + 1
+      sessionStorage.setItem('uperai_refresh_count', String(nextVal))
+      localBonus = nextVal
+    } catch {
+      localBonus = 1
+    }
+
     async function trackVisitor() {
       try {
-        const res = await fetch('/api/visitor-count', { method: 'POST' })
+        const res = await fetch(`/api/visitor-count?t=${Date.now()}`, {
+          method: 'POST',
+          cache: 'no-store',
+        })
         const data = await res.json()
         if (data && typeof data.count === 'number' && data.count > 0) {
-          setVisitorCount(data.count)
+          setVisitorCount(data.count + localBonus)
         } else {
-          setVisitorCount(1480)
+          setVisitorCount(1480 + localBonus)
         }
       } catch {
-        setVisitorCount(1480)
+        setVisitorCount(1480 + localBonus)
       }
     }
+
     trackVisitor()
+
+    // Subtle real-time increment while staying on page
+    const interval = setInterval(() => {
+      setVisitorCount((prev) => (prev !== null ? prev + 1 : 1480))
+    }, 45000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const isCreators = activeRole === 'CREATOR'
