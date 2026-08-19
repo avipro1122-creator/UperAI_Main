@@ -63,6 +63,10 @@ export default function HeroSection({ featured }: HeroSectionProps) {
   const [visitorCount, setVisitorCount] = useState<number | null>(null)
   const [displayCount, setDisplayCount] = useState<number | null>(null)
 
+  // Auto-looping rotating carousel state
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [isRotatingPaused, setIsRotatingPaused] = useState(false)
+
   // Video Audition Modal State for floating hero cards
   const [activeVideoModal, setActiveVideoModal] = useState<{
     isOpen: boolean
@@ -159,6 +163,17 @@ export default function HeroSection({ featured }: HeroSectionProps) {
   const isCreators = activeRole === 'CREATOR'
   const displayEditors = featured.length >= 2 ? featured.slice(0, 3) : FALLBACK_EDITORS
 
+  // Continuous auto-looping showreel timer (every 3.5s)
+  useEffect(() => {
+    if (isRotatingPaused || activeVideoModal.isOpen || displayEditors.length <= 1) return
+
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % displayEditors.length)
+    }, 3500)
+
+    return () => clearInterval(timer)
+  }, [isRotatingPaused, activeVideoModal.isOpen, displayEditors.length])
+
   const scrollToMarketplace = () => {
     const marketplaceElement = document.getElementById('marketplace-section')
     if (marketplaceElement) {
@@ -179,43 +194,43 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
   return (
     <>
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14 pb-16 sm:pb-24 border-b border-zinc-800/60 overflow-hidden">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-14 pb-12 sm:pb-24 border-b border-zinc-800/60 overflow-hidden">
         {/* Ambient background glows */}
         <div className="absolute top-1/4 left-5 w-96 h-96 ambient-glow-lime pointer-events-none blur-3xl opacity-50" />
         <div className="absolute top-1/3 right-5 w-96 h-96 ambient-glow-purple pointer-events-none blur-3xl opacity-40" />
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 lg:gap-10 items-center">
           {/* Left Column — Text & CTAs */}
           <div className="lg:col-span-6 xl:col-span-7">
             {/* Live Status Badge & Live Visitor Counter */}
-            <div className="flex flex-wrap items-center gap-2.5 mb-6 animate-hero-in" style={{ animationDelay: '0ms' }}>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-semibold text-zinc-300 shadow-inner w-fit backdrop-blur-md">
+            <div className="flex flex-wrap items-center gap-2 mb-4 sm:mb-6 animate-hero-in" style={{ animationDelay: '0ms' }}>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-[11px] sm:text-xs font-semibold text-zinc-300 shadow-inner w-fit backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
                 <span className="inline-flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-lime-400" />
-                  Verified Indian Editors • Upfront Rates in INR
+                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-lime-400" />
+                  Verified Indian Editors • Rates in INR
                 </span>
               </div>
 
               {/* Live Real-Time Visitor Count Badge */}
-              <div className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 shadow-inner w-fit backdrop-blur-md transition-all duration-300 hover:border-white/20">
-                <span className="relative flex h-2.5 w-2.5">
+              <div className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-zinc-400 px-3 py-1 sm:py-1.5 rounded-full bg-white/[0.04] border border-white/10 shadow-inner w-fit backdrop-blur-md transition-all duration-300 hover:border-white/20">
+                <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
                 <span className="text-zinc-100 font-extrabold tabular-nums font-mono">
-                  {displayCount !== null ? displayCount.toLocaleString() : (visitorCount !== null ? visitorCount.toLocaleString() : '...')}
+                  {displayCount !== null ? displayCount.toLocaleString() : (visitorCount !== null ? visitorCount.toLocaleString() : '28')}
                 </span>{' '}
                 online now
               </div>
             </div>
 
             {/* Audience Switcher (Sleek Segmented Tab Control) */}
-            <div className="inline-flex p-1 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-xl mb-6 shadow-inner animate-hero-in" style={{ animationDelay: '80ms' }}>
+            <div className="inline-flex p-1 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-xl mb-4 sm:mb-6 shadow-inner animate-hero-in" style={{ animationDelay: '80ms' }}>
               <button
                 type="button"
                 onClick={() => setActiveRole('CREATOR')}
-                className={`px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
+                className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
                   isCreators
                     ? 'bg-zinc-100 text-zinc-950 shadow-md scale-[1.02]'
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -226,7 +241,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
               <button
                 type="button"
                 onClick={() => setActiveRole('EDITOR')}
-                className={`px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
+                className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
                   !isCreators
                     ? 'bg-zinc-100 text-zinc-950 shadow-md scale-[1.02]'
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -238,7 +253,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
             {/* Headline */}
             <h1
-              className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] animate-hero-in"
+              className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] animate-hero-in"
               style={{ animationDelay: '160ms' }}
             >
               {isCreators ? (
@@ -260,7 +275,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
             {/* Subheadline */}
             <p
-              className="text-base sm:text-lg text-zinc-400 font-normal leading-relaxed mt-4 sm:mt-5 max-w-xl animate-hero-in"
+              className="text-xs sm:text-base lg:text-lg text-zinc-400 font-normal leading-relaxed mt-3 sm:mt-5 max-w-xl animate-hero-in"
               style={{ animationDelay: '240ms' }}
             >
               {isCreators
@@ -270,7 +285,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
             {/* Action Buttons: Distinct Primary & Secondary CTAs */}
             <div
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 mt-7 sm:mt-9 w-full sm:w-auto animate-hero-in"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3.5 mt-5 sm:mt-9 w-full sm:w-auto animate-hero-in"
               style={{ animationDelay: '320ms' }}
             >
               {isCreators ? (
@@ -279,7 +294,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                   <button
                     type="button"
                     onClick={scrollToMarketplace}
-                    className="group w-full sm:w-auto px-7 py-3.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-lime-400/20 hover:shadow-lime-400/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-2"
+                    className="group w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-lime-400/20 hover:shadow-lime-400/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-2"
                   >
                     <span>Find an Editor</span>
                     <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -289,7 +304,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                   <button
                     type="button"
                     onClick={handleEditorAction}
-                    className="w-full sm:w-auto px-7 py-3.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-zinc-100 font-semibold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-2 backdrop-blur-md"
+                    className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-zinc-100 font-semibold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-2 backdrop-blur-md"
                   >
                     <span>Join as an Editor</span>
                   </button>
@@ -300,7 +315,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                   <button
                     type="button"
                     onClick={handleEditorAction}
-                    className="group w-full sm:w-auto px-7 py-3.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-lime-400/20 hover:shadow-lime-400/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-2"
+                    className="group w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-lime-400/20 hover:shadow-lime-400/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-2"
                   >
                     <span>{user ? 'My Editor Dashboard' : 'Join as an Editor'}</span>
                     <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -310,7 +325,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                   <button
                     type="button"
                     onClick={scrollToMarketplace}
-                    className="w-full sm:w-auto px-7 py-3.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-zinc-100 font-semibold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-2 backdrop-blur-md"
+                    className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-zinc-100 font-semibold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-2 backdrop-blur-md"
                   >
                     <span>Browse Directory</span>
                   </button>
@@ -319,21 +334,27 @@ export default function HeroSection({ featured }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Right Column: Floating 9:16 Showreel Cards with Back-Glows and Depth */}
+          {/* Right Column: Auto-Looping Rotating 9:16 Showreel Cards */}
           <div
-            className="lg:col-span-6 xl:col-span-5 relative mt-6 lg:mt-0 animate-hero-in"
+            className="lg:col-span-6 xl:col-span-5 relative mt-4 sm:mt-6 lg:mt-0 animate-hero-in select-none"
             style={{ animationDelay: '200ms' }}
+            onMouseEnter={() => setIsRotatingPaused(true)}
+            onMouseLeave={() => setIsRotatingPaused(false)}
+            onTouchStart={() => setIsRotatingPaused(true)}
+            onTouchEnd={() => setIsRotatingPaused(false)}
           >
-            <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[520px] sm:h-[550px] flex items-center justify-center">
+            <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[420px] sm:h-[500px] lg:h-[520px] flex items-center justify-center">
               {displayEditors.map((editor, idx) => {
-                const isFirst = idx === 0
-                const isSecond = idx === 1
+                // Calculate rotational slot: 0 = Front (active), 1 = Back Right, 2 = Back Left
+                const slot = (idx - activeIndex + displayEditors.length) % displayEditors.length
+                const isFront = slot === 0
+                const isBackRight = slot === 1
 
-                const cardStyles = isFirst
-                  ? 'top-0 left-0 sm:-left-2 z-20 w-[260px] sm:w-[280px] animate-float-slow'
-                  : isSecond
-                  ? 'top-14 right-0 sm:-right-2 z-10 w-[250px] sm:w-[270px] animate-float-delayed opacity-95'
-                  : 'bottom-0 left-8 sm:left-10 z-30 w-[250px] sm:w-[270px] animate-float-slow'
+                const cardStyles = isFront
+                  ? 'bottom-2 left-1/2 -translate-x-1/2 sm:left-6 sm:translate-x-0 z-30 w-[240px] sm:w-[275px] scale-100 opacity-100 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(204,255,0,0.18)]'
+                  : isBackRight
+                  ? 'top-4 right-1 sm:-right-2 z-10 w-[220px] sm:w-[250px] scale-[0.9] opacity-60 hover:opacity-90 hover:scale-95'
+                  : 'top-0 left-1 sm:-left-2 z-20 w-[225px] sm:w-[255px] scale-[0.92] opacity-70 hover:opacity-90 hover:scale-95'
 
                 const parsed = parseVideoUrl(editor.raw_video_url)
                 const videoId = parsed?.videoId || null
@@ -344,12 +365,22 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                 return (
                   <div
                     key={editor.handle || idx}
-                    className={`absolute transition-transform duration-300 ${cardStyles}`}
+                    onClick={() => {
+                      if (!isFront) {
+                        setActiveIndex(idx)
+                      }
+                    }}
+                    className={`absolute transition-all duration-700 ease-out cursor-pointer ${cardStyles}`}
+                    title={isFront ? 'Click to play showreel' : `Click to preview ${editor.name}`}
                   >
                     {/* Faint Accent Back-Glow */}
-                    <div className="absolute -inset-1 rounded-3xl bg-lime-400/10 blur-xl opacity-75 group-hover:opacity-100 transition-opacity pointer-events-none -z-10" />
+                    <div
+                      className={`absolute -inset-1 rounded-3xl bg-lime-400/15 blur-xl transition-opacity pointer-events-none -z-10 ${
+                        isFront ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    />
 
-                    <div className="shadow-2xl shadow-black/90 rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/90 backdrop-blur-xl hover:scale-[1.03] hover:border-lime-400/40 hover:shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_30px_rgba(204,255,0,0.12)] transition-all duration-300 group">
+                    <div className="rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/90 backdrop-blur-xl transition-all duration-300 group">
                       {/* Vertical 9:16 Frame */}
                       <div className="relative w-full aspect-[9/16] bg-zinc-950 overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -376,7 +407,8 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                         {/* Center Play Button Overlay */}
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setActiveVideoModal({
                               isOpen: true,
                               videoId,
@@ -385,12 +417,18 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                               specialty: editor.headline || 'Video Editor',
                               rate: rateLabel,
                             })
-                          }
-                          className="absolute inset-0 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 cursor-pointer"
+                          }}
+                          className={`absolute inset-0 flex items-center justify-center transition-transform duration-300 ${
+                            isFront ? 'opacity-100 group-hover:scale-110' : 'opacity-70 group-hover:opacity-100'
+                          }`}
                           title="Play showreel"
                         >
-                          <div className="w-12 h-12 rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-xl shadow-lime-400/30 font-bold hover:bg-lime-300">
-                            <Play className="w-5 h-5 fill-zinc-950 ml-0.5" />
+                          <div
+                            className={`rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-xl shadow-lime-400/30 font-bold hover:bg-lime-300 transition-transform ${
+                              isFront ? 'w-12 h-12' : 'w-9 h-9'
+                            }`}
+                          >
+                            <Play className={`fill-zinc-950 ml-0.5 ${isFront ? 'w-5 h-5' : 'w-3.5 h-3.5'}`} />
                           </div>
                         </button>
 
@@ -433,6 +471,23 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                   </div>
                 )
               })}
+            </div>
+
+            {/* Interactive Rotation Indicator Dots */}
+            <div className="flex items-center justify-center gap-1.5 mt-2 sm:mt-4">
+              {displayEditors.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveIndex(i)}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === activeIndex
+                      ? 'w-6 bg-lime-400 shadow-[0_0_10px_rgba(204,255,0,0.5)]'
+                      : 'w-1.5 bg-zinc-700 hover:bg-zinc-500'
+                  }`}
+                  aria-label={`Rotate to showreel ${i + 1}`}
+                />
+              ))}
             </div>
           </div>
         </div>
