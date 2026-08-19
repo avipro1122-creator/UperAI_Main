@@ -196,16 +196,22 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
 
   let result: FirestoreEditorProfile[] = []
 
-  // 1. Direct Ultra-Fast HTTP REST Call
+  // 1. Direct Ultra-Fast HTTP REST Call with Abort Timeout
   try {
     const key = firebaseConfig.apiKey
     const projectId = firebaseConfig.projectId
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 1800)
+
     const res = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/editor_profiles?key=${key}`,
       {
         next: { revalidate: 15 },
+        signal: controller.signal,
       }
     )
+    clearTimeout(timeout)
+
     if (res.ok) {
       const data = await res.json()
       if (data.documents && Array.isArray(data.documents)) {
@@ -216,7 +222,7 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
       }
     }
   } catch (restErr) {
-    console.warn('REST fetch failed, attempting Firestore SDK:', restErr)
+    // Falls through directly to SDK / Default
   }
 
   // 2. Fallback to Firestore SDK if REST fails or is empty
