@@ -38,6 +38,7 @@ export interface VideoPlayerModalProps {
   rate?: string
   turnaroundTime?: string | null
   roleExplanation?: string | null
+  editorHandle?: string | null
   editor?: PreviewModalEditor
   portfolioItem?: PreviewModalPortfolioItem
 }
@@ -53,6 +54,7 @@ export default function VideoPlayerModal({
   rate,
   turnaroundTime,
   roleExplanation,
+  editorHandle,
   editor,
   portfolioItem,
 }: VideoPlayerModalProps) {
@@ -145,6 +147,15 @@ export default function VideoPlayerModal({
           </div>
 
           <div className="space-y-3 pt-2">
+            {editorHandle && (
+              <a
+                href={`/editors/${editorHandle}`}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 transition-all flex items-center justify-center gap-1.5 border border-zinc-700/80"
+              >
+                <span>View Full Profile</span>
+                <span className="text-lime-400">↗</span>
+              </a>
+            )}
             <button
               onClick={() => {
                 onClose()

@@ -75,6 +75,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
     editorName: string
     specialty: string
     rate: string
+    editorHandle?: string | null
   }>({
     isOpen: false,
     videoId: null,
@@ -82,6 +83,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
     editorName: '',
     specialty: '',
     rate: '',
+    editorHandle: null,
   })
 
   // Real-time site visitor tracker and live presence heartbeat
@@ -362,16 +364,20 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                 const rateLabel = editor.min_rate != null ? `From ₹${editor.min_rate.toLocaleString()}` : 'Rates upfront'
                 const viewBadge = CARD_VIEW_BADGES[idx % CARD_VIEW_BADGES.length]
 
+                const profileUrl = `/editors/${editor.id || editor.handle}`
+
                 return (
                   <div
                     key={editor.handle || idx}
                     onClick={() => {
                       if (!isFront) {
                         setActiveIndex(idx)
+                      } else {
+                        router.push(profileUrl)
                       }
                     }}
                     className={`absolute transition-all duration-700 ease-out cursor-pointer ${cardStyles}`}
-                    title={isFront ? 'Click to play showreel' : `Click to preview ${editor.name}`}
+                    title={isFront ? `View ${editor.name}'s Profile` : `Click to preview ${editor.name}`}
                   >
                     {/* Faint Accent Back-Glow */}
                     <div
@@ -412,12 +418,13 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                               editorName: editor.name,
                               specialty: editor.headline || 'Video Editor',
                               rate: rateLabel,
+                              editorHandle: editor.id || editor.handle,
                             })
                           }}
                           className={`absolute inset-0 flex items-center justify-center transition-transform duration-300 ${
                             isFront ? 'opacity-100 group-hover:scale-110' : 'opacity-70 group-hover:opacity-100'
                           }`}
-                          title="Play showreel"
+                          title="Play showreel audition"
                         >
                           <div
                             className={`rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-xl shadow-lime-400/30 font-bold hover:bg-lime-300 transition-transform ${
@@ -428,8 +435,14 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                           </div>
                         </button>
 
-                        {/* Bottom Card Content over 9:16 video */}
-                        <div className="absolute bottom-3 inset-x-3 space-y-1.5 pointer-events-none">
+                        {/* Bottom Card Content over 9:16 video (Clickable Profile Info) */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(profileUrl)
+                          }}
+                          className="absolute bottom-3 inset-x-3 space-y-1.5 cursor-pointer z-10 hover:opacity-90 transition-opacity"
+                        >
                           <div className="flex items-center gap-2">
                             {/* Avatar */}
                             {editor.avatar_url && !editor.avatar_url.includes('dicebear.com') ? (
@@ -498,6 +511,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
         editorName={activeVideoModal.editorName}
         specialty={activeVideoModal.specialty}
         rate={activeVideoModal.rate}
+        editorHandle={activeVideoModal.editorHandle}
       />
 
       {/* Mobile Sticky Bottom Action Bar */}
