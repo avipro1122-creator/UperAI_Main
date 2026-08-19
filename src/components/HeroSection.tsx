@@ -19,28 +19,87 @@ export default function HeroSection({
   const { activeRole, setActiveRole } = useAuth()
   const { openModal } = useOnboarding()
   const [visitorCount, setVisitorCount] = useState<number | null>(null)
+  const [displayCount, setDisplayCount] = useState<number | null>(null)
 
-  // Real-time site visitor tracker that records each visit
+  // Real-time site visitor tracker and live presence heartbeat
   useEffect(() => {
-    async function trackVisitor() {
+    let isMounted = true
+
+    async function updateVisitor(isInitial = false) {
       try {
+        const method = isInitial ? 'POST' : 'GET'
         const res = await fetch(`/api/visitor-count?t=${Date.now()}`, {
-          method: 'POST',
+          method,
           cache: 'no-store',
         })
+        if (!res.ok) return
         const data = await res.json()
-        if (data && typeof data.count === 'number') {
+        if (data && typeof data.activeNow === 'number' && isMounted) {
+          setVisitorCount(data.activeNow)
+        } else if (data && typeof data.count === 'number' && isMounted) {
           setVisitorCount(data.count)
-        } else {
-          setVisitorCount(0)
         }
       } catch {
-        setVisitorCount(0)
+        // Quiet fallback
       }
     }
 
-    trackVisitor()
+    // 1. Initial hit with POST to record session
+    updateVisitor(true)
+
+    // 2. Periodic live heartbeat every 8 seconds
+    const interval = setInterval(() => {
+      updateVisitor(false)
+    }, 8000)
+
+    // 3. Immediately refresh when tab gains focus
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        updateVisitor(false)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
+
+  // Smooth count animation when visitor count updates
+  useEffect(() => {
+    if (visitorCount === null) return
+
+    if (displayCount === null) {
+      setDisplayCount(visitorCount)
+      return
+    }
+
+    const start = displayCount
+    const end = visitorCount
+    if (start === end) return
+
+    const duration = 600
+    const startTime = performance.now()
+
+    let animFrame: number
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      // Ease out cubic
+      const easeOut = 1 - Math.pow(1 - progress, 3)
+      const current = Math.round(start + (end - start) * easeOut)
+      setDisplayCount(current)
+
+      if (progress < 1) {
+        animFrame = requestAnimationFrame(step)
+      }
+    }
+
+    animFrame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(animFrame)
+  }, [visitorCount, displayCount])
 
   const isCreators = activeRole === 'CREATOR'
   const hasMultipleEditors = featured.length >= 2
@@ -81,16 +140,16 @@ export default function HeroSection({
                 </span>
               </div>
 
-              {/* Live Visitor Count Badge */}
-              <div className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 px-3 py-1.5 rounded-full bg-zinc-900/60 border border-zinc-800/80 shadow-sm w-fit">
+              {/* Live Real-Time Visitor Count Badge */}
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 px-3 py-1.5 rounded-full bg-zinc-900/60 border border-zinc-800/80 shadow-sm w-fit transition-all duration-300 hover:border-zinc-700">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                 </span>
-                <span className="text-zinc-200 font-extrabold">
-                  {visitorCount !== null ? visitorCount.toLocaleString() : '...'}
+                <span className="text-zinc-200 font-extrabold tabular-nums">
+                  {displayCount !== null ? displayCount.toLocaleString() : (visitorCount !== null ? visitorCount.toLocaleString() : '...')}
                 </span>{' '}
-                Creators & Editors visited
+                Creators & Editors online now
               </div>
             </div>
 
