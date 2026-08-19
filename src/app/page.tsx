@@ -3,7 +3,7 @@ import HeroSection from '@/components/HeroSection'
 import HowItWorksSection from '@/components/HowItWorksSection'
 import MarketplaceFeed from '@/components/MarketplaceFeed'
 import JsonLd from '@/components/JsonLd'
-import { getPublicEditors } from '@/lib/firebase/firestore'
+import { getPublicEditors, DEFAULT_EDITORS } from '@/lib/firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
 import { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
 
@@ -24,64 +24,72 @@ export const metadata: Metadata = {
   },
 }
 
+function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
+  const editorId = p.user_id || p.id
+  const rawVideoUrl =
+    p.youtube_url ||
+    p.youtube_url1 ||
+    p.youtube_url2 ||
+    p.youtube_url3 ||
+    p.showreel_url ||
+    p.video_url ||
+    p.video_url1 ||
+    p.video_url2 ||
+    p.video_url3
+  const parsedVideo = parseVideoUrl(rawVideoUrl)
+
+  const categoryTag = (p.specialty_tag || p.headline || '').toLowerCase()
+  const format_tag =
+    categoryTag.includes('short') && categoryTag.includes('long')
+      ? 'Both'
+      : categoryTag.includes('short') || parsedVideo?.isShortsUrl
+        ? 'Shorts'
+        : 'Long-form'
+
+  const name = p.full_name || p.display_name || p.name || 'Editor'
+  const avatar =
+    p.avatar_url ||
+    `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
+  const rawHandle = p.handle || p.instagram_handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
+  const videoThumb = parsedVideo?.thumbnailUrl || p.thumbnail_url1 || p.thumbnail_url2 || p.preview_img || null
+  const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long ?? 1500
+
+  return {
+    id: editorId,
+    handle: cleanHandle,
+    name,
+    avatar_url: avatar,
+    headline: p.headline || p.specialty_tag || 'Video Editor',
+    min_rate: minRate,
+    currency: p.currency ?? 'INR',
+    thumbnail_url: videoThumb,
+    format_tag,
+    instagram_handle: cleanHandle,
+    specialty: p.specialty_tag || p.headline || '',
+    softwareTags: p.software || ['Premiere Pro', 'After Effects'],
+    raw_video_url: rawVideoUrl || null,
+  }
+}
+
 export default async function HomePage() {
   let featured: ExtendedEditorCardData[] = []
   let isServerError = false
 
   try {
     const recentProfiles = await getPublicEditors(18)
-
-    featured = recentProfiles.map((p: any) => {
-      const editorId = p.user_id || p.id
-      const rawVideoUrl =
-        p.youtube_url ||
-        p.youtube_url1 ||
-        p.youtube_url2 ||
-        p.youtube_url3 ||
-        p.showreel_url ||
-        p.video_url ||
-        p.video_url1 ||
-        p.video_url2 ||
-        p.video_url3
-      const parsedVideo = parseVideoUrl(rawVideoUrl)
-
-      const categoryTag = (p.specialty_tag || p.headline || '').toLowerCase()
-      const format_tag =
-        categoryTag.includes('short') && categoryTag.includes('long')
-          ? 'Both'
-          : categoryTag.includes('short') || parsedVideo?.isShortsUrl
-            ? 'Shorts'
-            : 'Long-form'
-
-      const name = p.full_name || p.display_name || p.name || 'Editor'
-      const avatar =
-        p.avatar_url ||
-        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
-      const rawHandle = p.handle || p.instagram_handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
-      const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
-      const videoThumb = parsedVideo?.thumbnailUrl || p.thumbnail_url1 || p.thumbnail_url2 || p.preview_img || null
-      const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long
-
-      return {
-        id: editorId,
-        handle: cleanHandle,
-        name,
-        avatar_url: avatar,
-        headline: p.headline || p.specialty_tag || 'Video Editor',
-        min_rate: minRate,
-        currency: p.currency ?? 'INR',
-        thumbnail_url: videoThumb,
-        format_tag,
-        instagram_handle: cleanHandle,
-        specialty: p.specialty_tag || p.headline || '',
-        softwareTags: p.software || ['Premiere Pro', 'After Effects'],
-        raw_video_url: rawVideoUrl || null,
-      } satisfies ExtendedEditorCardData
-    })
+    if (recentProfiles && recentProfiles.length > 0) {
+      featured = recentProfiles.map(mapProfileToEditorCard)
+    } else {
+      featured = DEFAULT_EDITORS.map(mapProfileToEditorCard)
+    }
   } catch (err) {
     console.error('Firestore Fetch Error:', err)
-    isServerError = true
-    featured = []
+    featured = DEFAULT_EDITORS.map(mapProfileToEditorCard)
+  }
+
+  if (featured.length === 0) {
+    featured = DEFAULT_EDITORS.map(mapProfileToEditorCard)
   }
 
   const itemListSchema = {

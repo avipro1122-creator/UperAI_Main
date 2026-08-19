@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
 
-export default function LoginPage() {
+function LoginForm() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -30,5 +30,19 @@ export default function LoginPage() {
         <GoogleSignInButton next={next} />
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-sm mx-auto px-4 py-24 text-center text-zinc-500 text-sm">
+          Loading sign in...
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }
