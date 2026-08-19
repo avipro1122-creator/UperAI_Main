@@ -156,8 +156,22 @@ export default function HeroSection({ featured }: HeroSectionProps) {
     return () => cancelAnimationFrame(animFrame)
   }, [visitorCount, displayCount])
 
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [isRotatingPaused, setIsRotatingPaused] = useState(false)
+
   const isCreators = activeRole === 'CREATOR'
   const displayEditors = featured.length >= 2 ? featured.slice(0, 3) : FALLBACK_EDITORS
+
+  // Auto-rotate floating preview cards every 3.5s so each profile takes turns at the front
+  useEffect(() => {
+    if (isRotatingPaused || activeVideoModal.isOpen || displayEditors.length <= 1) return
+
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % displayEditors.length)
+    }, 3500)
+
+    return () => clearInterval(interval)
+  }, [isRotatingPaused, activeVideoModal.isOpen, displayEditors.length])
 
   const scrollToMarketplace = () => {
     const marketplaceElement = document.getElementById('marketplace-section')
@@ -319,21 +333,26 @@ export default function HeroSection({ featured }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Right Column: Floating 9:16 Showreel Cards with Back-Glows and Depth */}
+          {/* Right Column: Rotating Floating 9:16 Showreel Cards with Smooth Transitions */}
           <div
-            className="lg:col-span-6 xl:col-span-5 relative mt-6 lg:mt-0 animate-hero-in"
+            className="lg:col-span-6 xl:col-span-5 relative mt-6 lg:mt-0 animate-hero-in select-none"
             style={{ animationDelay: '200ms' }}
+            onMouseEnter={() => setIsRotatingPaused(true)}
+            onMouseLeave={() => setIsRotatingPaused(false)}
           >
-            <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[520px] sm:h-[550px] flex items-center justify-center">
+            <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[500px] sm:h-[540px] flex items-center justify-center">
               {displayEditors.map((editor, idx) => {
-                const isFirst = idx === 0
-                const isSecond = idx === 1
+                // Calculate rotational slot: 0 = Front (active), 1 = Back Right, 2 = Back Left
+                const slot = (idx - activeIndex + displayEditors.length) % displayEditors.length
+                const isFront = slot === 0
+                const isBackRight = slot === 1
+                const isBackLeft = slot === 2
 
-                const cardStyles = isFirst
-                  ? 'top-0 left-0 sm:-left-2 z-20 w-[260px] sm:w-[280px] animate-float-slow'
-                  : isSecond
-                  ? 'top-14 right-0 sm:-right-2 z-10 w-[250px] sm:w-[270px] animate-float-delayed opacity-95'
-                  : 'bottom-0 left-8 sm:left-10 z-30 w-[250px] sm:w-[270px] animate-float-slow'
+                const slotClasses = isFront
+                  ? 'bottom-0 left-6 sm:left-8 z-30 w-[260px] sm:w-[285px] scale-100 opacity-100 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(204,255,0,0.18)] border-lime-400/40'
+                  : isBackRight
+                  ? 'top-12 right-0 sm:-right-2 z-10 w-[240px] sm:w-[260px] scale-[0.92] opacity-75 hover:opacity-100 hover:scale-95'
+                  : 'top-0 left-0 sm:-left-2 z-20 w-[245px] sm:w-[265px] scale-[0.94] opacity-80 hover:opacity-100 hover:scale-95'
 
                 const parsed = parseVideoUrl(editor.raw_video_url)
                 const videoId = parsed?.videoId || null
@@ -344,12 +363,22 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                 return (
                   <div
                     key={editor.handle || idx}
-                    className={`absolute transition-transform duration-300 ${cardStyles}`}
+                    onClick={() => {
+                      if (!isFront) {
+                        setActiveIndex(idx)
+                      }
+                    }}
+                    className={`absolute transition-all duration-700 ease-out cursor-pointer ${slotClasses}`}
+                    title={isFront ? 'Click to play showreel' : `Click to view ${editor.name}`}
                   >
                     {/* Faint Accent Back-Glow */}
-                    <div className="absolute -inset-1 rounded-3xl bg-lime-400/10 blur-xl opacity-75 group-hover:opacity-100 transition-opacity pointer-events-none -z-10" />
+                    <div
+                      className={`absolute -inset-1 rounded-3xl bg-lime-400/15 blur-xl transition-opacity pointer-events-none -z-10 ${
+                        isFront ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    />
 
-                    <div className="shadow-2xl shadow-black/90 rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/90 backdrop-blur-xl hover:scale-[1.03] hover:border-lime-400/40 hover:shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_30px_rgba(204,255,0,0.12)] transition-all duration-300 group">
+                    <div className="rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/90 backdrop-blur-xl transition-all duration-300 group">
                       {/* Vertical 9:16 Frame */}
                       <div className="relative w-full aspect-[9/16] bg-zinc-950 overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -376,7 +405,8 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                         {/* Center Play Button Overlay */}
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setActiveVideoModal({
                               isOpen: true,
                               videoId,
@@ -385,12 +415,18 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                               specialty: editor.headline || 'Video Editor',
                               rate: rateLabel,
                             })
-                          }
-                          className="absolute inset-0 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 cursor-pointer"
+                          }}
+                          className={`absolute inset-0 flex items-center justify-center transition-transform duration-300 ${
+                            isFront ? 'opacity-100 group-hover:scale-110' : 'opacity-70 group-hover:opacity-100'
+                          }`}
                           title="Play showreel"
                         >
-                          <div className="w-12 h-12 rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-xl shadow-lime-400/30 font-bold hover:bg-lime-300">
-                            <Play className="w-5 h-5 fill-zinc-950 ml-0.5" />
+                          <div
+                            className={`rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-xl shadow-lime-400/30 font-bold hover:bg-lime-300 transition-transform ${
+                              isFront ? 'w-13 h-13' : 'w-10 h-10'
+                            }`}
+                          >
+                            <Play className={`fill-zinc-950 ml-0.5 ${isFront ? 'w-5 h-5' : 'w-4 h-4'}`} />
                           </div>
                         </button>
 
@@ -433,6 +469,23 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                   </div>
                 )
               })}
+            </div>
+
+            {/* Interactive Rotation Indicator Dots */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              {displayEditors.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveIndex(i)}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === activeIndex
+                      ? 'w-6 bg-lime-400 shadow-[0_0_10px_rgba(204,255,0,0.5)]'
+                      : 'w-1.5 bg-zinc-700 hover:bg-zinc-500'
+                  }`}
+                  aria-label={`Rotate to editor ${i + 1}`}
+                />
+              ))}
             </div>
           </div>
         </div>
