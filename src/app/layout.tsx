@@ -163,11 +163,11 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-purple-500 selection:text-white">
+      <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-purple-500 selection:text-white w-full max-w-full overflow-x-hidden">
         <AuthProvider>
           <OnboardingProvider>
             <Navbar />
-            <main className="flex-grow">{children}</main>
+            <main className="flex-grow w-full max-w-full overflow-x-hidden">{children}</main>
             <Footer />
           </OnboardingProvider>
         </AuthProvider>

@@ -21,11 +21,14 @@
   --radius: 0.75rem;
 }
 
+html,
 body {
+  max-width: 100vw;
+  width: 100%;
+  overflow-x: hidden !important;
   background-color: #09090b;
   color: #F4F4F5;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  overflow-x: hidden;
   letter-spacing: -0.01em;
 }
 

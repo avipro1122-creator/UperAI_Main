@@ -194,10 +194,10 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
   return (
     <>
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-14 pb-12 sm:pb-24 border-b border-zinc-800/60 overflow-hidden">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-14 pb-12 sm:pb-24 border-b border-zinc-800/60 overflow-hidden w-full max-w-full">
         {/* Ambient background glows */}
-        <div className="absolute top-1/4 left-5 w-96 h-96 ambient-glow-lime pointer-events-none blur-3xl opacity-50" />
-        <div className="absolute top-1/3 right-5 w-96 h-96 ambient-glow-purple pointer-events-none blur-3xl opacity-40" />
+        <div className="absolute top-1/4 -left-10 w-64 sm:w-96 h-64 sm:h-96 ambient-glow-lime pointer-events-none blur-3xl opacity-35 max-w-full" />
+        <div className="absolute top-1/3 -right-10 w-64 sm:w-96 h-64 sm:h-96 ambient-glow-purple pointer-events-none blur-3xl opacity-25 max-w-full" />
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 lg:gap-10 items-center">
           {/* Left Column — Text & CTAs */}
@@ -336,14 +336,14 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
           {/* Right Column: Auto-Looping Rotating 9:16 Showreel Cards */}
           <div
-            className="lg:col-span-6 xl:col-span-5 relative mt-4 sm:mt-6 lg:mt-0 animate-hero-in select-none"
+            className="lg:col-span-6 xl:col-span-5 relative mt-4 sm:mt-6 lg:mt-0 animate-hero-in select-none w-full max-w-full overflow-hidden"
             style={{ animationDelay: '200ms' }}
             onMouseEnter={() => setIsRotatingPaused(true)}
             onMouseLeave={() => setIsRotatingPaused(false)}
             onTouchStart={() => setIsRotatingPaused(true)}
             onTouchEnd={() => setIsRotatingPaused(false)}
           >
-            <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[420px] sm:h-[500px] lg:h-[520px] flex items-center justify-center">
+            <div className="relative w-full max-w-[310px] sm:max-w-sm mx-auto lg:max-w-none h-[400px] sm:h-[500px] lg:h-[520px] flex items-center justify-center">
               {displayEditors.map((editor, idx) => {
                 // Calculate rotational slot: 0 = Front (active), 1 = Back Right, 2 = Back Left
                 const slot = (idx - activeIndex + displayEditors.length) % displayEditors.length
@@ -351,10 +351,10 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                 const isBackRight = slot === 1
 
                 const cardStyles = isFront
-                  ? 'bottom-2 left-1/2 -translate-x-1/2 sm:left-6 sm:translate-x-0 z-30 w-[240px] sm:w-[275px] scale-100 opacity-100 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(204,255,0,0.18)]'
+                  ? 'bottom-2 left-1/2 -translate-x-1/2 sm:left-6 sm:translate-x-0 z-30 w-[210px] sm:w-[275px] scale-100 opacity-100 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(204,255,0,0.18)]'
                   : isBackRight
-                  ? 'top-4 right-1 sm:-right-2 z-10 w-[220px] sm:w-[250px] scale-[0.9] opacity-60 hover:opacity-90 hover:scale-95'
-                  : 'top-0 left-1 sm:-left-2 z-20 w-[225px] sm:w-[255px] scale-[0.92] opacity-70 hover:opacity-90 hover:scale-95'
+                  ? 'top-3 right-0 sm:-right-2 z-10 w-[180px] sm:w-[250px] scale-[0.88] opacity-60 hover:opacity-90 hover:scale-95'
+                  : 'top-0 left-0 sm:-left-2 z-20 w-[185px] sm:w-[255px] scale-[0.9] opacity-70 hover:opacity-90 hover:scale-95'
 
                 const parsed = parseVideoUrl(editor.raw_video_url)
                 const videoId = parsed?.videoId || null
