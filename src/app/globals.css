@@ -204,6 +204,14 @@ h1, h2, h3, h4, .font-display {
   animation: shimmer 1.6s ease-in-out infinite;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -218,4 +226,5 @@ h1, h2, h3, h4, .font-display {
     transform: none;
   }
 }
+
 

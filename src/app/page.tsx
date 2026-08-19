@@ -101,7 +101,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="bg-zinc-950 text-zinc-100 min-h-screen selection:bg-lime-400 selection:text-black">
+    <div className="bg-zinc-950 text-zinc-100 min-h-screen selection:bg-lime-400 selection:text-black pb-16 sm:pb-0">
       <JsonLd data={itemListSchema} id="featured-editors-schema" />
 
       {/* Soft Server Maintenance Banner Notice */}

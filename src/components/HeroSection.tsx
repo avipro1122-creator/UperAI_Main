@@ -450,20 +450,22 @@ export default function HeroSection({ featured }: HeroSectionProps) {
       />
 
       {/* Mobile Sticky Bottom Action Bar */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 p-3 z-40 flex items-center justify-between gap-3 shadow-[0_-10px_25px_rgba(0,0,0,0.8)]">
-        <div className="pl-1">
-          <p className="text-[10px] font-bold text-zinc-400 uppercase">Verified Indian Editors</p>
-          <p className="text-xs font-black text-lime-400">Rates Upfront in INR</p>
+      <div className="sm:hidden fixed bottom-0 inset-x-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 px-4 py-2.5 z-40 flex items-center justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.9)] pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))]">
+        <div className="min-w-0 pr-1">
+          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider truncate">Verified Indian Editors</p>
+          <p className="text-[11px] font-extrabold text-lime-400 truncate">Rates Upfront in INR</p>
         </div>
 
         <button
+          type="button"
           onClick={scrollToMarketplace}
-          className="px-5 py-2.5 bg-lime-400 active:bg-lime-300 text-zinc-950 font-black text-xs rounded-xl shadow-lg uppercase tracking-wider whitespace-nowrap"
+          className="shrink-0 px-4 py-2 bg-lime-400 active:bg-lime-300 text-zinc-950 font-black text-xs rounded-xl shadow-md uppercase tracking-wider whitespace-nowrap"
         >
-          Find an Editor ↗
+          Find Editor ↗
         </button>
       </div>
     </>
   )
 }
+
 
