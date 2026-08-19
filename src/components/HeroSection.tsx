@@ -345,7 +345,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
             onTouchStart={() => setIsRotatingPaused(true)}
             onTouchEnd={() => setIsRotatingPaused(false)}
           >
-            <div className="relative w-full max-w-[310px] sm:max-w-sm mx-auto lg:max-w-none h-[400px] sm:h-[500px] lg:h-[520px] flex items-center justify-center">
+            <div className="relative w-full max-w-[320px] sm:max-w-[360px] mx-auto h-[420px] sm:h-[480px] flex items-center justify-center">
               {displayEditors.map((editor, idx) => {
                 // Calculate rotational slot: 0 = Front (active), 1 = Back Right, 2 = Back Left
                 const slot = (idx - activeIndex + displayEditors.length) % displayEditors.length
@@ -353,10 +353,10 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                 const isBackRight = slot === 1
 
                 const cardStyles = isFront
-                  ? 'bottom-2 left-1/2 -translate-x-1/2 sm:left-6 sm:translate-x-0 z-30 w-[210px] sm:w-[275px] scale-100 opacity-100 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(204,255,0,0.18)]'
+                  ? 'bottom-2 left-1/2 -translate-x-1/2 z-30 w-[220px] sm:w-[245px] scale-100 opacity-100 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(204,255,0,0.18)]'
                   : isBackRight
-                  ? 'top-3 right-0 sm:-right-2 z-10 w-[180px] sm:w-[250px] scale-[0.88] opacity-60 hover:opacity-90 hover:scale-95'
-                  : 'top-0 left-0 sm:-left-2 z-20 w-[185px] sm:w-[255px] scale-[0.9] opacity-70 hover:opacity-90 hover:scale-95'
+                  ? 'top-4 right-0 z-10 w-[190px] sm:w-[215px] scale-[0.88] opacity-60 hover:opacity-90 hover:scale-95'
+                  : 'top-1 left-0 z-20 w-[195px] sm:w-[220px] scale-[0.9] opacity-70 hover:opacity-90 hover:scale-95'
 
                 const parsed = parseVideoUrl(editor.raw_video_url)
                 const videoId = parsed?.videoId || null
