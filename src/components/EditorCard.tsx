@@ -32,9 +32,10 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   AUD: 'A$',
 }
 
-const FORMAT_TAG_STYLES: Record<FormatTag, string> = {
+const FORMAT_TAG_STYLES: Record<string, string> = {
   Shorts: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
   'Long-form': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+  'Long-Form': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
   Both: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
 }
 
@@ -105,26 +106,32 @@ function VideoFrameCapture({ src, alt, className }: { src: string; alt: string; 
 }
 
 export default function EditorCard({ editor }: { editor: EditorCardData }) {
-  const symbol = CURRENCY_SYMBOLS[editor.currency] ?? editor.currency + ' '
+  if (!editor) return null
+
+  const currencyKey = (editor.currency || 'INR').toUpperCase()
+  const symbol = CURRENCY_SYMBOLS[currencyKey] ?? '₹'
   const rateLabel =
-    editor.min_rate != null ? `From ${symbol}${editor.min_rate}` : 'Rate not set'
+    editor.min_rate != null ? `From ${symbol}${Number(editor.min_rate).toLocaleString()}` : 'Rate not set'
   const hasRate = editor.min_rate != null
-  const targetIdOrHandle = editor.id || editor.handle
+  const targetIdOrHandle = editor.id || editor.handle || 'editor'
 
   // Clean handle: Never show raw email address (@gmail.com, etc.)
-  const rawHandle = editor.instagram_handle || editor.handle || ''
-  const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
+  const rawHandle = editor.instagram_handle || editor.handle || editor.name || ''
+  const cleanHandle = String(rawHandle).replace(/@.+$/, '').replace(/^@/, '').trim()
 
-  // Video Thumbnail extraction (Highest priority: real submitted video thumbnail)
-  const parsedVideo = parseVideoUrl(editor.raw_video_url)
+  // Video Thumbnail extraction
+  const parsedVideo = editor.raw_video_url ? parseVideoUrl(editor.raw_video_url) : null
   const effectiveThumbnail =
     parsedVideo?.thumbnailUrl ||
     (editor.thumbnail_url && !editor.thumbnail_url.includes('unsplash.com') ? editor.thumbnail_url : null) ||
-    editor.thumbnail_url
+    editor.thumbnail_url ||
+    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
 
-  const isInstagram = editor.thumbnail_url?.includes('instagram.com') || (editor.format_tag === 'Shorts' && !effectiveThumbnail?.includes('youtube'))
+  const isInstagram = Boolean(editor.thumbnail_url?.includes('instagram.com') || (editor.format_tag === 'Shorts' && !effectiveThumbnail?.includes('youtube')))
 
-  const softwareTags = (editor.softwareTags || []).filter(Boolean).slice(0, 2)
+  const softwareTags = Array.isArray(editor.softwareTags) ? editor.softwareTags.filter(Boolean).slice(0, 2) : []
+
+  const formatTagStyle = (editor.format_tag && FORMAT_TAG_STYLES[editor.format_tag]) || 'bg-violet-500/15 text-violet-300 border-violet-500/30'
 
   return (
     <Link
@@ -137,7 +144,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={effectiveThumbnail}
-            alt={`${editor.name} video thumbnail`}
+            alt={`${editor.name || 'Editor'} video thumbnail`}
             loading="lazy"
             decoding="async"
             width={380}
@@ -150,7 +157,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
         ) : editor.raw_video_url && isDirectVideoUrl(editor.raw_video_url) ? (
           <VideoFrameCapture
             src={editor.raw_video_url}
-            alt={`${editor.name} video thumbnail`}
+            alt={`${editor.name || 'Editor'} video thumbnail`}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
         ) : isInstagram ? (
@@ -188,7 +195,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={editor.avatar_url}
-              alt={editor.name}
+              alt={editor.name || 'Editor'}
               loading="lazy"
               decoding="async"
               width={36}
@@ -205,7 +212,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-white truncate leading-tight group-hover:text-lime-300 transition-colors flex items-center gap-1">
-              <span>{editor.name}</span>
+              <span>{editor.name || 'Editor'}</span>
               <svg className="w-3.5 h-3.5 text-lime-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
@@ -264,7 +271,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
         <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/[0.08]">
           {editor.format_tag ? (
             <span
-              className={`inline-flex items-center text-[10px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full border ${FORMAT_TAG_STYLES[editor.format_tag]}`}
+              className={`inline-flex items-center text-[10px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full border ${formatTagStyle}`}
             >
               {editor.format_tag}
             </span>
