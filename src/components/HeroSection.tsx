@@ -501,18 +501,23 @@ export default function HeroSection({ featured }: HeroSectionProps) {
       />
 
       {/* Mobile Sticky Bottom Action Bar */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 px-4 py-2.5 z-40 flex items-center justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.9)] pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))]">
+      <div className="sm:hidden fixed bottom-0 inset-x-0 bg-zinc-950/95 backdrop-blur-2xl border-t border-white/10 px-4 py-2.5 z-40 flex items-center justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.9)] pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))]">
         <div className="min-w-0 pr-1">
-          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider truncate">Verified Indian Editors</p>
-          <p className="text-[11px] font-extrabold text-lime-400 truncate">Rates Upfront in INR</p>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider truncate">
+            {activeRole === 'EDITOR' ? 'Editor Dashboard' : 'Verified Indian Editors'}
+          </p>
+          <p className="text-xs font-black text-lime-400 truncate">
+            {activeRole === 'EDITOR' ? '0% Commission' : 'Rates Upfront in INR'}
+          </p>
         </div>
 
         <button
           type="button"
-          onClick={scrollToMarketplace}
-          className="shrink-0 px-4 py-2 bg-lime-400 active:bg-lime-300 text-zinc-950 font-black text-xs rounded-xl shadow-md uppercase tracking-wider whitespace-nowrap"
+          onClick={activeRole === 'EDITOR' ? handleEditorAction : scrollToMarketplace}
+          className="shrink-0 px-4 py-2.5 bg-lime-400 active:bg-lime-300 text-zinc-950 font-black text-xs rounded-xl shadow-lg shadow-lime-400/20 uppercase tracking-wider whitespace-nowrap flex items-center gap-1"
         >
-          Find Editor ↗
+          <span>{activeRole === 'EDITOR' ? 'My Profile' : 'Find Editor'}</span>
+          <ArrowUpRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </>
