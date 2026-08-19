@@ -1,55 +1,48 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, CheckCircle2, ArrowRight, ArrowLeft, Loader2, Sparkles } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { X, CheckCircle2, ArrowRight, ArrowLeft, Loader2, Sparkles, Video, DollarSign, User, PhoneCall } from 'lucide-react'
 import { normalizeIndianPhone } from '@/lib/phone'
+import { parseVideoUrl } from '@/lib/video-parser'
 import { useAuth } from '@/context/AuthContext'
-import { account } from '@/lib/appwrite/client'
+import { db } from '@/lib/firebase/client'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 interface EditorOnboardingModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-export function parseYouTubeVideoId(url: string): string | null {
-  if (!url) return null
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/
-  const match = url.trim().match(regExp)
-  return match && match[2].length === 11 ? match[2] : null
-}
-
-export function getYouTubeThumbnail(url: string): string {
-  const videoId = parseYouTubeVideoId(url)
-  if (videoId) {
-    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-  }
-  return 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=600&auto=format&fit=crop'
-}
-
-const mapFormatToDb = (rawFormat: string): 'SHORTS' | 'LONG_FORM' | 'DUAL' => {
-  const normalized = (rawFormat || '').toLowerCase()
-  if (normalized.includes('short') || normalized.includes('9:16')) return 'SHORTS'
-  if (normalized.includes('long') || normalized.includes('16:9')) return 'LONG_FORM'
-  return 'DUAL'
-}
+const SUGGESTED_SPECIALTIES = [
+  'Short-Form / Reels Specialist',
+  'YouTube Long-Form Editor',
+  'Documentary & Cinematic Editor',
+  'Gaming & Stream Highlights',
+  '3D VFX & Motion Graphics',
+]
 
 export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboardingModalProps) {
-  const { user, loginWithGoogle } = useAuth()
+  const { user, loginWithGoogle, setActiveRole } = useAuth()
+  const router = useRouter()
+
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  // Form Fields
+  // Form Fields (Exact same schema as /profile)
   const [name, setName] = useState('')
   const [city, setCity] = useState('')
-  const [bio, setBio] = useState('')
-  const [headline, setHeadline] = useState('')
+  const [headline, setHeadline] = useState('Short-Form / Reels Specialist')
+  const [formatChoice, setFormatChoice] = useState<'both' | 'shorts' | 'long'>('both')
   const [whatsapp, setWhatsapp] = useState('')
   const [instagramHandle, setInstagramHandle] = useState('')
-  const [rateShort, setRateShort] = useState('')
-  const [rateLong, setRateLong] = useState('')
-  const [turnaroundDays, setTurnaroundDays] = useState('2')
+
+  const [rateShort, setRateShort] = useState<number | ''>(1500)
+  const [rateLong, setRateLong] = useState<number | ''>(4500)
+  const [turnaroundTime, setTurnaroundTime] = useState('48 Hours')
+
   const [video1, setVideo1] = useState('')
   const [desc1, setDesc1] = useState('')
   const [video2, setVideo2] = useState('')
@@ -57,10 +50,40 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
   const [video3, setVideo3] = useState('')
   const [desc3, setDesc3] = useState('')
 
+  // Pre-fill from existing profile when opened
   useEffect(() => {
-    if (isOpen && user?.name) {
-      setName((prev) => prev || user.name || '')
+    if (!isOpen) return
+
+    if (user?.name || user?.displayName) {
+      setName((prev) => prev || user.displayName || user.name || '')
     }
+
+    async function loadExisting() {
+      const uid = user?.uid || user?.$id
+      if (!uid) return
+
+      try {
+        const snap = await getDoc(doc(db, 'editor_profiles', uid))
+        if (snap.exists()) {
+          const d = snap.data()
+          if (d.full_name || d.name) setName(d.full_name || d.name)
+          if (d.city) setCity(d.city)
+          if (d.headline || d.specialty_tag) setHeadline(d.headline || d.specialty_tag)
+          if (d.whatsapp_number || d.whatsapp) setWhatsapp(d.whatsapp_number || d.whatsapp)
+          if (d.instagram_handle || d.instagram) setInstagramHandle((d.instagram_handle || d.instagram).replace(/^@/, ''))
+          if (d.rate_short) setRateShort(d.rate_short)
+          if (d.rate_long) setRateLong(d.rate_long)
+          if (d.turnaround_time) setTurnaroundTime(d.turnaround_time)
+          if (d.youtube_url1 || d.youtube_url) setVideo1(d.youtube_url1 || d.youtube_url)
+          if (d.youtube_url2) setVideo2(d.youtube_url2)
+          if (d.youtube_url3) setVideo3(d.youtube_url3)
+        }
+      } catch {
+        // Quiet fallback
+      }
+    }
+
+    loadExisting()
   }, [isOpen, user])
 
   if (!isOpen) return null
@@ -99,75 +122,71 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
       return setError('Please sign in with Google to save your editor profile.')
     }
 
-    const portfolio = [
-      { youtubeUrl: video1.trim(), roleDescription: desc1.trim() },
-      { youtubeUrl: video2.trim(), roleDescription: desc2.trim() },
-      { youtubeUrl: video3.trim(), roleDescription: desc3.trim() },
-    ].filter((item) => item.youtubeUrl)
+    const uid = user.uid || user.$id
+    if (!uid) {
+      return setError('Please sign in with Google to save your editor profile.')
+    }
 
-    if (portfolio.length < 1) {
-      return setError('Please provide at least 1 valid video link (YouTube or Google Drive).')
+    if (!video1.trim() && !video2.trim() && !video3.trim()) {
+      return setError('Please provide at least 1 video showreel URL (YouTube, Drive, or Reel).')
     }
 
     setSubmitting(true)
 
+    const cleanName = name.trim() || user.displayName || user.name || 'Editor'
+    const cleanHandle = cleanName.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30) || uid
+    const cleanInsta = instagramHandle.trim().replace(/^@/, '')
+    const formatTag = formatChoice === 'shorts' ? 'Shorts' : formatChoice === 'long' ? 'Long-form' : 'Both'
+    const effectiveBaseRate = Number(rateShort) || Number(rateLong) || 1500
+
+    const primaryParsed = parseVideoUrl(video1.trim() || video2.trim() || video3.trim())
+    const effectiveThumb = primaryParsed?.thumbnailUrl || null
+
+    const payload = {
+      user_id: uid,
+      id: uid,
+      full_name: cleanName,
+      display_name: cleanName,
+      name: cleanName,
+      handle: cleanHandle,
+      city: city.trim() || null,
+      headline: headline.trim() || 'Video Editor',
+      specialty_tag: headline.trim() || 'Video Editor',
+      format_tag: formatTag,
+      format: formatTag,
+      base_rate: effectiveBaseRate,
+      min_rate: Number(rateShort) || effectiveBaseRate,
+      max_rate: Number(rateLong) || effectiveBaseRate,
+      rate_short: Number(rateShort) || null,
+      rate_long: Number(rateLong) || null,
+      turnaround_time: turnaroundTime,
+      whatsapp: whatsapp.trim(),
+      whatsapp_number: whatsapp.trim(),
+      instagram: cleanInsta || null,
+      instagram_handle: cleanInsta || null,
+      youtube_url: video1.trim() || video2.trim() || video3.trim() || '',
+      youtube_url1: video1.trim(),
+      youtube_url2: video2.trim(),
+      youtube_url3: video3.trim(),
+      thumbnail_url: effectiveThumb,
+      preview_img: effectiveThumb,
+      avatar_url: user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`,
+      open_to_work: true,
+      is_hidden: false,
+      updatedAt: new Date().toISOString(),
+    }
+
     try {
-      let sessionSecret: string | null = null
-      try {
-        const session = await account.getSession('current')
-        sessionSecret = session?.secret || null
-      } catch {
-        // Session fallback
-      }
+      const editorRef = doc(db, 'editor_profiles', uid)
+      await setDoc(editorRef, payload, { merge: true })
 
-      const reqHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (sessionSecret) {
-        reqHeaders['Authorization'] = `Bearer ${sessionSecret}`
-        reqHeaders['x-appwrite-session'] = sessionSecret
-      }
+      const userRef = doc(db, 'users', uid)
+      await setDoc(userRef, { role: 'EDITOR', handle: cleanHandle, name: cleanName, updatedAt: new Date().toISOString() }, { merge: true })
+      setActiveRole('EDITOR')
 
-      const rawFormat = rateShort && rateLong ? 'DUAL' : rateShort ? 'SHORTS' : 'LONG_FORM'
-      const formData = {
-        fullName: name.trim(),
-        name: name.trim(),
-        city: city.trim() || null,
-        bio: bio.trim() || null,
-        specialtyTag: headline.trim() || 'Video Editor & Motion Graphics Specialist',
-        headline: headline.trim() || 'Video Editor & Motion Graphics Specialist',
-        whatsapp: whatsapp.trim() || null,
-        instagramHandle: instagramHandle.trim() || null,
-        instagram: instagramHandle.trim() || null,
-        youtubeUrl: portfolio[0]?.youtubeUrl || null,
-        format: mapFormatToDb(rawFormat),
-        rateShort: rateShort ? Number(rateShort) : null,
-        rateLong: rateLong ? Number(rateLong) : null,
-        baseRate: rateShort ? Number(rateShort) : rateLong ? Number(rateLong) : 1500,
-        currency: 'INR',
-        turnaroundTime: `${turnaroundDays || 2} Days`,
-        turnaroundDays: Number(turnaroundDays) || 2,
-        clips: portfolio.map((p) => ({ url: p.youtubeUrl, roleExplanation: p.roleDescription })),
-        portfolio,
-      }
-
-      const res = await fetch('/api/onboarding/editor', {
-        method: 'POST',
-        headers: reqHeaders,
-        body: JSON.stringify(formData),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to submit profile')
-        setSubmitting(false)
-        return
-      }
-
-      // Success: Refresh homepage
-      window.location.reload()
+      setSuccess(true)
     } catch (err: any) {
-      setError(err.message || 'Error submitting profile')
-      setSubmitting(false)
+      setError(err.message || 'Error saving profile')
     } finally {
       setSubmitting(false)
     }
@@ -179,13 +198,13 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
     setError(null)
     onClose()
     if (success) {
-      window.location.reload()
+      router.push('/profile')
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden">
-      <div className="relative w-[92vw] max-w-lg md:w-full md:max-w-xl bg-zinc-950 text-white rounded-t-2xl md:rounded-3xl p-4 md:p-6 border border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto pb-24 md:pb-6 my-0 md:my-auto">
+      <div className="relative w-[92vw] max-w-lg md:w-full md:max-w-xl bg-zinc-950 text-white rounded-t-2xl md:rounded-3xl p-5 md:p-7 border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto pb-24 md:pb-7 my-0 md:my-auto">
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 md:top-5 md:right-5 p-2 text-zinc-400 hover:text-white bg-zinc-900 rounded-full transition-colors z-20"
@@ -202,29 +221,32 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
               Profile Listed Successfully!
             </h3>
             <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
-              Your editor profile and portfolio clips are now live on the marketplace. Creators can find you and send project briefs directly!
+              Your editor profile and showreels are now live on the marketplace. You can update your profile anytime in your dashboard.
             </p>
-            <button
-              onClick={handleClose}
-              className="mt-4 px-6 py-3 bg-white text-zinc-950 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors"
-            >
-              View My Profile
-            </button>
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  onClose()
+                  router.push('/profile')
+                }}
+                className="px-6 py-3 bg-lime-400 text-zinc-950 font-extrabold rounded-xl text-xs hover:bg-lime-300 transition-colors shadow-lg"
+              >
+                Go to Profile Dashboard
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
             {/* Step Indicators */}
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-              <div>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-lime-400 uppercase tracking-wider">
-                  <Sparkles className="w-3.5 h-3.5" /> Editor Onboarding • Step {step} of 3
-                </span>
-                <h3 className="font-display text-xl font-bold text-white">
-                  {step === 1 && 'Personal & Contact Info'}
-                  {step === 2 && 'Rates & Editing Specialty'}
-                  {step === 3 && 'Add 3 YouTube Portfolio Clips'}
-                </h3>
-              </div>
+            <div className="border-b border-zinc-800 pb-4">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-lime-400 uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" /> Editor Onboarding • Step {step} of 3
+              </span>
+              <h3 className="font-display text-xl font-bold text-white mt-1">
+                {step === 1 && '1. Personal & Contact Info'}
+                {step === 2 && '2. Rates & Editing Specialty'}
+                {step === 3 && '3. Add Portfolio Showreels'}
+              </h3>
             </div>
 
             {error && (
@@ -258,7 +280,7 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
                   <input
                     type="text"
                     required
-                    placeholder="Your display name"
+                    placeholder="e.g. Aman Sharma"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
@@ -272,36 +294,9 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Mumbai"
+                      placeholder="e.g. Mumbai, Maharashtra"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                      Headline
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Gaming & VFX Specialist"
-                      value={headline}
-                      onChange={(e) => setHeadline(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                      WhatsApp Number
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="+91 98765 43210"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
                       className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
                     />
                   </div>
@@ -311,12 +306,26 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
                     </label>
                     <input
                       type="text"
-                      placeholder="@editorname"
+                      placeholder="e.g. amanedits (without @)"
                       value={instagramHandle}
-                      onChange={(e) => setInstagramHandle(e.target.value)}
+                      onChange={(e) => setInstagramHandle(e.target.value.replace(/^@/, ''))}
                       className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    WhatsApp Number *
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
+                  />
+                  <p className="text-[11px] text-zinc-500 mt-1">Creators send brief requests directly to your WhatsApp.</p>
                 </div>
               </div>
             )}
@@ -324,6 +333,62 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
             {/* STEP 2 */}
             {step === 2 && (
               <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Headline / Specialty *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. High-Retention Shorts & Reels Specialist"
+                    value={headline}
+                    onChange={(e) => setHeadline(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {SUGGESTED_SPECIALTIES.map((spec) => (
+                      <button
+                        key={spec}
+                        type="button"
+                        onClick={() => setHeadline(spec)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg border transition-all ${
+                          headline === spec
+                            ? 'bg-lime-400 text-zinc-950 border-lime-400'
+                            : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
+                        }`}
+                      >
+                        {spec}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Primary Editing Format
+                  </label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {[
+                      { id: 'shorts', label: 'Shorts (9:16)' },
+                      { id: 'long', label: 'Long-Form (16:9)' },
+                      { id: 'both', label: 'Both Formats' },
+                    ].map((fmt) => (
+                      <button
+                        key={fmt.id}
+                        type="button"
+                        onClick={() => setFormatChoice(fmt.id as any)}
+                        className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center ${
+                          formatChoice === fmt.id
+                            ? 'bg-lime-400/10 border-lime-400 text-lime-400'
+                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                        }`}
+                      >
+                        {fmt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
@@ -333,7 +398,7 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
                       type="number"
                       placeholder="1500"
                       value={rateShort}
-                      onChange={(e) => setRateShort(e.target.value)}
+                      onChange={(e) => setRateShort(e.target.value ? Number(e.target.value) : '')}
                       className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
                     />
                   </div>
@@ -343,9 +408,9 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
                     </label>
                     <input
                       type="number"
-                      placeholder="8000"
+                      placeholder="4500"
                       value={rateLong}
-                      onChange={(e) => setRateLong(e.target.value)}
+                      onChange={(e) => setRateLong(e.target.value ? Number(e.target.value) : '')}
                       className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none placeholder:text-zinc-600"
                     />
                   </div>
@@ -353,17 +418,17 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                    Typical Delivery Turnaround (Days)
+                    Typical Delivery Turnaround
                   </label>
                   <select
-                    value={turnaroundDays}
-                    onChange={(e) => setTurnaroundDays(e.target.value)}
+                    value={turnaroundTime}
+                    onChange={(e) => setTurnaroundTime(e.target.value)}
                     className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-lime-400 focus:outline-none"
                   >
-                    <option value="1">24 Hours (1 Day)</option>
-                    <option value="2">48 Hours (2 Days)</option>
-                    <option value="4">3 – 4 Days</option>
-                    <option value="7">1 Week</option>
+                    <option value="24 Hours">24 Hours (1 Day)</option>
+                    <option value="48 Hours">48 Hours (2 Days)</option>
+                    <option value="3-4 Days">3 – 4 Days</option>
+                    <option value="1 Week">1 Week</option>
                   </select>
                 </div>
               </div>
@@ -373,58 +438,47 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
             {step === 3 && (
               <div className="space-y-4">
                 <p className="text-xs text-zinc-400">
-                  Add at least 1 YouTube video URL you edited. You can add up to 3 videos with brief lines explaining your role.
+                  Add links to videos you edited (YouTube, Google Drive, or Instagram Reels).
                 </p>
 
                 <div className="space-y-3">
                   <div>
+                    <label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                      Video #1 (Primary Showreel) *
+                    </label>
                     <input
                       type="url"
-                      placeholder="YouTube Video 1 URL (Required)"
+                      required
+                      placeholder="https://www.youtube.com/watch?v=..."
                       value={video1}
                       onChange={(e) => setVideo1(e.target.value)}
                       className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:ring-2 focus:ring-lime-400 focus:outline-none"
                     />
-                    <input
-                      type="text"
-                      placeholder="Role (e.g. Cut 9:16 Shorts, added sound SFX & captions)"
-                      value={desc1}
-                      onChange={(e) => setDesc1(e.target.value)}
-                      className="w-full px-4 py-1.5 mt-1 bg-zinc-900/60 border border-zinc-800/80 rounded-lg text-[11px] text-zinc-300 focus:outline-none"
-                    />
                   </div>
 
                   <div>
+                    <label className="text-[11px] font-bold text-zinc-400 block mb-1">
+                      Video #2 (Optional)
+                    </label>
                     <input
                       type="url"
-                      placeholder="YouTube Video 2 URL (Optional)"
+                      placeholder="https://www.youtube.com/watch?v=..."
                       value={video2}
                       onChange={(e) => setVideo2(e.target.value)}
                       className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:ring-2 focus:ring-lime-400 focus:outline-none"
                     />
-                    <input
-                      type="text"
-                      placeholder="Role (e.g. 16:9 Documentary edit & color grading)"
-                      value={desc2}
-                      onChange={(e) => setDesc2(e.target.value)}
-                      className="w-full px-4 py-1.5 mt-1 bg-zinc-900/60 border border-zinc-800/80 rounded-lg text-[11px] text-zinc-300 focus:outline-none"
-                    />
                   </div>
 
                   <div>
+                    <label className="text-[11px] font-bold text-zinc-400 block mb-1">
+                      Video #3 (Optional)
+                    </label>
                     <input
                       type="url"
-                      placeholder="YouTube Video 3 URL (Optional)"
+                      placeholder="https://www.youtube.com/watch?v=..."
                       value={video3}
                       onChange={(e) => setVideo3(e.target.value)}
                       className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:ring-2 focus:ring-lime-400 focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Role (e.g. Motion graphics & VFX assets)"
-                      value={desc3}
-                      onChange={(e) => setDesc3(e.target.value)}
-                      className="w-full px-4 py-1.5 mt-1 bg-zinc-900/60 border border-zinc-800/80 rounded-lg text-[11px] text-zinc-300 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -432,7 +486,7 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
             )}
 
             {/* Navigation controls */}
-            <div className="sticky bottom-0 bg-zinc-950/95 backdrop-blur-sm pt-3 pb-2 border-t border-zinc-800/80 -mx-4 md:-mx-6 px-4 md:px-6 mt-4 flex items-center justify-between z-10">
+            <div className="sticky bottom-0 bg-zinc-950/95 backdrop-blur-sm pt-3 pb-2 border-t border-zinc-800/80 -mx-4 md:-mx-7 px-4 md:px-7 mt-4 flex items-center justify-between z-10">
               {step > 1 ? (
                 <button
                   type="button"
@@ -456,9 +510,9 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
                   type="button"
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="px-6 py-2.5 bg-gradient-to-r from-lime-300 to-emerald-400 text-zinc-950 rounded-xl text-xs font-bold hover:from-lime-400 hover:to-emerald-500 transition-all flex items-center gap-2 shadow-md shadow-lime-400/10 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-lime-400 text-zinc-950 rounded-xl text-xs font-extrabold hover:bg-lime-300 transition-all flex items-center gap-2 shadow-lg shadow-lime-400/20 disabled:opacity-50"
                 >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete Registration'}
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Publish Profile'}
                 </button>
               )}
             </div>

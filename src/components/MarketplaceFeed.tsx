@@ -163,7 +163,7 @@ export default function MarketplaceFeed({
       </div>
 
       {/* ── UNIFIED FILTER & SEARCH BAR (Sticky Glassmorphic Container) ─────────── */}
-      <div className="relative z-20 mb-10 p-4 sm:p-5 rounded-2xl bg-zinc-900/80 border border-white/10 backdrop-blur-xl shadow-2xl space-y-4">
+      <div className="sticky top-16 z-30 mb-10 p-4 sm:p-5 rounded-2xl bg-zinc-950/90 border border-white/10 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] space-y-4">
         {/* Top Row: Search Input + Niche Chips */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-center">
           {/* Search Input (5 Cols) */}
@@ -174,7 +174,7 @@ export default function MarketplaceFeed({
               placeholder="Search by software, style, or editor name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 bg-zinc-950/90 border border-zinc-800 rounded-xl text-xs sm:text-sm font-medium text-white placeholder-zinc-500 focus:outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/20 transition-all shadow-inner"
+              className="w-full pl-10 pr-9 py-2.5 bg-zinc-900/90 border border-zinc-800 rounded-xl text-xs sm:text-sm font-medium text-white placeholder-zinc-500 focus:outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/20 transition-all shadow-inner"
             />
             {searchQuery && (
               <button
@@ -194,7 +194,7 @@ export default function MarketplaceFeed({
               { id: 'shorts', label: 'Short-Form / Reels' },
               { id: 'long', label: 'Long-Form' },
               { id: 'gaming', label: 'Gaming' },
-              { id: 'vfx', label: 'VFX & Motion' },
+              { id: 'vfx', label: 'VFX' },
             ].map((niche) => {
               const isActive = selectedNiche === niche.id
               return (
@@ -204,7 +204,7 @@ export default function MarketplaceFeed({
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
                     isActive
                       ? 'bg-lime-400 text-zinc-950 shadow-md shadow-lime-400/20 scale-[1.02]'
-                      : 'bg-zinc-950/60 hover:bg-zinc-800 text-zinc-300 border border-zinc-800/80 hover:border-zinc-700'
+                      : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border border-zinc-800/80 hover:border-zinc-700'
                   }`}
                 >
                   {niche.label}
@@ -217,22 +217,26 @@ export default function MarketplaceFeed({
         {/* Bottom Row: Price Slider + Results Counter + Reset */}
         <div className="pt-3 border-t border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
           {/* Price Range Slider */}
-          <div className="flex items-center gap-3 w-full sm:max-w-md bg-zinc-950/60 border border-zinc-800/80 px-3.5 py-2 rounded-xl">
+          <div className="flex items-center gap-3 w-full sm:max-w-md bg-zinc-900/80 border border-zinc-800/80 px-3.5 py-2 rounded-xl">
             <div className="flex items-center gap-1 text-xs font-bold text-zinc-300 shrink-0">
               <SlidersHorizontal className="w-3.5 h-3.5 text-lime-400" />
-              <span>Max Budget:</span>
+              <span>Budget:</span>
             </div>
-            <input
-              type="range"
-              min="500"
-              max="15000"
-              step="500"
-              value={maxRate}
-              onChange={(e) => setMaxRate(Number(e.target.value))}
-              className="w-full accent-lime-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
-            />
-            <span className="text-xs font-extrabold text-lime-400 font-mono shrink-0">
-              {maxRate >= 15000 ? '₹15,000+' : `₹${maxRate.toLocaleString()}`}
+            <div className="flex-1 flex items-center gap-2">
+              <span className="text-[11px] text-zinc-500 font-mono">₹500</span>
+              <input
+                type="range"
+                min="500"
+                max="15000"
+                step="500"
+                value={maxRate}
+                onChange={(e) => setMaxRate(Number(e.target.value))}
+                className="w-full accent-lime-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+              />
+              <span className="text-[11px] text-zinc-500 font-mono">₹15k+</span>
+            </div>
+            <span className="text-xs font-extrabold text-lime-400 font-mono shrink-0 px-2 py-0.5 rounded-lg bg-lime-400/10 border border-lime-400/20">
+              {maxRate >= 15000 ? '₹15,000+' : `≤ ₹${maxRate.toLocaleString()}`}
             </span>
           </div>
 
