@@ -50,14 +50,16 @@ function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
   const avatar =
     p.avatar_url ||
     `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
-  const rawHandle = p.handle || p.instagram_handle || name.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const rawInsta = p.instagram_handle || p.instagram || ''
+  const cleanInsta = rawInsta.replace(/^@/, '').trim()
+  const rawHandle = p.handle || cleanInsta || name.toLowerCase().replace(/[^a-z0-9]/g, '')
   const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
   const videoThumb = parsedVideo?.thumbnailUrl || p.thumbnail_url1 || p.thumbnail_url2 || p.preview_img || null
   const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long ?? 1500
 
   return {
     id: editorId,
-    handle: cleanHandle,
+    handle: p.handle || cleanHandle,
     name,
     avatar_url: avatar,
     headline: p.headline || p.specialty_tag || 'Video Editor',
@@ -65,7 +67,7 @@ function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
     currency: p.currency ?? 'INR',
     thumbnail_url: videoThumb,
     format_tag,
-    instagram_handle: cleanHandle,
+    instagram_handle: cleanInsta || cleanHandle,
     specialty: p.specialty_tag || p.headline || '',
     softwareTags: p.software || ['Premiere Pro', 'After Effects'],
     raw_video_url: rawVideoUrl || null,

@@ -173,15 +173,38 @@ export default function EditorProfileClient({
   }, [editor, portfolioItems])
 
   const formatTurnaround = (val?: string | number | null) => {
-    if (!val) return '2 Days'
-    const str = String(val).trim()
-    const numMatch = str.match(/\d+/)
-    if (numMatch) {
-      const num = numMatch[0]
-      return `${num} ${Number(num) === 1 ? 'Day' : 'Days'}`
+    if (!val) {
+      if (editor?.turnaround_days) {
+        const d = Number(editor.turnaround_days)
+        return `${d} ${d === 1 ? 'Day' : 'Days'}`
+      }
+      return '24-48 Hours'
     }
-    if (/hour/i.test(str)) return str
-    return str.replace(/ays?/i, 'Days').replace(/days?/i, 'Days')
+    const str = String(val).trim()
+    if (!str) return '24-48 Hours'
+
+    // If it already specifies hours (e.g., "24 Hours", "24-48 Hours", "48 Hours", "24h")
+    if (/hour|hr|h\b/i.test(str)) {
+      return str
+    }
+
+    // If it specifies days (e.g., "2 Days", "1-2 Days", "3-4 Days", "1 Day")
+    if (/day/i.test(str)) {
+      return str
+    }
+
+    // If it specifies weeks (e.g., "1 Week")
+    if (/week/i.test(str)) {
+      return str
+    }
+
+    // If it's a pure number (e.g. 2, "2", 1)
+    if (/^\d+$/.test(str)) {
+      const num = Number(str)
+      return `${num} ${num === 1 ? 'Day' : 'Days'}`
+    }
+
+    return str
   }
 
   if (!editor) {
@@ -199,6 +222,10 @@ export default function EditorProfileClient({
   const rawPhone = rawDigits.length >= 10 ? rawDigits : '919016047119'
   const displayPhone = rawPhone.length === 10 ? `+91 ${rawPhone}` : `+${rawPhone}`
   const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone
+
+  const rawInsta = (editor.instagram_handle || editor.instagram || '').toString().trim().replace(/^@/, '')
+  const cleanInstagram = rawInsta && !rawInsta.includes('@') ? rawInsta : null
+  const instagramUrl = cleanInstagram ? `https://instagram.com/${cleanInstagram}` : null
 
   const whatsappMessage = encodeURIComponent(
     `Hi ${editor.full_name || 'Editor'}, I saw your portfolio on UperAI and would like to discuss a video project with you.`
@@ -310,11 +337,25 @@ export default function EditorProfileClient({
         </Link>
 
         {/* Hero Banner */}
-        <div className="bg-gradient-to-r from-yellow-500 via-amber-600 to-lime-500 rounded-3xl p-8 text-black shadow-2xl space-y-2">
-          <span className="bg-black text-lime-400 text-[10px] font-black uppercase px-3 py-1 rounded-full">
-            {editor?.specialty_tag || 'VIDEO EDITOR'}
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor?.full_name?.toUpperCase() || 'EDITOR'}</h1>
+        <div className="bg-gradient-to-r from-yellow-500 via-amber-600 to-lime-500 rounded-3xl p-8 text-black shadow-2xl space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="bg-black text-lime-400 text-[10px] font-black uppercase px-3 py-1 rounded-full">
+              {editor?.specialty_tag || 'VIDEO EDITOR'}
+            </span>
+            {cleanInstagram && (
+              <a
+                href={instagramUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-black hover:bg-zinc-900 text-white text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 transition-all shadow-md hover:scale-105"
+              >
+                <Instagram className="w-3.5 h-3.5 text-pink-400" />
+                <span>@{cleanInstagram}</span>
+                <ExternalLink className="w-3 h-3 text-zinc-400" />
+              </a>
+            )}
+          </div>
+          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor?.full_name?.toUpperCase() || editor?.name?.toUpperCase() || 'EDITOR'}</h1>
           <p className="font-bold text-sm opacity-90">Verified Indian Video Editor • High Impact Showreels</p>
         </div>
 
@@ -374,7 +415,7 @@ export default function EditorProfileClient({
           <p className="text-xs text-zinc-400 max-w-md mx-auto">
             {user
               ? 'Have a project in mind? Connect directly with this editor.'
-              : 'Sign in to access direct WhatsApp contacts and hire verified editors.'}
+              : 'Sign in to access direct WhatsApp and Instagram contacts to hire verified editors.'}
           </p>
 
           {user ? (
@@ -385,7 +426,7 @@ export default function EditorProfileClient({
               }}
               className="inline-block px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
             >
-              CONTACT ME ON WHATSAPP →
+              CONTACT ME ON WHATSAPP / INSTAGRAM →
             </button>
           ) : (
             <button
@@ -398,7 +439,7 @@ export default function EditorProfileClient({
                 <path fill="#000" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                 <path fill="#000" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
               </svg>
-              LOG IN TO CONTACT ON WHATSAPP 🔒
+              LOG IN TO CONTACT EDITOR 🔒
             </button>
           )}
         </div>
@@ -407,7 +448,7 @@ export default function EditorProfileClient({
       {/* CONTACT DETAILS POP-UP MODAL */}
       {isContactModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 space-y-6 relative shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 space-y-5 relative shadow-2xl animate-in fade-in zoom-in-95">
             <button
               onClick={() => setIsContactModalOpen(false)}
               className="absolute top-4 right-4 w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-white transition-all text-xs font-bold"
@@ -419,10 +460,11 @@ export default function EditorProfileClient({
               <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2.5 py-1 rounded-full uppercase">
                 DIRECT CONTACT UNLOCKED
               </span>
-              <h3 className="text-xl font-black text-white pt-2">{editor.full_name}</h3>
-              <p className="text-zinc-400 text-xs">Reach out directly via phone or WhatsApp</p>
+              <h3 className="text-xl font-black text-white pt-2">{editor.full_name || editor.name}</h3>
+              <p className="text-zinc-400 text-xs">Reach out directly via WhatsApp or Instagram</p>
             </div>
 
+            {/* WhatsApp Contact Box */}
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-zinc-500 uppercase">WhatsApp / Phone Number</p>
@@ -436,7 +478,31 @@ export default function EditorProfileClient({
               </button>
             </div>
 
-            <div className="space-y-3 pt-1">
+            {/* Instagram Contact Box */}
+            {cleanInstagram && (
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                    <Instagram className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase">Instagram Profile</p>
+                    <p className="text-sm font-black text-white">@{cleanInstagram}</p>
+                  </div>
+                </div>
+                <a
+                  href={instagramUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                >
+                  <span>Open IG</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+
+            <div className="space-y-2.5 pt-1">
               <a
                 href={whatsappUrl}
                 target="_blank"
@@ -446,9 +512,20 @@ export default function EditorProfileClient({
                 Open Chat on WhatsApp 💬
               </a>
 
+              {cleanInstagram && (
+                <a
+                  href={instagramUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-3 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:opacity-90 text-white font-extrabold text-xs text-center rounded-xl uppercase tracking-wider shadow-lg transition-all"
+                >
+                  Send DM on Instagram 📷
+                </a>
+              )}
+
               <button
                 onClick={() => setIsContactModalOpen(false)}
-                className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 font-bold text-xs rounded-xl transition-all"
+                className="w-full py-2 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 font-bold text-xs rounded-xl transition-all"
               >
                 Stay on UperAI Platform
               </button>
