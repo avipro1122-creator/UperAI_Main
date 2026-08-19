@@ -393,14 +393,10 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                         {/* Dark Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/25 to-transparent" />
 
-                        {/* Top Badges: Turnaround / Rating + View Count Badge */}
+                        {/* Top Badges: Turnaround / Rating */}
                         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
                           <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-zinc-950/85 border border-white/10 text-lime-300 backdrop-blur-md">
                             {idx === 0 ? '🔥 Top Rated' : idx === 1 ? '⚡ 24h Turnaround' : '✨ Pro Motion'}
-                          </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 text-zinc-200 border border-white/10 backdrop-blur-md flex items-center gap-1">
-                            <Eye className="w-3 h-3 text-lime-400" />
-                            <span>{viewBadge}</span>
                           </span>
                         </div>
 

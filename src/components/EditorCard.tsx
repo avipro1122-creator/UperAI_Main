@@ -248,25 +248,6 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           </p>
         )}
 
-        {/* Niche + software badges */}
-        {(editor.specialty || softwareTags.length > 0) && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {editor.specialty && (
-              <span className="inline-flex items-center max-w-[140px] truncate text-[10px] font-semibold px-2 py-0.5 rounded-full bg-lime-400/10 text-lime-300 border border-lime-400/20">
-                {editor.specialty}
-              </span>
-            )}
-            {softwareTags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/[0.05] text-zinc-300 border border-white/10"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
         {/* Format tag + rate row */}
         <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/[0.08]">
           {editor.format_tag ? (
