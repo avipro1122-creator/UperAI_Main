@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import HeroSection from '@/components/HeroSection'
-import BentoMarketplace, { BentoEditorItem } from '@/components/BentoMarketplace'
-import RecentlyActiveEditors, { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
+import HowItWorksSection from '@/components/HowItWorksSection'
+import MarketplaceFeed from '@/components/MarketplaceFeed'
 import JsonLd from '@/components/JsonLd'
 import { getPublicEditors } from '@/lib/firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
 
 export const revalidate = 15
 
@@ -25,15 +26,23 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   let featured: ExtendedEditorCardData[] = []
-  let bentoEditors: BentoEditorItem[] = []
   let isServerError = false
 
   try {
-    const recentProfiles = await getPublicEditors(16)
+    const recentProfiles = await getPublicEditors(18)
 
     featured = recentProfiles.map((p: any) => {
       const editorId = p.user_id || p.id
-      const rawVideoUrl = p.youtube_url || p.youtube_url1 || p.youtube_url2 || p.youtube_url3 || p.showreel_url || p.video_url || p.video_url1 || p.video_url2 || p.video_url3
+      const rawVideoUrl =
+        p.youtube_url ||
+        p.youtube_url1 ||
+        p.youtube_url2 ||
+        p.youtube_url3 ||
+        p.showreel_url ||
+        p.video_url ||
+        p.video_url1 ||
+        p.video_url2 ||
+        p.video_url3
       const parsedVideo = parseVideoUrl(rawVideoUrl)
 
       const categoryTag = (p.specialty_tag || p.headline || '').toLowerCase()
@@ -69,49 +78,10 @@ export default async function HomePage() {
         raw_video_url: rawVideoUrl || null,
       } satisfies ExtendedEditorCardData
     })
-
-    bentoEditors = recentProfiles.map((doc: any) => {
-      const editorId = doc.user_id || doc.id
-      const rawVideoUrl = doc.youtube_url || doc.youtube_url1 || doc.youtube_url2 || doc.youtube_url3 || doc.showreel_url || doc.video_url || doc.video_url1 || doc.video_url2 || doc.video_url3
-      const parsedVideo = parseVideoUrl(rawVideoUrl)
-
-      const specText = (doc.specialty_tag || doc.headline || '').toLowerCase()
-      const category: 'shorts' | 'long' | 'vfx' =
-        specText.includes('vfx') || specText.includes('motion')
-          ? 'vfx'
-          : specText.includes('short') || parsedVideo?.isShortsUrl
-            ? 'shorts'
-            : 'long'
-
-      const minRate = Number(doc.base_rate || doc.min_rate || doc.rate_short || doc.rate_long || 1500)
-      const editorName = doc.full_name || doc.display_name || doc.name || 'Editor'
-      const googleAvatar =
-        doc.avatar_url ||
-        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(editorName)}`
-      const videoThumb = parsedVideo?.thumbnailUrl || doc.thumbnail_url1 || doc.thumbnail_url2 || doc.preview_img || null
-      const badgeText = doc.specialty_tag || doc.headline || 'Verified Editor'
-
-      return {
-        id: editorId,
-        name: editorName,
-        avatar: googleAvatar,
-        specialty: doc.specialty_tag || doc.headline || (category === 'shorts' ? 'Shorts / Reels Specialist' : '16:9 Long-Form Specialist'),
-        category,
-        headline: doc.headline || doc.specialty_tag || 'Video Editor & Motion Specialist',
-        rate: minRate,
-        rateLabel: `₹${Number(doc.base_rate || minRate).toLocaleString()} / Video`,
-        turnaround: doc.turnaround_time || (doc.turnaround_days ? `${doc.turnaround_days} Days Turnaround` : '2 Days'),
-        badgeText,
-        videoId: parsedVideo?.videoId || '',
-        previewImg: videoThumb || '',
-        softwareTags: doc.software || ['Premiere Pro', 'After Effects'],
-      } satisfies BentoEditorItem
-    })
   } catch (err) {
     console.error('Firestore Fetch Error:', err)
     isServerError = true
     featured = []
-    bentoEditors = []
   }
 
   const itemListSchema = {
@@ -131,8 +101,9 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="bg-[#0E1017] text-gray-100 min-h-screen selection:bg-lime-400 selection:text-black">
+    <div className="bg-zinc-950 text-zinc-100 min-h-screen selection:bg-lime-400 selection:text-black">
       <JsonLd data={itemListSchema} id="featured-editors-schema" />
+
       {/* Soft Server Maintenance Banner Notice */}
       {isServerError && (
         <div className="bg-amber-950/80 border-b border-amber-800/60 py-3 px-4 text-center text-amber-200 text-xs font-semibold flex items-center justify-center gap-2">
@@ -141,14 +112,14 @@ export default async function HomePage() {
         </div>
       )}
 
-      {/* Hero Section */}
+      {/* 1. Hero Section with Audience Switcher, Bold Headline, Distinct CTAs, 9:16 Floating Cards */}
       <HeroSection featured={featured} />
 
-      {/* Feature Highlight Cards ("Indian editors. Rates upfront.") */}
-      <BentoMarketplace dbEditors={bentoEditors} isServerError={isServerError} />
+      {/* 2. Educational How It Works Section (Cards 01–03) */}
+      <HowItWorksSection />
 
-      {/* Recently Active Editors Showcase Directory with Search */}
-      <RecentlyActiveEditors editors={featured} isServerError={isServerError} />
+      {/* 3. Dedicated Sticky Filter Bar & Editor Directory Feed */}
+      <MarketplaceFeed editors={featured} isServerError={isServerError} />
     </div>
   )
 }

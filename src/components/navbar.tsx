@@ -41,7 +41,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-[#0E1017] border-b border-zinc-800 px-4 sm:px-6 py-3.5 flex items-center justify-between text-gray-100 sticky top-0 z-50">
+    <nav className="bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 sm:px-6 py-3.5 flex items-center justify-between text-gray-100 sticky top-0 z-50">
       {/* Brand Logo */}
       <Link className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2 font-display" href="/">
         <LogoMark className="w-8 h-8 transition-transform hover:scale-105" />

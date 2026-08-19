@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Sparkles } from 'lucide-react'
-import EditorCard, { EditorCardData } from '@/components/EditorCard'
+import dynamic from 'next/dynamic'
+import { ArrowUpRight, Sparkles, Play, CheckCircle2, ShieldCheck, Instagram } from 'lucide-react'
+import { EditorCardData } from '@/components/EditorCard'
 import { useOnboarding } from '@/context/OnboardingContext'
 import { useAuth } from '@/context/AuthContext'
+import { parseVideoUrl } from '@/lib/video-parser'
+
+const VideoPlayerModal = dynamic(() => import('@/components/VideoPlayerModal'), { ssr: false })
 
 interface HeroSectionProps {
   featured: EditorCardData[]
@@ -13,13 +17,28 @@ interface HeroSectionProps {
   userHandle?: string | null
 }
 
-export default function HeroSection({
-  featured,
-}: HeroSectionProps) {
+export default function HeroSection({ featured }: HeroSectionProps) {
   const { activeRole, setActiveRole } = useAuth()
   const { openModal } = useOnboarding()
   const [visitorCount, setVisitorCount] = useState<number | null>(null)
   const [displayCount, setDisplayCount] = useState<number | null>(null)
+
+  // Video Audition Modal State for floating hero cards
+  const [activeVideoModal, setActiveVideoModal] = useState<{
+    isOpen: boolean
+    videoId: string | null
+    title: string | null
+    editorName: string
+    specialty: string
+    rate: string
+  }>({
+    isOpen: false,
+    videoId: null,
+    title: null,
+    editorName: '',
+    specialty: '',
+    rate: '',
+  })
 
   // Real-time site visitor tracker and live presence heartbeat
   useEffect(() => {
@@ -116,72 +135,72 @@ export default function HeroSection({
 
   return (
     <>
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 pb-20 border-b border-zinc-800/60 overflow-hidden">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-16 pb-16 sm:pb-24 border-b border-zinc-800/60 overflow-hidden">
         {/* Ambient background glows */}
-        <div className="absolute top-1/4 left-10 w-96 h-96 ambient-glow-lime pointer-events-none blur-3xl opacity-70" />
-        <div className="absolute top-1/3 right-10 w-96 h-96 ambient-glow-purple pointer-events-none blur-3xl opacity-60" />
+        <div className="absolute top-1/4 left-5 w-96 h-96 ambient-glow-lime pointer-events-none blur-3xl opacity-60" />
+        <div className="absolute top-1/3 right-5 w-96 h-96 ambient-glow-purple pointer-events-none blur-3xl opacity-50" />
 
         <div
           className={
             hasMultipleEditors
-              ? 'relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center'
+              ? 'relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center'
               : 'relative z-10 max-w-2xl'
           }
         >
-          {/* Left Column — Text & Toggle */}
+          {/* Left Column — Text & CTAs */}
           <div className={hasMultipleEditors ? 'lg:col-span-6 xl:col-span-7' : ''}>
             {/* Live Status Badge & Live Visitor Counter */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6 animate-hero-in" style={{ animationDelay: '0ms' }}>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/90 text-xs font-semibold text-zinc-300 shadow-sm w-fit">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-semibold text-zinc-300 shadow-inner w-fit">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-lime-400" />
                   Verified Indian Editors • Upfront Rates in INR
                 </span>
               </div>
 
               {/* Live Real-Time Visitor Count Badge */}
-              <div className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 px-3 py-1.5 rounded-full bg-zinc-900/60 border border-zinc-800/80 shadow-sm w-fit transition-all duration-300 hover:border-zinc-700">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 shadow-inner w-fit transition-all duration-300 hover:border-white/20">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                 </span>
-                <span className="text-zinc-200 font-extrabold tabular-nums">
+                <span className="text-zinc-100 font-extrabold tabular-nums font-mono">
                   {displayCount !== null ? displayCount.toLocaleString() : (visitorCount !== null ? visitorCount.toLocaleString() : '...')}
                 </span>{' '}
-                Creators & Editors online now
+                Creators &amp; Editors online now
               </div>
             </div>
 
-            {/* Toggle Switch */}
-            <div className="block sm:inline-flex items-center p-1 rounded-2xl sm:rounded-full bg-zinc-900/90 border border-zinc-800 mb-8 shadow-inner animate-hero-in" style={{ animationDelay: '80ms' }}>
+            {/* Audience Switcher (Segmented Tab Control) */}
+            <div className="inline-flex p-1 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-xl mb-6 shadow-inner animate-hero-in" style={{ animationDelay: '80ms' }}>
               <button
                 type="button"
                 onClick={() => setActiveRole('CREATOR')}
-                className={`w-full sm:w-auto px-5 py-2 rounded-xl sm:rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
+                className={`px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
                   isCreators
                     ? 'bg-zinc-100 text-zinc-950 shadow-md scale-[1.02]'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                FOR CREATORS / CLIENTS
+                For Creators
               </button>
               <button
                 type="button"
                 onClick={() => setActiveRole('EDITOR')}
-                className={`w-full sm:w-auto px-5 py-2 mt-1 sm:mt-0 rounded-xl sm:rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
+                className={`px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 ${
                   !isCreators
                     ? 'bg-zinc-100 text-zinc-950 shadow-md scale-[1.02]'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                FOR EDITORS
+                For Editors
               </button>
             </div>
 
             {/* Headline */}
             <h1
-              className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-100 leading-[1.1] animate-hero-in"
+              className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] animate-hero-in"
               style={{ animationDelay: '160ms' }}
             >
               {isCreators ? (
@@ -203,82 +222,171 @@ export default function HeroSection({
 
             {/* Subheadline */}
             <p
-              className="text-base sm:text-xl text-gray-400 font-normal leading-relaxed mt-4 sm:mt-5 max-w-xl animate-hero-in"
+              className="text-base sm:text-lg text-zinc-400 font-normal leading-relaxed mt-4 sm:mt-5 max-w-xl animate-hero-in"
               style={{ animationDelay: '240ms' }}
             >
               {isCreators
                 ? "You don't need 40 replies. You need one editor who's actually good."
-                : 'Get found by creators who are actually hiring.'}
+                : 'Get discovered by high-budget creators and agencies who are actively hiring.'}
             </p>
 
-            {/* Action Buttons */}
+            {/* Action Buttons: Distinct Primary & Secondary CTAs */}
             <div
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-6 sm:mt-8 w-full sm:w-auto animate-hero-in"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 mt-7 sm:mt-9 w-full sm:w-auto animate-hero-in"
               style={{ animationDelay: '320ms' }}
             >
               {isCreators ? (
                 <>
+                  {/* Primary CTA: Find an Editor */}
                   <button
                     type="button"
                     onClick={scrollToMarketplace}
-                    className="group w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg hover:shadow-[0_0_32px_rgba(204,255,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-1.5"
+                    className="group w-full sm:w-auto px-7 py-3.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-lime-400/20 hover:shadow-lime-400/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-2"
                   >
-                    Browse editors
+                    <span>Find an Editor</span>
                     <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </button>
-                  <Link
-                    href="/editors"
-                    className="group w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 text-gray-100 font-bold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-1.5"
+
+                  {/* Secondary CTA: Join as an Editor */}
+                  <button
+                    type="button"
+                    onClick={() => openModal()}
+                    className="w-full sm:w-auto px-7 py-3.5 bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 hover:border-white/20 text-zinc-100 font-semibold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-2 backdrop-blur-md"
                   >
-                    View All Directory
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                  </Link>
+                    <span>Join as an Editor</span>
+                  </button>
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/profile"
-                    className="group w-full sm:w-auto px-6 py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg hover:shadow-[0_0_32px_rgba(204,255,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-1.5"
+                  {/* Primary CTA for Editors: List your work */}
+                  <button
+                    type="button"
+                    onClick={() => openModal()}
+                    className="group w-full sm:w-auto px-7 py-3.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-extrabold rounded-xl transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-lime-400/20 hover:shadow-lime-400/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center inline-flex items-center justify-center gap-2"
                   >
-                    List your work
+                    <span>List Your Work</span>
                     <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                  </Link>
-                  <Link
-                    href="/editors"
-                    className="group w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 text-gray-100 font-bold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-1.5"
+                  </button>
+
+                  {/* Secondary CTA for Editors: Explore Directory */}
+                  <button
+                    type="button"
+                    onClick={scrollToMarketplace}
+                    className="w-full sm:w-auto px-7 py-3.5 bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 hover:border-white/20 text-zinc-100 font-semibold rounded-xl transition-all duration-300 text-xs sm:text-sm hover:-translate-y-0.5 active:translate-y-0 text-center inline-flex items-center justify-center gap-2 backdrop-blur-md"
                   >
-                    View All Directory
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                  </Link>
+                    <span>Browse Directory</span>
+                  </button>
                 </>
               )}
             </div>
           </div>
 
-          {/* Right Column */}
+          {/* Right Column: Floating 9:16 Showreel Cards */}
           {hasMultipleEditors && (
             <div
               className="lg:col-span-6 xl:col-span-5 relative mt-6 lg:mt-0 animate-hero-in"
               style={{ animationDelay: '200ms' }}
             >
-              <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[420px] flex items-center justify-center">
+              <div className="relative w-full max-w-sm mx-auto lg:max-w-none h-[480px] flex items-center justify-center">
                 {visibleCards.map((editor, idx) => {
                   const isFirst = idx === 0
                   const isSecond = idx === 1
 
                   const cardStyles = isFirst
-                    ? 'top-2 left-0 sm:-left-2 z-20 w-[270px] sm:w-[290px] animate-float-slow'
+                    ? 'top-0 left-0 sm:-left-2 z-20 w-[270px] sm:w-[290px] animate-float-slow'
                     : isSecond
-                    ? 'top-20 right-0 sm:-right-2 z-10 w-[260px] sm:w-[280px] animate-float-delayed opacity-90'
+                    ? 'top-14 right-0 sm:-right-2 z-10 w-[260px] sm:w-[280px] animate-float-delayed opacity-95'
                     : 'bottom-2 left-6 sm:left-8 z-30 w-[260px] sm:w-[280px] animate-float-slow'
+
+                  const parsed = parseVideoUrl(editor.raw_video_url)
+                  const videoId = parsed?.videoId || null
+                  const thumb = parsed?.thumbnailUrl || editor.thumbnail_url || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
+                  const rateLabel = editor.min_rate != null ? `From ₹${editor.min_rate.toLocaleString()}` : 'Rates upfront'
 
                   return (
                     <div
-                      key={editor.handle}
+                      key={editor.handle || idx}
                       className={`absolute transition-transform duration-300 ${cardStyles}`}
                     >
-                      <div className="shadow-2xl shadow-black/90 rounded-2xl overflow-hidden border border-white/10 bg-[#14161F]/90 backdrop-blur-xl hover:scale-[1.03] hover:border-lime-400/40 hover:shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_20px_rgba(204,255,0,0.08)] transition-all duration-300">
-                        <EditorCard editor={editor} />
+                      <div className="shadow-2xl shadow-black/90 rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/90 backdrop-blur-xl hover:scale-[1.03] hover:border-lime-400/40 hover:shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_25px_rgba(204,255,0,0.1)] transition-all duration-300 group">
+                        {/* 9:16 Vertical Video Frame */}
+                        <div className="relative w-full aspect-[9/14] bg-zinc-950 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={thumb}
+                            alt={editor.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+
+                          {/* Gradient Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+
+                          {/* Top Badges: Match / Turnaround Badge */}
+                          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
+                            <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-zinc-950/80 border border-white/10 text-lime-300 backdrop-blur-md">
+                              {idx === 0 ? '🔥 Top Rated' : '⚡ 24h Turnaround'}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              Verified
+                            </span>
+                          </div>
+
+                          {/* Center Play Button Overlay */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveVideoModal({
+                                isOpen: true,
+                                videoId,
+                                title: `${editor.name}'s Showreel`,
+                                editorName: editor.name,
+                                specialty: editor.headline || 'Video Editor',
+                                rate: rateLabel,
+                              })
+                            }
+                            className="absolute inset-0 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 cursor-pointer"
+                            title="Play showreel"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-xl shadow-lime-400/30 font-bold">
+                              <Play className="w-5 h-5 fill-zinc-950 ml-0.5" />
+                            </div>
+                          </button>
+
+                          {/* Bottom Card Content over video */}
+                          <div className="absolute bottom-3 inset-x-3 space-y-1.5 pointer-events-none">
+                            <div className="flex items-center gap-2">
+                              {/* Avatar */}
+                              {editor.avatar_url && !editor.avatar_url.includes('dicebear.com') ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={editor.avatar_url}
+                                  alt={editor.name}
+                                  className="w-7 h-7 rounded-full object-cover border border-white/20 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-lime-400 text-zinc-950 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                  {editor.name?.[0] || 'U'}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-white truncate leading-tight flex items-center gap-1">
+                                  <span>{editor.name}</span>
+                                  <CheckCircle2 className="w-3 h-3 text-lime-400 shrink-0" />
+                                </p>
+                                <p className="text-[10px] text-zinc-400 truncate">@{editor.handle}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-white/10 text-[11px]">
+                              <span className="text-zinc-300 truncate max-w-[120px]">
+                                {editor.format_tag || 'Shorts / Reels'}
+                              </span>
+                              <span className="font-extrabold text-lime-400 font-mono">
+                                {rateLabel}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )
@@ -289,7 +397,18 @@ export default function HeroSection({
         </div>
       </section>
 
-      {/* MASAI-STYLE MOBILE STICKY BOTTOM BAR (Visible only on mobile screens < sm) */}
+      {/* Video Audition Modal for Floating Cards */}
+      <VideoPlayerModal
+        isOpen={activeVideoModal.isOpen}
+        onClose={() => setActiveVideoModal((prev) => ({ ...prev, isOpen: false }))}
+        videoId={activeVideoModal.videoId}
+        title={activeVideoModal.title}
+        editorName={activeVideoModal.editorName}
+        specialty={activeVideoModal.specialty}
+        rate={activeVideoModal.rate}
+      />
+
+      {/* Mobile Sticky Bottom Action Bar */}
       <div className="sm:hidden fixed bottom-0 inset-x-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 p-3 z-40 flex items-center justify-between gap-3 shadow-[0_-10px_25px_rgba(0,0,0,0.8)]">
         <div className="pl-1">
           <p className="text-[10px] font-bold text-zinc-400 uppercase">Verified Indian Editors</p>
@@ -298,9 +417,9 @@ export default function HeroSection({
 
         <button
           onClick={scrollToMarketplace}
-          className="px-5 py-3 bg-lime-400 active:bg-lime-300 text-black font-black text-xs rounded-xl shadow-lg uppercase tracking-wider whitespace-nowrap"
+          className="px-5 py-2.5 bg-lime-400 active:bg-lime-300 text-zinc-950 font-black text-xs rounded-xl shadow-lg uppercase tracking-wider whitespace-nowrap"
         >
-          EXPLORE NOW ↗
+          Find an Editor ↗
         </button>
       </div>
     </>
