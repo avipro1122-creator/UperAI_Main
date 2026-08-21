@@ -20,6 +20,7 @@ export async function GET() {
     { loc: `${baseUrl}/about`, priority: '0.7', changefreq: 'monthly', lastmod: new Date().toISOString() },
     { loc: `${baseUrl}/sitemap`, priority: '0.6', changefreq: 'weekly', lastmod: new Date().toISOString() },
     { loc: `${baseUrl}/terms`, priority: '0.4', changefreq: 'yearly', lastmod: new Date().toISOString() },
+    { loc: `${baseUrl}/privacy`, priority: '0.4', changefreq: 'yearly', lastmod: new Date().toISOString() },
     { loc: `${baseUrl}/onboarding`, priority: '0.6', changefreq: 'monthly', lastmod: new Date().toISOString() },
     { loc: `${baseUrl}/login`, priority: '0.5', changefreq: 'monthly', lastmod: new Date().toISOString() },
   ]

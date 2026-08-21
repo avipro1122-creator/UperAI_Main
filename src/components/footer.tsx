@@ -25,6 +25,7 @@ export default function Footer() {
             <Link href="/editors" className="hover:text-lime-400 transition-colors">Browse Editors</Link>
             <Link href="/sitemap" className="hover:text-lime-400 transition-colors">Sitemap</Link>
             <Link href="/terms" className="hover:text-lime-400 transition-colors">Terms &amp; Conditions</Link>
+            <Link href="/privacy" className="hover:text-lime-400 transition-colors">Privacy Policy</Link>
             <ListYourWorkButton className="hover:text-lime-400 transition-colors">List Your Work</ListYourWorkButton>
           </div>
 
@@ -58,6 +59,10 @@ export default function Footer() {
             <span className="text-zinc-700">•</span>
             <Link href="/terms" className="hover:text-lime-400 transition-colors underline underline-offset-4 decoration-zinc-800 hover:decoration-lime-400">
               Terms &amp; Conditions
+            </Link>
+            <span className="text-zinc-700">•</span>
+            <Link href="/privacy" className="hover:text-lime-400 transition-colors underline underline-offset-4 decoration-zinc-800 hover:decoration-lime-400">
+              Privacy Policy
             </Link>
           </div>
           <div className="flex items-center gap-2">

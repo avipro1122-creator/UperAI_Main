@@ -24,7 +24,8 @@ export default async function SitemapPage() {
     { title: 'Home / Marketplace', path: '/', description: 'Featured showreels, budget filter, and recent editors' },
     { title: 'Browse All Editors', path: '/editors', description: 'Complete searchable directory with niche tags and pricing' },
     { title: 'About UperAI', path: '/about', description: 'Our mission and why we built an upfront pricing marketplace' },
-    { title: 'Terms & Conditions', path: '/terms', description: 'Platform guidelines, user agreements, and privacy terms' },
+    { title: 'Terms & Conditions', path: '/terms', description: 'Platform guidelines and user agreements' },
+    { title: 'Privacy Policy', path: '/privacy', description: 'How we collect, use, share and protect your data' },
     { title: 'Sign In / Account', path: '/login', description: 'Google authentication for creators and editors' },
     { title: 'Editor Onboarding', path: '/onboarding', description: 'Create and list your editing portfolio' },
   ]
