@@ -60,7 +60,8 @@ export default function HeroSection({ featured }: HeroSectionProps) {
   const router = useRouter()
   const { user, activeRole, setActiveRole } = useAuth()
   const { openModal } = useOnboarding()
-  const [visitorCount, setVisitorCount] = useState<number | null>(null)
+  // Lifetime total visits (persisted server-side), plus the animated value shown on screen
+  const [totalVisited, setTotalVisited] = useState<number | null>(null)
   const [displayCount, setDisplayCount] = useState<number | null>(null)
 
   // Auto-looping rotating carousel state
@@ -86,7 +87,8 @@ export default function HeroSection({ featured }: HeroSectionProps) {
     editorHandle: null,
   })
 
-  // Real-time site visitor tracker and live presence heartbeat
+  // Lifetime visit counter — POST once on mount to register this visit, then
+  // poll so the number ticks up in real time as other people land on the site.
   useEffect(() => {
     let isMounted = true
 
@@ -99,10 +101,8 @@ export default function HeroSection({ featured }: HeroSectionProps) {
         })
         if (!res.ok) return
         const data = await res.json()
-        if (data && typeof data.activeNow === 'number' && isMounted) {
-          setVisitorCount(data.activeNow)
-        } else if (data && typeof data.count === 'number' && isMounted) {
-          setVisitorCount(data.count)
+        if (data && typeof data.totalVisited === 'number' && isMounted) {
+          setTotalVisited(data.totalVisited)
         }
       } catch {
         // Quiet fallback
@@ -129,17 +129,17 @@ export default function HeroSection({ featured }: HeroSectionProps) {
     }
   }, [])
 
-  // Smooth count animation when visitor count updates
+  // Smooth count-up animation whenever the lifetime total ticks upward
   useEffect(() => {
-    if (visitorCount === null) return
+    if (totalVisited === null) return
 
     if (displayCount === null) {
-      setDisplayCount(visitorCount)
+      setDisplayCount(totalVisited)
       return
     }
 
     const start = displayCount
-    const end = visitorCount
+    const end = totalVisited
     if (start === end) return
 
     const duration = 600
@@ -160,7 +160,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
     animFrame = requestAnimationFrame(step)
     return () => cancelAnimationFrame(animFrame)
-  }, [visitorCount, displayCount])
+  }, [totalVisited, displayCount])
 
   const isCreators = activeRole === 'CREATOR'
   const displayEditors = featured.length >= 2 ? featured.slice(0, 3) : FALLBACK_EDITORS
@@ -204,26 +204,37 @@ export default function HeroSection({ featured }: HeroSectionProps) {
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 lg:gap-10 items-center">
           {/* Left Column — Text & CTAs */}
           <div className="lg:col-span-6 xl:col-span-7">
-            {/* Live Status Badge & Live Visitor Counter */}
-            <div className="flex flex-wrap items-center gap-2 mb-4 sm:mb-6 animate-hero-in" style={{ animationDelay: '0ms' }}>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-[11px] sm:text-xs font-semibold text-zinc-300 shadow-inner w-fit backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                <span className="inline-flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-lime-400" />
-                  Verified Indian Editors • Rates in INR
+            {/* Trust bar — verification badge + lifetime visit counter, unified
+                into one glass rail with a hairline divider so the hero opens
+                with a single confident element instead of two floating pills. */}
+            <div
+              className="inline-flex items-stretch mb-4 sm:mb-6 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-inner overflow-hidden animate-hero-in"
+              style={{ animationDelay: '0ms' }}
+            >
+              {/* Verification */}
+              <div className="inline-flex items-center gap-1.5 pl-3 pr-3 sm:pl-3.5 sm:pr-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold text-zinc-300">
+                <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-lime-400 shrink-0" />
+                <span className="whitespace-nowrap">
+                  Verified Indian Editors
+                  <span className="hidden sm:inline text-zinc-500"> • Rates in INR</span>
                 </span>
               </div>
 
-              {/* Live Real-Time Visitor Count Badge */}
-              <div className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-zinc-400 px-3 py-1 sm:py-1.5 rounded-full bg-white/[0.04] border border-white/10 shadow-inner w-fit backdrop-blur-md transition-all duration-300 hover:border-white/20">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              {/* Hairline divider */}
+              <div className="w-px bg-white/10 shrink-0" aria-hidden="true" />
+
+              {/* Lifetime visit counter — ticks up in real time */}
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 pl-3 pr-3.5 sm:pl-4 sm:pr-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold text-zinc-400">
+                <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden="true">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-lime-400" />
                 </span>
-                <span className="text-zinc-100 font-extrabold tabular-nums font-mono">
-                  {displayCount !== null ? displayCount.toLocaleString() : (visitorCount !== null ? visitorCount.toLocaleString() : '28')}
-                </span>{' '}
-                online now
+                <span className="text-zinc-100 font-extrabold tabular-nums font-mono tracking-tight">
+                  {displayCount !== null ? displayCount.toLocaleString('en-IN') : '—'}
+                </span>
+                <span className="whitespace-nowrap text-zinc-500">
+                  total visit{displayCount === 1 ? '' : 's'}
+                </span>
               </div>
             </div>
 
