@@ -107,6 +107,7 @@ export default function RootLayout({
     ],
     sameAs: [
       'https://www.linkedin.com/in/avanish-rai-proshot/',
+      'https://www.instagram.com/uperai26/',
     ],
   }
 

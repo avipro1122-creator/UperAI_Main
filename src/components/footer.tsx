@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Mail, MessageSquareHeart } from 'lucide-react'
+import { Mail, MessageSquareHeart, Instagram } from 'lucide-react'
 import ListYourWorkButton from '@/components/ListYourWorkButton'
 import { LogoMark } from '@/components/Logo'
 
@@ -23,6 +23,15 @@ export default function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-zinc-400">
             <Link href="/about" className="hover:text-lime-400 transition-colors">About</Link>
             <Link href="/editors" className="hover:text-lime-400 transition-colors">Browse Editors</Link>
+            <a
+              href="https://www.instagram.com/uperai26/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-pink-400 transition-colors inline-flex items-center gap-1.5 font-semibold text-zinc-300"
+            >
+              <Instagram className="w-3.5 h-3.5 text-pink-400" />
+              <span>Community</span>
+            </a>
             <Link href="/sitemap" className="hover:text-lime-400 transition-colors">Sitemap</Link>
             <Link href="/terms" className="hover:text-lime-400 transition-colors">Terms &amp; Conditions</Link>
             <Link href="/privacy" className="hover:text-lime-400 transition-colors">Privacy Policy</Link>
@@ -38,13 +47,25 @@ export default function Footer() {
             <p className="text-[11px] text-zinc-400">
               Have feedback or feature requests? Email us directly:
             </p>
-            <a
-              href="mailto:support@uperai.in"
-              className="inline-flex items-center justify-center md:justify-end gap-1.5 text-xs font-black text-white hover:text-lime-400 transition-colors pt-1"
-            >
-              <Mail className="w-3.5 h-3.5 text-lime-400" />
-              <span>support@uperai.in</span>
-            </a>
+            <div className="flex items-center justify-center md:justify-end gap-3 pt-1">
+              <a
+                href="mailto:support@uperai.in"
+                className="inline-flex items-center gap-1.5 text-xs font-black text-white hover:text-lime-400 transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5 text-lime-400" />
+                <span>support@uperai.in</span>
+              </a>
+              <span className="text-zinc-700">•</span>
+              <a
+                href="https://www.instagram.com/uperai26/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-black text-zinc-300 hover:text-pink-400 transition-colors"
+              >
+                <Instagram className="w-3.5 h-3.5 text-pink-400" />
+                <span>@uperai26</span>
+              </a>
+            </div>
           </div>
         </div>
 

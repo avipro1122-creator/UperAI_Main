@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import HeroSection from '@/components/HeroSection'
 import HowItWorksSection from '@/components/HowItWorksSection'
 import MarketplaceFeed from '@/components/MarketplaceFeed'
+import JoinCommunitySection from '@/components/JoinCommunitySection'
 import JsonLd from '@/components/JsonLd'
 import { getPublicEditors, DEFAULT_EDITORS } from '@/lib/firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
@@ -130,6 +131,9 @@ export default async function HomePage() {
 
       {/* 3. Dedicated Sticky Filter Bar & Editor Directory Feed */}
       <MarketplaceFeed editors={featured} isServerError={isServerError} />
+
+      {/* 4. Join Community Section */}
+      <JoinCommunitySection />
     </div>
   )
 }
