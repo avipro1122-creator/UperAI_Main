@@ -33,10 +33,10 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 }
 
 const FORMAT_TAG_STYLES: Record<string, string> = {
-  Shorts: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
-  'Long-form': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  'Long-Form': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  Both: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  Shorts: 'bg-violet-500/10 text-violet-300 border-violet-400/25 shadow-[0_0_12px_rgba(139,92,246,0.12)]',
+  'Long-form': 'bg-sky-500/10 text-sky-300 border-sky-400/25 shadow-[0_0_12px_rgba(14,165,233,0.12)]',
+  'Long-Form': 'bg-sky-500/10 text-sky-300 border-sky-400/25 shadow-[0_0_12px_rgba(14,165,233,0.12)]',
+  Both: 'bg-emerald-500/10 text-emerald-300 border-emerald-400/25 shadow-[0_0_12px_rgba(16,185,129,0.12)]',
 }
 
 function isDirectVideoUrl(url: string): boolean {
@@ -136,7 +136,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
   return (
     <Link
       href={`/editors/${targetIdOrHandle}`}
-      className="group block rounded-2xl overflow-hidden bg-white/[0.04] hover:bg-white/[0.07] border border-white/10 hover:border-white/20 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.6),0_0_20px_rgba(204,255,0,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50 will-change-transform"
+      className="group relative block rounded-2xl overflow-hidden bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/[0.08] hover:border-lime-400/40 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_45px_rgba(0,0,0,0.7),0_0_25px_rgba(163,230,53,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 will-change-transform"
     >
       {/* ── Video Thumbnail ────────────────────────────────── */}
       <div className="relative w-full aspect-video bg-zinc-950 overflow-hidden">
@@ -176,19 +176,22 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           </div>
         )}
 
+        {/* Subtle grounding vignette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent pointer-events-none opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
+
         {/* Play overlay */}
         <div
-          className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+          className="absolute inset-0 flex items-center justify-center bg-zinc-950/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
           aria-hidden="true"
         >
-          <div className="w-11 h-11 rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-lg shadow-lime-400/30 translate-y-1 group-hover:translate-y-0 transition-transform duration-300 font-bold">
+          <div className="w-12 h-12 rounded-full bg-lime-400 text-zinc-950 flex items-center justify-center shadow-[0_0_25px_rgba(163,230,53,0.6)] translate-y-1 group-hover:translate-y-0 group-hover:scale-105 transition-all duration-300 font-bold">
             <Play className="w-4 h-4 fill-zinc-950 ml-0.5" />
           </div>
         </div>
       </div>
 
       {/* ── Card body ────────────────────────────────────────── */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 bg-zinc-950/30">
         {/* Avatar + Name + Clean Handle */}
         <div className="flex items-center gap-2.5">
           {editor.avatar_url && !editor.avatar_url.includes('dicebear.com') ? (
@@ -211,9 +214,9 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white truncate leading-tight group-hover:text-lime-300 transition-colors flex items-center gap-1">
+            <p className="text-sm font-bold text-white truncate leading-tight group-hover:text-lime-300 transition-colors flex items-center gap-1.5">
               <span>{editor.name || 'Editor'}</span>
-              <svg className="w-3.5 h-3.5 text-lime-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="w-3.5 h-3.5 text-lime-400 shrink-0 drop-shadow-[0_0_6px_rgba(163,230,53,0.5)]" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
             </p>
@@ -229,7 +232,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
                     window.open(`https://instagram.com/${inst}`, '_blank', 'noopener,noreferrer')
                   }
                 }}
-                className="inline-flex text-xs text-zinc-400 hover:text-lime-400 transition-colors items-center gap-1 mt-0.5 cursor-pointer font-medium"
+                className="inline-flex text-[11px] text-zinc-400 hover:text-lime-400 transition-colors items-center gap-1 mt-0.5 cursor-pointer font-medium tracking-tight"
               >
                 <span>@{cleanHandle}</span>
               </span>
@@ -239,11 +242,11 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
 
         {/* One-line description / headline */}
         {editor.headline ? (
-          <p className="text-xs text-zinc-400 truncate leading-relaxed font-normal">
+          <p className="text-xs text-zinc-300/85 truncate leading-relaxed font-normal">
             {editor.headline}
           </p>
         ) : (
-          <p className="text-xs text-zinc-600 truncate leading-relaxed italic">
+          <p className="text-xs text-zinc-500 truncate leading-relaxed italic">
             Video Editor
           </p>
         )}
@@ -252,7 +255,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
         <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/[0.08]">
           {editor.format_tag ? (
             <span
-              className={`inline-flex items-center text-[10px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full border ${formatTagStyle}`}
+              className={`inline-flex items-center text-[10px] font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full border ${formatTagStyle}`}
             >
               {editor.format_tag}
             </span>
@@ -261,7 +264,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           )}
 
           <p
-            className={`text-xs font-extrabold font-mono shrink-0 ${hasRate ? 'text-lime-400' : 'text-zinc-500'}`}
+            className={`text-xs font-black font-mono tracking-tight shrink-0 ${hasRate ? 'text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]' : 'text-zinc-500'}`}
           >
             {rateLabel}
           </p>
