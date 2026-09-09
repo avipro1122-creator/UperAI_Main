@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeftRight, Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isAdminEmail } from '@/lib/flags'
 
 interface UserMenuProps {
   name: string
@@ -16,6 +17,7 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ name, email, handle, avatarUrl, role, isAdmin }: UserMenuProps) {
+  const isUserAdmin = Boolean(isAdmin || isAdminEmail(email))
   const [open, setOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -109,7 +111,14 @@ export default function UserMenu({ name, email, handle, avatarUrl, role, isAdmin
         <div className="absolute right-0 mt-2 w-56 rounded-xl bg-zinc-900 border border-zinc-800 shadow-xl shadow-black/40 py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
           {/* Identity */}
           <div className="px-4 py-3 border-b border-zinc-800">
-            <p className="text-xs font-semibold text-white truncate">{name}</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-white truncate">{name}</p>
+              {isUserAdmin && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-400/10 text-amber-400 border border-amber-400/30">
+                  Admin
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-zinc-500 truncate mt-0.5">{email}</p>
           </div>
 
@@ -123,13 +132,13 @@ export default function UserMenu({ name, email, handle, avatarUrl, role, isAdmin
               My profile
             </Link>
 
-            {isAdmin && (
+            {isUserAdmin && (
               <Link
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className="flex items-center w-full px-4 py-2 text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/60 transition-colors"
+                className="flex items-center w-full px-4 py-2 text-xs text-amber-400 hover:text-amber-300 hover:bg-zinc-800/60 transition-colors font-semibold"
               >
-                Admin Panel
+                ⚡ Admin Dashboard
               </Link>
             )}
           </div>

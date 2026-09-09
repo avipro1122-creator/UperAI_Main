@@ -6,9 +6,11 @@ import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { LogoMark } from '@/components/Logo'
 import LoginModal from '@/components/LoginModal'
+import { isAdminEmail } from '@/lib/flags'
 
 export default function Navbar() {
   const { user, loading, activeRole, setActiveRole, loginWithGoogle, logout } = useAuth()
+  const isUserAdmin = isAdminEmail(user?.email)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -108,7 +110,14 @@ export default function Navbar() {
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2.5 w-60 bg-zinc-900/95 backdrop-blur-2xl border border-white/[0.12] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.05)] p-3 z-50 space-y-2 text-xs animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-3 py-2.5 border-b border-white/[0.08]">
-                  <p className="font-bold text-white truncate text-xs">{user.name || user.email?.split('@')[0] || 'User'}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-white truncate text-xs">{user.name || user.email?.split('@')[0] || 'User'}</p>
+                    {isUserAdmin && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-400/10 text-amber-400 border border-amber-400/30">
+                        Admin
+                      </span>
+                    )}
+                  </div>
                   {user.email && <p className="text-zinc-400 text-[10px] truncate mt-0.5">{user.email}</p>}
                   <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 bg-lime-400/10 text-lime-400 font-extrabold rounded-md text-[10px] border border-lime-400/25 tracking-wide">
                     <span className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse" />
@@ -117,6 +126,16 @@ export default function Navbar() {
                 </div>
 
                 <div className="space-y-1">
+                  {/* Admin Dashboard Link */}
+                  {isUserAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="block px-3 py-2 text-amber-400 hover:text-amber-300 hover:bg-white/[0.06] rounded-xl font-bold transition-colors duration-150"
+                    >
+                      ⚡ Admin Dashboard
+                    </Link>
+                  )}
                   {/* My Profile Link (Unlocked for Editors / Locked Notice for Creators) */}
                   {activeRole === 'EDITOR' ? (
                     <Link
@@ -190,7 +209,14 @@ export default function Navbar() {
         <div className="md:hidden fixed inset-x-0 top-[53px] bg-zinc-950/95 backdrop-blur-2xl border-b border-white/10 p-4 space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-40 text-xs animate-in fade-in slide-from-top-2 duration-150">
           <div className="flex justify-between items-center border-b border-white/[0.08] pb-3">
             <div>
-              <p className="font-bold text-white text-sm">{user.name || user.email?.split('@')[0] || 'User'}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-white text-sm">{user.name || user.email?.split('@')[0] || 'User'}</p>
+                {isUserAdmin && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-400/10 text-amber-400 border border-amber-400/30">
+                    Admin
+                  </span>
+                )}
+              </div>
               <p className="text-zinc-400 text-[11px]">{user.email}</p>
             </div>
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-lime-400/10 text-lime-400 font-extrabold text-[10px] rounded-lg border border-lime-400/25 tracking-wide">
@@ -200,6 +226,15 @@ export default function Navbar() {
           </div>
 
           <div className="space-y-2 pt-1">
+            {isUserAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold rounded-xl text-center border border-amber-500/30 active:scale-[0.99] transition-all"
+              >
+                ⚡ Admin Dashboard
+              </Link>
+            )}
             <button
               onClick={toggleRole}
               className="w-full py-3 bg-zinc-900/90 border border-white/10 text-lime-400 font-bold rounded-xl text-center active:scale-[0.99] transition-all"
