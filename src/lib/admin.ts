@@ -3,8 +3,13 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { Query } from 'node-appwrite'
 
 export function getAdminEmails(): Set<string> {
+  const envEmails =
+    process.env.ADMIN_EMAILS ||
+    process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
+    'AviPro1122@gmail.com,karan@uperai.in'
+
   return new Set(
-    (process.env.ADMIN_EMAILS ?? '')
+    envEmails
       .split(',')
       .map((e) => e.trim().toLowerCase())
       .filter(Boolean)

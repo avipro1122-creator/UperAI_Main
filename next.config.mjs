@@ -40,8 +40,8 @@ const nextConfig = {
       base-uri 'self';
       form-action 'self';
       frame-ancestors 'self';
-      frame-src 'self' https://accounts.google.com https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com https://player.vimeo.com https://www.instagram.com https://consent.cookiebot.com https://googleads.g.doubleclick.net;
-      connect-src 'self' https://accounts.google.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://*.firebaseio.com https://sgp.cloud.appwrite.io https://*.cloud.appwrite.io https://consent.cookiebot.com https://consentcdn.cookiebot.com https://www.googletagmanager.com https://www.google-analytics.com;
+      frame-src 'self' https://accounts.google.com https://auth.uperai.in https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com https://player.vimeo.com https://www.instagram.com https://consent.cookiebot.com https://googleads.g.doubleclick.net;
+      connect-src 'self' https://accounts.google.com https://auth.uperai.in https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://*.firebaseio.com https://sgp.cloud.appwrite.io https://*.cloud.appwrite.io https://consent.cookiebot.com https://consentcdn.cookiebot.com https://www.googletagmanager.com https://www.google-analytics.com;
     `.replace(/\s{2,}/g, ' ').trim();
 
     return [

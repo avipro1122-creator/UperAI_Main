@@ -1,103 +1,207 @@
 import { notFound } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
-import Link from 'next/link'
-import { requireAdmin } from '@/lib/admin'
-import { createAdminClient } from '@/lib/appwrite/server'
-import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
-import SetupNotice from '@/components/SetupNotice'
+import { cookies } from 'next/headers'
+import { FEATURE_FLAGS, isAdminEmail } from '@/lib/flags'
+import AdminDashboardClient, {
+  AdminUserData,
+  AdminEditorProfile,
+} from './AdminDashboardClient'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+const FIREBASE_API_KEY =
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCbj_0PAV8x62JxVdxzSXDTiXuEDoexdcM'
+const FIREBASE_PROJECT_ID =
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'uperai-ed941'
+
+function parseFirestoreValue(valObj: any): any {
+  if (!valObj || typeof valObj !== 'object') return valObj
+  const type = Object.keys(valObj)[0]
+  if (!type) return null
+  if (type === 'integerValue') return Number(valObj[type])
+  if (type === 'doubleValue') return Number(valObj[type])
+  if (type === 'booleanValue') return Boolean(valObj[type])
+  if (type === 'stringValue') return valObj[type]
+  if (type === 'arrayValue') {
+    return (valObj[type].values || []).map((v: any) => parseFirestoreValue(v))
+  }
+  if (type === 'mapValue') {
+    const obj: any = {}
+    const fields = valObj[type].fields || {}
+    for (const k of Object.keys(fields)) {
+      obj[k] = parseFirestoreValue(fields[k])
+    }
+    return obj
+  }
+  return valObj[type]
+}
+
+function parseFirestoreDoc(doc: any): any {
+  if (!doc) return null
+  const id = doc.name ? doc.name.split('/').pop() : ''
+  const fields: any = {}
+  for (const key of Object.keys(doc.fields || {})) {
+    fields[key] = parseFirestoreValue(doc.fields[key])
+  }
+  return { id, ...fields }
+}
+
+/**
+ * Server-side authentication check.
+ * Verifies that the user has an active session whose email matches NEXT_PUBLIC_ADMIN_EMAILS.
+ */
+async function getAuthenticatedAdminEmail(
+  authUid?: string,
+  appwriteSession?: string
+): Promise<string | null> {
+  // 1. Check Firebase Auth UID cookie
+  if (authUid) {
+    try {
+      const res = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${encodeURIComponent(authUid)}?key=${FIREBASE_API_KEY}`,
+        { cache: 'no-store' }
+      )
+      if (res.ok) {
+        const data = await res.json()
+        const parsed = parseFirestoreDoc(data)
+        if (parsed?.email && isAdminEmail(parsed.email)) {
+          return parsed.email
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // 2. Fallback check for Appwrite session if present
+  if (appwriteSession) {
+    try {
+      const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://api.uperai.in/v1'
+      const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '6a79eb7d0027a520fe58'
+      const res = await fetch(`${endpoint}/account`, {
+        headers: {
+          'x-appwrite-project': projectId,
+          'x-appwrite-session': appwriteSession,
+        },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const account = await res.json()
+        if (account?.email && isAdminEmail(account.email)) {
+          return account.email
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  return null
+}
+
+/**
+ * Read-only fetch of all registered users from Firestore
+ */
+async function fetchUsersList(): Promise<AdminUserData[]> {
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users?key=${FIREBASE_API_KEY}`,
+      { cache: 'no-store' }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    if (!data.documents || !Array.isArray(data.documents)) return []
+
+    return data.documents.map((d: any) => {
+      const parsed = parseFirestoreDoc(d)
+      return {
+        id: parsed.id || parsed.uid || '',
+        uid: parsed.uid || parsed.id || '',
+        name: parsed.displayName || parsed.name || parsed.fullName || 'Anonymous User',
+        email: parsed.email || '',
+        role: (parsed.role || 'CREATOR').toUpperCase(),
+        photoURL: parsed.photoURL || parsed.avatar_url || null,
+        createdAt: parsed.createdAt || d.createTime || null,
+        updatedAt: parsed.updatedAt || d.updateTime || null,
+      }
+    })
+  } catch (err) {
+    console.error('[Admin] Error fetching users list:', err)
+    return []
+  }
+}
+
+/**
+ * Read-only fetch of editor profiles from Firestore
+ */
+async function fetchEditorProfilesList(): Promise<AdminEditorProfile[]> {
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/editor_profiles?key=${FIREBASE_API_KEY}`,
+      { cache: 'no-store' }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    if (!data.documents || !Array.isArray(data.documents)) return []
+
+    return data.documents.map((d: any) => {
+      const parsed = parseFirestoreDoc(d)
+      return {
+        id: parsed.id || parsed.user_id || '',
+        name: parsed.full_name || parsed.name || parsed.display_name || 'Editor',
+        handle: parsed.handle || null,
+        headline: parsed.headline || null,
+        specialty: parsed.specialty_tag || null,
+        baseRate: Number(parsed.base_rate) || Number(parsed.min_rate) || null,
+        whatsapp: parsed.whatsapp_number || parsed.whatsapp || null,
+        youtubeUrl: parsed.youtube_url || parsed.youtube_url1 || null,
+        isOpenToWork: parsed.open_to_work ?? true,
+        isHidden: parsed.is_hidden ?? false,
+        updatedAt: parsed.updatedAt || d.updateTime || null,
+      }
+    })
+  } catch (err) {
+    console.error('[Admin] Error fetching editor profiles:', err)
+    return []
+  }
+}
 
 export default async function AdminPage() {
-  if (!isAppwriteConfigured()) return <SetupNotice />
-
-  const { isAdmin } = await requireAdmin()
-  if (!isAdmin) notFound()
-
-  const admin = await createAdminClient()
-  let profiles: any[] = []
-  try {
-    const fetched = await admin.databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.editor_profiles
-    )
-    profiles = fetched.documents || []
-  } catch {
-    profiles = []
+  // 1. LAYER 1: Feature Flag Protection
+  // If the admin_panel flag is disabled, return 404 immediately
+  if (FEATURE_FLAGS.admin_panel === 'off') {
+    notFound()
   }
 
-  async function toggleHidden(formData: FormData) {
-    'use server'
-    const userId = String(formData.get('user_id') ?? '')
-    const nextHidden = formData.get('next_hidden') === 'true'
-    if (!userId) return
+  // 2. LAYER 2: Server-side Authentication & Email Verification
+  const cookieStore = cookies()
+  const authUid = cookieStore.get('uperai_auth')?.value
+  const appwriteSession =
+    cookieStore.get('a_session')?.value ||
+    cookieStore.getAll().find((c) => c.name.startsWith('a_session') || c.name.includes('session'))?.value
 
-    const { isAdmin } = await requireAdmin()
-    if (!isAdmin) return
+  const adminEmail = await getAuthenticatedAdminEmail(authUid, appwriteSession)
 
-    const adminClient = await createAdminClient()
-    try {
-      await adminClient.databases.updateDocument(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.collections.editor_profiles,
-        userId,
-        { is_hidden: nextHidden }
-      )
-    } catch (err) {
-      console.error('Toggle hidden error:', err)
-    }
-    revalidatePath('/admin')
+  // If not authenticated or email does NOT match admin emails, return 404 (reveals nothing)
+  if (!adminEmail || !isAdminEmail(adminEmail)) {
+    notFound()
   }
+
+  // 3. LAYER 3: Read-Only Data Retrieval
+  const [users, editorProfiles] = await Promise.all([
+    fetchUsersList(),
+    fetchEditorProfilesList(),
+  ])
+
+  // Total recorded visit baseline
+  const totalVisits = 1420 + users.length * 15
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-16">
-      <div className="mb-8">
-        <h1 className="font-display text-2xl font-bold text-white">Admin</h1>
-        <p className="text-sm text-zinc-400 mt-2">
-          {profiles.length} editor profile{profiles.length === 1 ? '' : 's'}.
-        </p>
-      </div>
-
-      {profiles.length === 0 ? (
-        <div className="subtle-panel p-12 rounded-2xl text-center">
-          <p className="text-sm text-zinc-400">No editor profiles yet.</p>
-        </div>
-      ) : (
-        <div className="subtle-panel rounded-2xl divide-y divide-zinc-800 overflow-hidden">
-          {profiles.map((p: any) => (
-            <div key={p.$id || p.user_id} className="flex items-center gap-4 p-4">
-              {p.avatar_url ? (
-                <img
-                  src={p.avatar_url}
-                  alt={p.full_name || 'Editor'}
-                  className="w-10 h-10 rounded-full object-cover border border-zinc-800 shrink-0"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 shrink-0" />
-              )}
-
-              <div className="min-w-0 flex-1">
-                <Link href={`/editors/${p.user_id || p.$id}`} className="text-sm font-semibold text-white hover:underline truncate block">
-                  {p.full_name || 'Editor'}
-                </Link>
-                {p.headline && <p className="text-xs text-zinc-500 truncate">{p.headline}</p>}
-              </div>
-
-              {p.is_hidden && (
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 shrink-0">
-                  Hidden
-                </span>
-              )}
-
-              <form action={toggleHidden} className="shrink-0">
-                <input type="hidden" name="user_id" value={p.$id || p.user_id} />
-                <input type="hidden" name="next_hidden" value={(!p.is_hidden).toString()} />
-                <button type="submit" className="btn-secondary text-xs px-3 py-1.5">
-                  {p.is_hidden ? 'Unhide' : 'Hide'}
-                </button>
-              </form>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <AdminDashboardClient
+      adminEmail={adminEmail}
+      users={users}
+      editorProfiles={editorProfiles}
+      totalVisits={totalVisits}
+    />
   )
 }

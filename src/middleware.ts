@@ -12,33 +12,9 @@ export async function middleware(request: NextRequest) {
     allCookies.find((c) => c.name.startsWith('a_session') || c.name.includes('session'))?.value ||
     request.cookies.get('a_session')?.value
 
-  // Gate /admin
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    if (!sessionCookie) {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('next', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
+  // Note: /admin is guarded by route-level checks in src/app/admin/page.tsx
+  // returning 404 notFound() to prevent revealing that /admin exists.
 
-    try {
-      const res = await fetch(`${APPWRITE_CONFIG.endpoint}/account`, {
-        headers: {
-          'x-appwrite-project': APPWRITE_CONFIG.projectId,
-          'x-appwrite-session': sessionCookie,
-        },
-      })
-
-      if (!res.ok) {
-        const loginUrl = new URL('/login', request.url)
-        loginUrl.searchParams.set('next', pathname)
-        return NextResponse.redirect(loginUrl)
-      }
-    } catch {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('next', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
-  }
 
   // Gate /settings/*
   if (pathname.startsWith('/settings')) {
