@@ -1,6 +1,6 @@
 export default function EditorCardSkeleton() {
   return (
-    <div className="rounded-2xl overflow-hidden bg-[#14161F]/80 backdrop-blur-md border border-white/10" aria-hidden="true">
+    <div className="rounded-2xl overflow-hidden bg-white border border-neutral-200 shadow-sm" aria-hidden="true">
       {/* Thumbnail */}
       <div className="w-full aspect-video skeleton-shimmer" />
 
@@ -26,7 +26,7 @@ export default function EditorCardSkeleton() {
         </div>
 
         {/* Format + rate row */}
-        <div className="flex items-center justify-between pt-2 border-t border-white/5">
+        <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
           <div className="h-4 w-14 rounded-full skeleton-shimmer" />
           <div className="h-3 w-12 rounded skeleton-shimmer" />
         </div>
