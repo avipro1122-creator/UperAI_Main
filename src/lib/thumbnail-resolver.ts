@@ -61,10 +61,18 @@ export function resolveThumbnailUrl(inputUrl: string | null | undefined): string
 
   // 2. Google Drive link
   if (trimmed.includes('drive.google.com')) {
+    if (trimmed.includes('/folders/')) {
+      return `/api/get-drive-thumbnail?url=${encodeURIComponent(trimmed)}`
+    }
     const fileId = extractDriveFileId(trimmed)
     if (fileId) {
       return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`
     }
+  }
+
+  // 3. Instagram Reel / Post link
+  if (isInstagramUrl(trimmed)) {
+    return `/api/get-reel-thumbnail?url=${encodeURIComponent(trimmed)}`
   }
 
   // 3. YouTube link

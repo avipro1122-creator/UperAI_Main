@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Play } from 'lucide-react'
 import { parseVideoUrl } from '@/lib/video-parser'
-import { resolveThumbnailUrl, isInstagramUrl } from '@/lib/thumbnail-resolver'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 
 export type FormatTag = 'Shorts' | 'Long-form' | 'Both'
 
@@ -59,54 +58,15 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
   // User-provided link resolution (Google Drive, direct image, YouTube, Instagram)
   const parsedVideo = editor.raw_video_url ? parseVideoUrl(editor.raw_video_url) : null
 
-  // Dynamic Instagram cover extraction state
-  const [instaThumbnail, setInstaThumbnail] = useState<string | null>(null)
-  const [isLoadingInsta, setIsLoadingInsta] = useState(false)
-
-  useEffect(() => {
-    const rawLink =
-      (isInstagramUrl(editor.raw_video_url) ? editor.raw_video_url : null) ||
-      (isInstagramUrl(editor.thumbnail_url) ? editor.thumbnail_url : null)
-
-    if (!rawLink) {
-      setInstaThumbnail(null)
-      return
-    }
-
-    let isMounted = true
-    setIsLoadingInsta(true)
-
-    fetch(`/api/get-reel-thumbnail?url=${encodeURIComponent(rawLink)}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (isMounted && data?.thumbnailUrl) {
-          setInstaThumbnail(data.thumbnailUrl)
-        }
-      })
-      .catch(() => {
-        // Fallback placeholder handled on render
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoadingInsta(false)
-        }
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [editor.raw_video_url, editor.thumbnail_url])
-
-  // Resolve direct thumbnail using link resolver utility (Drive, YouTube, direct image, Vimeo)
+  // Resolve thumbnail using link resolver utility (Drive file/folder, Instagram Reel, YouTube, Vimeo, direct image)
   const resolvedDirectThumbnail =
     resolveThumbnailUrl(editor.thumbnail_url) ||
     resolveThumbnailUrl(editor.raw_video_url)
 
   const fallbackThumbnail =
-    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80'
 
   const finalThumbnail =
-    instaThumbnail ||
     resolvedDirectThumbnail ||
     parsedVideo?.thumbnailUrl ||
     fallbackThumbnail
@@ -130,12 +90,11 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           decoding="async"
           width={380}
           height={214}
+          referrerPolicy="no-referrer"
           onError={(e) => {
             e.currentTarget.src = fallbackThumbnail
           }}
-          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04] ${
-            isLoadingInsta ? 'animate-pulse opacity-75' : 'opacity-100'
-          }`}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
         />
 
         {/* Subtle grounding vignette */}
