@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { X, CheckCircle2, ArrowRight, ArrowLeft, Loader2, Sparkles, Video, DollarSign, User, PhoneCall } from 'lucide-react'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 import { useAuth } from '@/context/AuthContext'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
@@ -140,7 +141,10 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
     const effectiveBaseRate = Number(rateShort) || Number(rateLong) || 1500
 
     const primaryParsed = parseVideoUrl(video1.trim() || video2.trim() || video3.trim())
-    const effectiveThumb = primaryParsed?.thumbnailUrl || null
+    const thumb1 = resolveThumbnailUrl(video1.trim()) || null
+    const thumb2 = resolveThumbnailUrl(video2.trim()) || null
+    const thumb3 = resolveThumbnailUrl(video3.trim()) || null
+    const effectiveThumb = thumb1 || thumb2 || thumb3 || primaryParsed?.thumbnailUrl || null
 
     const payload = {
       user_id: uid,
@@ -168,6 +172,9 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
       youtube_url1: video1.trim(),
       youtube_url2: video2.trim(),
       youtube_url3: video3.trim(),
+      thumbnail_url1: thumb1,
+      thumbnail_url2: thumb2,
+      thumbnail_url3: thumb3,
       thumbnail_url: effectiveThumb,
       preview_img: effectiveThumb,
       avatar_url: user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`,

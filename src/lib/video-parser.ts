@@ -67,12 +67,23 @@ export function parseVideoUrl(rawUrl: string | null | undefined): ParsedVideoUrl
       embedUrl: insta.embedUrl,
       isReel: insta.isReel,
       isShortsUrl: true,
-      thumbnailUrl: null,
+      thumbnailUrl: `/api/get-reel-thumbnail?url=${encodeURIComponent(url)}`,
       rawUrl: url,
     }
   }
 
-  // 3. Try Google Drive
+  // 3. Try Google Drive (files & folders)
+  if (url.includes('drive.google.com') && url.includes('/folders/')) {
+    return {
+      sourceType: 'drive',
+      videoId: url,
+      embedUrl: url,
+      isShortsUrl: false,
+      thumbnailUrl: `/api/get-drive-thumbnail?url=${encodeURIComponent(url)}`,
+      rawUrl: url,
+    }
+  }
+
   const drive = parseDriveUrl(url)
   if (drive) {
     return {
@@ -80,7 +91,7 @@ export function parseVideoUrl(rawUrl: string | null | undefined): ParsedVideoUrl
       videoId: drive.fileId,
       embedUrl: drive.previewUrl,
       isShortsUrl: false,
-      thumbnailUrl: `https://drive.google.com/thumbnail?id=${drive.fileId}&sz=w400-h225`,
+      thumbnailUrl: `https://drive.google.com/thumbnail?id=${drive.fileId}&sz=w800`,
       rawUrl: url,
     }
   }

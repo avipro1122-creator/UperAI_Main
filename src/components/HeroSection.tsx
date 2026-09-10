@@ -9,6 +9,7 @@ import { EditorCardData } from '@/components/EditorCard'
 import { useOnboarding } from '@/context/OnboardingContext'
 import { useAuth } from '@/context/AuthContext'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 
 const VideoPlayerModal = dynamic(() => import('@/components/VideoPlayerModal'), { ssr: false })
 
@@ -26,7 +27,7 @@ const FALLBACK_EDITORS: EditorCardData[] = [
     headline: 'High-Retention Shorts & Reels Specialist',
     min_rate: 1500,
     currency: 'INR',
-    thumbnail_url: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=80',
+    thumbnail_url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80',
     format_tag: 'Shorts',
     specialty: 'Shorts / Reels',
   },
@@ -280,7 +281,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
 
                 const parsed = parseVideoUrl(editor.raw_video_url)
                 const videoId = parsed?.videoId || null
-                const thumb = parsed?.thumbnailUrl || editor.thumbnail_url || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
+                const thumb = resolveThumbnailUrl(editor.thumbnail_url) || parsed?.thumbnailUrl || 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80'
                 const rateLabel = editor.min_rate != null ? `From ₹${editor.min_rate.toLocaleString()}` : 'Rates upfront'
                 const viewBadge = CARD_VIEW_BADGES[idx % CARD_VIEW_BADGES.length]
 

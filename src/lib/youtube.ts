@@ -59,7 +59,7 @@ export function getYouTubeThumbnail(url: string): string {
   if (videoId) {
     return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
   }
-  return 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=600&auto=format&fit=crop'
+  return 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80'
 }
 
 export interface OEmbedResult {

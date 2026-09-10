@@ -3,6 +3,7 @@
 import { Play, VideoOff, HardDrive } from 'lucide-react'
 import { youtubeEmbedUrl } from '@/lib/youtube'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 
 export interface PortfolioThumbItem {
   id: string
@@ -62,23 +63,30 @@ export default function PortfolioThumb({ item, isPlaying, onPlay }: Props) {
             className="w-full h-full block relative"
             aria-label={`Play ${item.title ?? 'video'}`}
           >
-            {item.thumbnail_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={item.thumbnail_url}
-                alt={item.title ?? 'Video thumbnail'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900 p-4 flex flex-col items-center justify-center text-center space-y-2">
-                <div className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-300">
-                  {isDrive ? <HardDrive className="w-5 h-5 text-sky-400" /> : <Play className="w-5 h-5 text-white ml-0.5" />}
+            {(() => {
+              const displayThumb = resolveThumbnailUrl(item.thumbnail_url) || resolveThumbnailUrl(item.youtube_url) || item.thumbnail_url
+              return displayThumb ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={displayThumb}
+                  alt={item.title ?? 'Video thumbnail'}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80'
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900 p-4 flex flex-col items-center justify-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-300">
+                    {isDrive ? <HardDrive className="w-5 h-5 text-sky-400" /> : <Play className="w-5 h-5 text-white ml-0.5" />}
+                  </div>
+                  <span className="text-[11px] font-semibold text-zinc-400">
+                    {isDrive ? 'Google Drive Video' : 'Click to Play Video'}
+                  </span>
                 </div>
-                <span className="text-[11px] font-semibold text-zinc-400">
-                  {isDrive ? 'Google Drive Video' : 'Click to Play Video'}
-                </span>
-              </div>
-            )}
+              )
+            })()}
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
               <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
                 <Play className="w-4 h-4 text-zinc-950 ml-0.5" fill="currentColor" />

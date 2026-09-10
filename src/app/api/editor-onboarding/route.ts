@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient, createSessionClient } from '@/lib/appwrite/server'
 import { isAppwriteConfigured, APPWRITE_CONFIG } from '@/lib/appwrite/config'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 import { fetchYoutubeOEmbed } from '@/lib/youtube'
 import { checkDrivePublicAccess } from '@/lib/gdrive'
 import { normalizeIndianPhone } from '@/lib/phone'
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
           title: 'Instagram Reel',
           role_description: item.roleDescription?.trim() || '',
           position: index,
-          thumbnail_url: null,
+          thumbnail_url: resolveThumbnailUrl(item.youtubeUrl) || null,
           is_short: true,
           is_available: true,
         }
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
           title: oembed.title ?? null,
           role_description: item.roleDescription?.trim() || '',
           position: index,
-          thumbnail_url: oembed.thumbnailUrl ?? null,
+          thumbnail_url: oembed.thumbnailUrl ?? resolveThumbnailUrl(item.youtubeUrl) ?? null,
           is_short: !!oembed.isShort,
           is_available: oembed.available,
         }
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
           title: null,
           role_description: item.roleDescription?.trim() || '',
           position: index,
-          thumbnail_url: null,
+          thumbnail_url: resolveThumbnailUrl(item.youtubeUrl) || null,
           is_short: false,
           is_available: true,
         }

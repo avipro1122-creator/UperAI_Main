@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/firebase/client'
 import { doc, setDoc, collection, addDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { z } from 'zod'
 
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
       role_description: item.roleDescription || item.roleExplanation || '',
       role_explanation: item.roleExplanation || item.roleDescription || '',
       position: idx,
-      thumbnail_url: parsedVideo?.thumbnailUrl || '',
+      thumbnail_url: resolveThumbnailUrl(rawUrl) || parsedVideo?.thumbnailUrl || '',
       is_short: isShort,
       is_available: true,
       createdAt: new Date().toISOString(),
@@ -104,6 +105,8 @@ export async function POST(req: Request) {
   const instagramRaw = (body.instagram || body.instagramHandle || body.instagram_handle || '').trim().replace(/^@/, '')
   const whatsappRaw = (body.whatsapp || body.whatsappNumber || body.whatsapp_number || '').trim().replace(/[^0-9+]/g, '')
   const whatsappVal = whatsappRaw && whatsappRaw.length >= 10 ? (whatsappRaw.length === 10 ? `91${whatsappRaw}` : whatsappRaw) : '919016047119'
+
+  const firstThumb = processedItems[0]?.thumbnail_url || resolveThumbnailUrl(primaryYoutubeUrl) || ''
 
   const profilePayload = {
     user_id: userId,
@@ -127,6 +130,11 @@ export async function POST(req: Request) {
     turnaround_time: body.turnaroundTime || (body.turnaroundDays ? `${body.turnaroundDays} Days` : '2 Days'),
     turnaround_days: body.turnaroundDays ? Number(body.turnaroundDays) : 2,
     youtube_url: primaryYoutubeUrl,
+    thumbnail_url: firstThumb || null,
+    preview_img: firstThumb || null,
+    thumbnail_url1: processedItems[0]?.thumbnail_url || null,
+    thumbnail_url2: processedItems[1]?.thumbnail_url || null,
+    thumbnail_url3: processedItems[2]?.thumbnail_url || null,
     open_to_work: true,
     is_hidden: false,
     updatedAt: new Date().toISOString(),

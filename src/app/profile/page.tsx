@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 import { normalizeIndianPhone } from '@/lib/phone'
 import { db, storage } from '@/lib/firebase/client'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
@@ -206,7 +207,10 @@ export default function ProfilePage() {
     const effectiveBaseRate = Number(rateShort) || Number(rateLong) || 1500
 
     const primaryParsed = parseVideoUrl(video1.trim() || video2.trim() || video3.trim())
-    const effectiveThumb = thumb1.trim() || primaryParsed?.thumbnailUrl || thumb2.trim() || null
+    const resolvedThumb1 = resolveThumbnailUrl(thumb1.trim()) || resolveThumbnailUrl(video1.trim()) || primaryParsed?.thumbnailUrl || null
+    const resolvedThumb2 = resolveThumbnailUrl(thumb2.trim()) || resolveThumbnailUrl(video2.trim()) || null
+    const resolvedThumb3 = resolveThumbnailUrl(thumb3.trim()) || resolveThumbnailUrl(video3.trim()) || null
+    const effectiveThumb = resolvedThumb1 || resolvedThumb2 || resolvedThumb3 || null
 
     const payload = {
       user_id: uid,
@@ -234,9 +238,9 @@ export default function ProfilePage() {
       youtube_url1: video1.trim(),
       youtube_url2: video2.trim(),
       youtube_url3: video3.trim(),
-      thumbnail_url1: thumb1.trim() || null,
-      thumbnail_url2: thumb2.trim() || null,
-      thumbnail_url3: thumb3.trim() || null,
+      thumbnail_url1: resolvedThumb1,
+      thumbnail_url2: resolvedThumb2,
+      thumbnail_url3: resolvedThumb3,
       thumbnail_url: effectiveThumb,
       preview_img: effectiveThumb,
       avatar_url: user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`,
@@ -265,7 +269,7 @@ export default function ProfilePage() {
   }
 
   // Derived preview values
-  const previewThumb = thumb1 || parseVideoUrl(video1)?.thumbnailUrl || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
+  const previewThumb = resolveThumbnailUrl(thumb1) || resolveThumbnailUrl(video1) || parseVideoUrl(video1)?.thumbnailUrl || 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80'
   const previewRate = rateShort ? `From ₹${Number(rateShort).toLocaleString()}` : rateLong ? `From ₹${Number(rateLong).toLocaleString()}` : 'Rates upfront'
 
   if (!user && !loading) {
@@ -688,8 +692,9 @@ export default function ProfilePage() {
                       src={previewThumb}
                       alt="Thumbnail preview"
                       className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&auto=format&fit=crop&q=80'
                       }}
                     />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
