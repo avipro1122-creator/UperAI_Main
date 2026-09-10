@@ -47,10 +47,13 @@ export default function HowItWorksSection() {
           <Sparkles className="w-3.5 h-3.5 text-lime-400" />
           <span>How UperAI Works</span>
         </div>
-        <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
-          Hiring video editors, <span className="text-gradient-lime">simplified</span>
+        <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white drop-shadow-[0_2px_16px_rgba(255,255,255,0.14)]">
+          Hiring video editors,{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-zinc-100 to-zinc-300 drop-shadow-[0_2px_12px_rgba(255,255,255,0.2)]">
+            simplified
+          </span>
         </h2>
-        <p className="text-sm text-zinc-400 mt-2.5 leading-relaxed">
+        <p className="text-sm sm:text-base text-zinc-400 mt-3 leading-relaxed">
           Skip endless DMs, price haggling, and fake portfolios. Here is how you find your next video editor in minutes.
         </p>
       </div>
