@@ -4,6 +4,7 @@ import DirectoryView, { DirectoryEditor } from '@/components/DirectoryView'
 import { EditorCardData } from '@/components/EditorCard'
 import JsonLd from '@/components/JsonLd'
 import { getPublicEditors } from '@/lib/firebase/firestore'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 
 export const revalidate = 15
 
@@ -49,9 +50,11 @@ export default async function DirectoryPage() {
 
       const thumbnailUrl =
         (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null) ||
-        doc.thumbnail_url1 ||
-        doc.thumbnail_url2 ||
-        doc.preview_img
+        resolveThumbnailUrl(doc.thumbnail_url1) ||
+        resolveThumbnailUrl(doc.thumbnail_url2) ||
+        resolveThumbnailUrl(doc.preview_img) ||
+        resolveThumbnailUrl(rawUrl) ||
+        null
 
       const cardData: EditorCardData = {
         id: editorId,

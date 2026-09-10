@@ -75,5 +75,11 @@ export function resolveThumbnailUrl(inputUrl: string | null | undefined): string
     return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`
   }
 
-  return trimmed
+  // 4. Vimeo link
+  const vimeoMatch = trimmed.match(/vimeo\.com\/(?:video\/)?(\d+)/i)
+  if (vimeoMatch && vimeoMatch[1]) {
+    return `https://vumbnail.com/${vimeoMatch[1]}.jpg`
+  }
+
+  return null
 }

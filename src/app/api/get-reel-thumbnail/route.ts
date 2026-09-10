@@ -83,36 +83,7 @@ export async function GET(request: NextRequest) {
     : `https://${trimmed}`
 
   try {
-    // 1. Fetch Instagram Reel page HTML with standard desktop User-Agent header
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 6000)
-
-    const response = await fetch(targetUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache',
-        Pragma: 'no-cache',
-      },
-      cache: 'no-store',
-    })
-
-    clearTimeout(timeoutId)
-
-    if (response.ok) {
-      const html = await response.text()
-      const coverImage = extractMetaCoverImage(html)
-      if (coverImage) {
-        thumbnailCache.set(cacheKey, { url: coverImage, timestamp: Date.now() })
-        return NextResponse.json({ thumbnailUrl: coverImage })
-      }
-    }
-
-    // 2. Secondary fallback: Instagram public oEmbed endpoint
+    // 1. Primary: Instagram official public oEmbed endpoint (fastest and most reliable)
     try {
       const oembedRes = await fetch(
         `https://www.instagram.com/api/v1/oembed/?url=${encodeURIComponent(targetUrl)}`,
@@ -132,7 +103,36 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch {
-      // Ignore secondary error
+      // Fall through to HTML meta scraping
+    }
+
+    // 2. Secondary: Fetch Instagram Reel HTML using social crawler User-Agent
+    // (Instagram serves complete OpenGraph og:image tags only to crawler agents)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 6000)
+
+    const response = await fetch(targetUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent':
+          'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+      },
+      cache: 'no-store',
+    })
+
+    clearTimeout(timeoutId)
+
+    if (response.ok) {
+      const html = await response.text()
+      const coverImage = extractMetaCoverImage(html)
+      if (coverImage) {
+        thumbnailCache.set(cacheKey, { url: coverImage, timestamp: Date.now() })
+        return NextResponse.json({ thumbnailUrl: coverImage })
+      }
     }
 
     // Gracefully return fallback placeholder if fetch fails or account is private

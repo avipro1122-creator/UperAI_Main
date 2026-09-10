@@ -6,6 +6,7 @@ import JoinCommunitySection from '@/components/JoinCommunitySection'
 import JsonLd from '@/components/JsonLd'
 import { getPublicEditors, DEFAULT_EDITORS } from '@/lib/firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 import { ExtendedEditorCardData } from '@/components/RecentlyActiveEditors'
 
 export const revalidate = 15
@@ -55,7 +56,13 @@ function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
   const cleanInsta = rawInsta.replace(/^@/, '').trim()
   const rawHandle = p.handle || cleanInsta || name.toLowerCase().replace(/[^a-z0-9]/g, '')
   const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
-  const videoThumb = parsedVideo?.thumbnailUrl || p.thumbnail_url1 || p.thumbnail_url2 || p.preview_img || null
+  const videoThumb =
+    resolveThumbnailUrl(p.thumbnail_url1) ||
+    resolveThumbnailUrl(p.thumbnail_url2) ||
+    resolveThumbnailUrl(p.preview_img) ||
+    resolveThumbnailUrl(rawVideoUrl) ||
+    parsedVideo?.thumbnailUrl ||
+    null
   const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long ?? 1500
 
   return {

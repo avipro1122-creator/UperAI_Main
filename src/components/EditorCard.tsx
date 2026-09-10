@@ -64,14 +64,12 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
   const [isLoadingInsta, setIsLoadingInsta] = useState(false)
 
   useEffect(() => {
-    const rawLink = editor.raw_video_url || editor.thumbnail_url
-    if (!rawLink || !isInstagramUrl(rawLink)) {
-      setInstaThumbnail(null)
-      return
-    }
+    const rawLink =
+      (isInstagramUrl(editor.raw_video_url) ? editor.raw_video_url : null) ||
+      (isInstagramUrl(editor.thumbnail_url) ? editor.thumbnail_url : null)
 
-    // If editor has an explicit non-instagram custom thumbnail, use that directly
-    if (editor.thumbnail_url && !isInstagramUrl(editor.thumbnail_url) && !editor.thumbnail_url.includes('unsplash.com')) {
+    if (!rawLink) {
+      setInstaThumbnail(null)
       return
     }
 
@@ -99,21 +97,18 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
     }
   }, [editor.raw_video_url, editor.thumbnail_url])
 
-  // Resolve direct thumbnail using link resolver utility
+  // Resolve direct thumbnail using link resolver utility (Drive, YouTube, direct image, Vimeo)
   const resolvedDirectThumbnail =
-    resolveThumbnailUrl(editor.raw_video_url) ||
-    resolveThumbnailUrl(editor.thumbnail_url)
+    resolveThumbnailUrl(editor.thumbnail_url) ||
+    resolveThumbnailUrl(editor.raw_video_url)
 
   const fallbackThumbnail =
     'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop&q=80'
 
   const finalThumbnail =
     instaThumbnail ||
-    (resolvedDirectThumbnail && !isInstagramUrl(resolvedDirectThumbnail) ? resolvedDirectThumbnail : null) ||
+    resolvedDirectThumbnail ||
     parsedVideo?.thumbnailUrl ||
-    (editor.thumbnail_url && !isInstagramUrl(editor.thumbnail_url) && !editor.thumbnail_url.includes('unsplash.com')
-      ? editor.thumbnail_url
-      : null) ||
     fallbackThumbnail
 
   const softwareTags = Array.isArray(editor.softwareTags) ? editor.softwareTags.filter(Boolean).slice(0, 2) : []
