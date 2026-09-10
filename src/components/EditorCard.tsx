@@ -1,9 +1,10 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Play, Instagram, Video } from 'lucide-react'
+import { Play } from 'lucide-react'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { resolveThumbnailUrl, isInstagramUrl } from '@/lib/thumbnail-resolver'
 
 export type FormatTag = 'Shorts' | 'Long-form' | 'Both'
 
@@ -39,71 +40,7 @@ const FORMAT_TAG_STYLES: Record<string, string> = {
   Both: 'bg-neutral-100 text-neutral-800 border-neutral-200',
 }
 
-function isDirectVideoUrl(url: string): boolean {
-  return (
-    /\.(mp4|webm|mov|mkv|m4v|avi)(\?.*)?$/i.test(url) ||
-    /dropbox\.com\/s\//i.test(url) ||
-    /appwrite\.io\/v1\/storage/i.test(url) ||
-    /cloud\.appwrite\.io\/v1\/storage/i.test(url)
-  )
-}
 
-function VideoFrameCapture({ src, alt, className }: { src: string; alt: string; className?: string }) {
-  const [frameUrl, setFrameUrl] = useState<string | null>(null)
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    const video = document.createElement('video')
-    video.crossOrigin = 'anonymous'
-    video.preload = 'metadata'
-    video.muted = true
-    video.playsInline = true
-
-    video.addEventListener('loadedmetadata', () => {
-      video.currentTime = video.duration > 0 ? video.duration * (0.3 + Math.random() * 0.4) : 0
-    })
-
-    video.addEventListener('seeked', () => {
-      if (cancelled) return
-      try {
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth || 640
-        canvas.height = video.videoHeight || 360
-        const ctx = canvas.getContext('2d')
-        if (!ctx) { setFailed(true); return }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
-        if (!cancelled) setFrameUrl(dataUrl)
-      } catch {
-        if (!cancelled) setFailed(true)
-      }
-    })
-
-    video.addEventListener('error', () => { if (!cancelled) setFailed(true) })
-    video.src = src
-
-    return () => { cancelled = true; video.src = '' }
-  }, [src])
-
-  if (failed) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
-        <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
-          <Play className="w-4 h-4 fill-zinc-600 text-zinc-600 ml-0.5" />
-        </div>
-        <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Portfolio Video</span>
-      </div>
-    )
-  }
-
-  if (!frameUrl) {
-    return <div className="w-full h-full bg-zinc-900 animate-pulse" />
-  }
-
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={frameUrl} alt={alt} className={className} />
-}
 
 export default function EditorCard({ editor }: { editor: EditorCardData }) {
   if (!editor) return null
@@ -119,15 +56,65 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
   const rawHandle = editor.instagram_handle || editor.handle || editor.name || ''
   const cleanHandle = String(rawHandle).replace(/@.+$/, '').replace(/^@/, '').trim()
 
-  // Video Thumbnail extraction
+  // User-provided link resolution (Google Drive, direct image, YouTube, Instagram)
   const parsedVideo = editor.raw_video_url ? parseVideoUrl(editor.raw_video_url) : null
-  const effectiveThumbnail =
-    parsedVideo?.thumbnailUrl ||
-    (editor.thumbnail_url && !editor.thumbnail_url.includes('unsplash.com') ? editor.thumbnail_url : null) ||
-    editor.thumbnail_url ||
-    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
 
-  const isInstagram = Boolean(editor.thumbnail_url?.includes('instagram.com') || (editor.format_tag === 'Shorts' && !effectiveThumbnail?.includes('youtube')))
+  // Dynamic Instagram cover extraction state
+  const [instaThumbnail, setInstaThumbnail] = useState<string | null>(null)
+  const [isLoadingInsta, setIsLoadingInsta] = useState(false)
+
+  useEffect(() => {
+    const rawLink = editor.raw_video_url || editor.thumbnail_url
+    if (!rawLink || !isInstagramUrl(rawLink)) {
+      setInstaThumbnail(null)
+      return
+    }
+
+    // If editor has an explicit non-instagram custom thumbnail, use that directly
+    if (editor.thumbnail_url && !isInstagramUrl(editor.thumbnail_url) && !editor.thumbnail_url.includes('unsplash.com')) {
+      return
+    }
+
+    let isMounted = true
+    setIsLoadingInsta(true)
+
+    fetch(`/api/get-reel-thumbnail?url=${encodeURIComponent(rawLink)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data?.thumbnailUrl) {
+          setInstaThumbnail(data.thumbnailUrl)
+        }
+      })
+      .catch(() => {
+        // Fallback placeholder handled on render
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingInsta(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [editor.raw_video_url, editor.thumbnail_url])
+
+  // Resolve direct thumbnail using link resolver utility
+  const resolvedDirectThumbnail =
+    resolveThumbnailUrl(editor.raw_video_url) ||
+    resolveThumbnailUrl(editor.thumbnail_url)
+
+  const fallbackThumbnail =
+    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop&q=80'
+
+  const finalThumbnail =
+    instaThumbnail ||
+    (resolvedDirectThumbnail && !isInstagramUrl(resolvedDirectThumbnail) ? resolvedDirectThumbnail : null) ||
+    parsedVideo?.thumbnailUrl ||
+    (editor.thumbnail_url && !isInstagramUrl(editor.thumbnail_url) && !editor.thumbnail_url.includes('unsplash.com')
+      ? editor.thumbnail_url
+      : null) ||
+    fallbackThumbnail
 
   const softwareTags = Array.isArray(editor.softwareTags) ? editor.softwareTags.filter(Boolean).slice(0, 2) : []
 
@@ -140,41 +127,21 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
     >
       {/* ── Video Thumbnail ────────────────────────────────── */}
       <div className="relative w-full aspect-video bg-zinc-950 overflow-hidden">
-        {effectiveThumbnail && effectiveThumbnail.startsWith('http') && !effectiveThumbnail.includes('instagram.com') ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={effectiveThumbnail}
-            alt={`${editor.name || 'Editor'} video thumbnail`}
-            loading="lazy"
-            decoding="async"
-            width={380}
-            height={214}
-            onError={(e) => {
-              e.currentTarget.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7'
-            }}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          />
-        ) : editor.raw_video_url && isDirectVideoUrl(editor.raw_video_url) ? (
-          <VideoFrameCapture
-            src={editor.raw_video_url}
-            alt={`${editor.name || 'Editor'} video thumbnail`}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          />
-        ) : isInstagram ? (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-tr from-purple-950 via-zinc-900 to-pink-950 p-4 space-y-1.5 text-center">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-pink-400 bg-pink-950/80 border border-pink-800/50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <Instagram className="w-3 h-3" /> Instagram Reel
-            </span>
-            <span className="text-xs text-zinc-300 font-bold">Featured Video</span>
-          </div>
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
-            <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
-              <Play className="w-4 h-4 fill-zinc-600 text-zinc-600 ml-0.5" />
-            </div>
-            <span className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wider">Video Portfolio</span>
-          </div>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={finalThumbnail}
+          alt={`${editor.name || 'Editor'} video thumbnail`}
+          loading="lazy"
+          decoding="async"
+          width={380}
+          height={214}
+          onError={(e) => {
+            e.currentTarget.src = fallbackThumbnail
+          }}
+          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04] ${
+            isLoadingInsta ? 'animate-pulse opacity-75' : 'opacity-100'
+          }`}
+        />
 
         {/* Subtle grounding vignette */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent pointer-events-none opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
