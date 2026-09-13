@@ -28,7 +28,7 @@ export default async function DirectoryPage() {
   let isServerError = false
 
   try {
-    const validDocs = await getPublicEditors(30)
+    const validDocs = await getPublicEditors(60)
 
     mapped = validDocs.map((doc: any) => {
       const rawUrl = doc.youtube_url || doc.youtube_url1 || doc.youtube_url2 || doc.youtube_url3 || ''

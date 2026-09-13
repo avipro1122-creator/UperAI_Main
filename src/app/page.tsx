@@ -87,7 +87,7 @@ export default async function HomePage() {
   let isServerError = false
 
   try {
-    const recentProfiles = await getPublicEditors(18)
+    const recentProfiles = await getPublicEditors(60)
     if (recentProfiles && recentProfiles.length > 0) {
       featured = recentProfiles.map(mapProfileToEditorCard)
     } else {

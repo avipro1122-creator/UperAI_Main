@@ -185,7 +185,7 @@ function parseFirestoreFields(doc: any) {
 /**
  * Fetch public editor profiles with ultra-fast direct REST + cache + SDK fallback + verified defaults
  */
-export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditorProfile[]> {
+export async function getPublicEditors(limitCount = 60): Promise<FirestoreEditorProfile[]> {
   const cacheKey = `public_editors_${limitCount}`
   const cached = memoryCache.get(cacheKey)
   const now = Date.now()
@@ -204,7 +204,7 @@ export async function getPublicEditors(limitCount = 30): Promise<FirestoreEditor
     const timeout = setTimeout(() => controller.abort(), 1800)
 
     const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/editor_profiles?key=${key}`,
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/editor_profiles?pageSize=${Math.max(limitCount, 100)}&key=${key}`,
       {
         next: { revalidate: 15 },
         signal: controller.signal,

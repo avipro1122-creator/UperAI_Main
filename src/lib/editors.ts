@@ -2,7 +2,7 @@ import { getPublicEditors, getEditorPortfolioItems } from '@/lib/firebase/firest
 
 export async function getEditors() {
   try {
-    const profiles = await getPublicEditors(30)
+    const profiles = await getPublicEditors(60)
 
     const editorsWithPortfolio = await Promise.all(
       profiles.map(async (p: any) => {
