@@ -6,11 +6,11 @@ export async function POST(req: NextRequest) {
     const keyId =
       process.env.RAZORPAY_KEY_ID ||
       process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-      'rzp_test_TcpcZVkph9dXfD'
+      'rzp_test_TcpjRCNlqDperL'
 
     const keySecret =
       process.env.RAZORPAY_KEY_SECRET ||
-      '5rmyTxBjcwSPbhIAPwtVzdrH'
+      'TJj0c3r54qlS8aDzGDW5UxTH'
 
     const body = await req.json().catch(() => ({}))
     let amount = Number(body.amount)
