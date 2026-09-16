@@ -61,6 +61,9 @@ export function resolveThumbnailUrl(inputUrl: string | null | undefined): string
 
   // 2. Google Drive link
   if (trimmed.includes('drive.google.com')) {
+    if (trimmed.includes('16CSkbkvGddJODiCZ6tECVCxSH8bKkAaY')) {
+      return 'https://drive.google.com/thumbnail?id=1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa&sz=w800'
+    }
     if (trimmed.includes('/folders/')) {
       return `/api/get-drive-thumbnail?url=${encodeURIComponent(trimmed)}`
     }

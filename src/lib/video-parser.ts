@@ -74,6 +74,17 @@ export function parseVideoUrl(rawUrl: string | null | undefined): ParsedVideoUrl
 
   // 3. Try Google Drive (files & folders)
   if (url.includes('drive.google.com') && url.includes('/folders/')) {
+    if (url.includes('16CSkbkvGddJODiCZ6tECVCxSH8bKkAaY')) {
+      const fileId = '1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa'
+      return {
+        sourceType: 'drive',
+        videoId: fileId,
+        embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
+        isShortsUrl: false,
+        thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`,
+        rawUrl: `https://drive.google.com/file/d/${fileId}/view`,
+      }
+    }
     return {
       sourceType: 'drive',
       videoId: url,

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
   const editorId = p.user_id || p.id
-  const rawVideoUrl =
+  let rawVideoUrl =
     p.youtube_url ||
     p.youtube_url1 ||
     p.youtube_url2 ||
@@ -38,6 +38,16 @@ function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
     p.video_url1 ||
     p.video_url2 ||
     p.video_url3
+
+  // Direct video link for Shivali Mayani (BnffOxVehGg2UukQSHTBKGHaot73)
+  if (
+    editorId === 'BnffOxVehGg2UukQSHTBKGHaot73' ||
+    p.handle === 'shivalimayani' ||
+    (rawVideoUrl && rawVideoUrl.includes('16CSkbkvGddJODiCZ6tECVCxSH8bKkAaY'))
+  ) {
+    rawVideoUrl = 'https://drive.google.com/file/d/1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa/view'
+  }
+
   const parsedVideo = parseVideoUrl(rawVideoUrl)
 
   const categoryTag = (p.specialty_tag || p.headline || '').toLowerCase()
@@ -57,12 +67,16 @@ function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
   const rawHandle = p.handle || cleanInsta || name.toLowerCase().replace(/[^a-z0-9]/g, '')
   const cleanHandle = rawHandle.replace(/@.+$/, '').replace(/^@/, '').trim()
   const videoThumb =
-    resolveThumbnailUrl(p.thumbnail_url1) ||
-    resolveThumbnailUrl(p.thumbnail_url2) ||
-    resolveThumbnailUrl(p.preview_img) ||
-    resolveThumbnailUrl(rawVideoUrl) ||
-    parsedVideo?.thumbnailUrl ||
-    null
+    (editorId === 'BnffOxVehGg2UukQSHTBKGHaot73' || p.handle === 'shivalimayani')
+      ? 'https://drive.google.com/thumbnail?id=1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa&sz=w800'
+      : (
+          resolveThumbnailUrl(p.thumbnail_url1) ||
+          resolveThumbnailUrl(p.thumbnail_url2) ||
+          resolveThumbnailUrl(p.preview_img) ||
+          resolveThumbnailUrl(rawVideoUrl) ||
+          parsedVideo?.thumbnailUrl ||
+          null
+        )
   const minRate = p.min_rate ?? p.base_rate ?? p.rate_short ?? p.rate_long ?? 1500
 
   return {
@@ -100,6 +114,18 @@ export default async function HomePage() {
 
   if (featured.length === 0) {
     featured = DEFAULT_EDITORS.map(mapProfileToEditorCard)
+  }
+
+  // Ensure Shivali Mayani (BnffOxVehGg2UukQSHTBKGHaot73) is featured first in the hero cards
+  const shivaliIdx = featured.findIndex(
+    (e) =>
+      e.id === 'BnffOxVehGg2UukQSHTBKGHaot73' ||
+      e.handle === 'shivalimayani' ||
+      (e.name && e.name.toLowerCase().includes('shivali'))
+  )
+  if (shivaliIdx > 0) {
+    const [shivali] = featured.splice(shivaliIdx, 1)
+    featured.unshift(shivali)
   }
 
   const itemListSchema = {

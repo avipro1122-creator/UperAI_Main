@@ -22,6 +22,19 @@ interface HeroSectionProps {
 
 const FALLBACK_EDITORS: EditorCardData[] = [
   {
+    id: 'BnffOxVehGg2UukQSHTBKGHaot73',
+    handle: 'shivalimayani',
+    name: 'shivali mayani',
+    avatar_url: 'https://lh3.googleusercontent.com/a/ACg8ocLzlG2C6BClm7NhqXuXAwquwVgW8Q0ltkd8ycKdJ3tZt3lSeg=s96-c',
+    headline: 'YouTube Long-Form Editor',
+    min_rate: 1500,
+    currency: 'INR',
+    thumbnail_url: 'https://drive.google.com/thumbnail?id=1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa&sz=w800',
+    format_tag: 'Long-form',
+    specialty: 'YouTube Long-Form',
+    raw_video_url: 'https://drive.google.com/file/d/1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa/view',
+  },
+  {
     handle: 'arjun_vfx',
     name: 'Arjun Verma',
     avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
@@ -42,17 +55,6 @@ const FALLBACK_EDITORS: EditorCardData[] = [
     thumbnail_url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=600&auto=format&fit=crop&q=80',
     format_tag: 'Long-form',
     specialty: 'Long-Form',
-  },
-  {
-    handle: 'priya_visuals',
-    name: 'Priya Nair',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    headline: '3D VFX & Motion Graphics Designer',
-    min_rate: 3000,
-    currency: 'INR',
-    thumbnail_url: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=600&auto=format&fit=crop&q=80',
-    format_tag: 'Both',
-    specialty: 'VFX / 3D',
   },
 ]
 
@@ -351,7 +353,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                             e.stopPropagation()
                             setActiveVideoModal({
                               isOpen: true,
-                              videoId,
+                              videoId: editor.raw_video_url || videoId,
                               title: `${editor.name}'s Showreel`,
                               editorName: editor.name,
                               specialty: editor.headline || 'Video Editor',

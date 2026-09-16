@@ -10,6 +10,9 @@ import { db } from '@/lib/firebase/client'
 import { collection, addDoc } from 'firebase/firestore'
 
 function getGoogleDriveEmbedUrl(url: string): string | null {
+  if (url.includes('16CSkbkvGddJODiCZ6tECVCxSH8bKkAaY') || url.includes('1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa')) {
+    return 'https://drive.google.com/file/d/1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa/preview'
+  }
   const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/)
   return match ? `https://drive.google.com/file/d/${match[1]}/preview` : null
 }
