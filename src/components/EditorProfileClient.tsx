@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Instagram, Video, ExternalLink } from 'lucide-react'
+import { Instagram, Video, ExternalLink, Loader2, Sparkles } from 'lucide-react'
 import TestimonialsSection from '@/components/TestimonialsSection'
 import { useAuth } from '@/context/AuthContext'
 import { getEditorPortfolioItems } from '@/lib/firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { collection, addDoc } from 'firebase/firestore'
+import PaywallModal from '@/components/PaywallModal'
 
 function getGoogleDriveEmbedUrl(url: string): string | null {
   if (url.includes('16CSkbkvGddJODiCZ6tECVCxSH8bKkAaY') || url.includes('1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa')) {
@@ -139,6 +140,9 @@ export default function EditorProfileClient({
   const [portfolioItems, setPortfolioItems] = useState<any[]>(initialPortfolioItems || [])
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [isPaywallModalOpen, setIsPaywallModalOpen] = useState(false)
+  const [unlockedPhone, setUnlockedPhone] = useState<string | null>(null)
+  const [isUnlocking, setIsUnlocking] = useState(false)
 
   useEffect(() => {
     async function refreshItems() {
@@ -221,7 +225,7 @@ export default function EditorProfileClient({
     )
   }
 
-  const rawDigits = (editor.whatsapp_number || editor.whatsapp || '').toString().replace(/\D/g, '')
+  const rawDigits = (unlockedPhone || editor.whatsapp_number || editor.whatsapp || '').toString().replace(/\D/g, '')
   const rawPhone = rawDigits.length >= 10 ? rawDigits : '919016047119'
   const displayPhone = rawPhone.length === 10 ? `+91 ${rawPhone}` : `+${rawPhone}`
   const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone
@@ -255,6 +259,49 @@ export default function EditorProfileClient({
       }
     } catch (e) {
       console.log('Lead event logged')
+    }
+  }
+
+  const handleContactClick = async () => {
+    if (!user) {
+      loginWithGoogle()
+      return
+    }
+
+    setIsUnlocking(true)
+    try {
+      const token = (user as any)?.token || (await (user as any)?.getIdToken?.()) || ''
+      const res = await fetch('/api/contacts/unlock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-user-uid': user.uid,
+        },
+        body: JSON.stringify({
+          editorId: editor.user_id || editor.id || editor.handle,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (res.status === 402 || data.error === 'PAYWALL_REQUIRED') {
+        setIsPaywallModalOpen(true)
+        return
+      }
+
+      if (data.success && data.phone) {
+        setUnlockedPhone(data.phone)
+        setIsContactModalOpen(true)
+        handleTrackLead()
+      } else {
+        setIsContactModalOpen(true)
+      }
+    } catch (err) {
+      console.error('Failed to unlock contact:', err)
+      setIsContactModalOpen(true)
+    } finally {
+      setIsUnlocking(false)
     }
   }
 
@@ -423,13 +470,18 @@ export default function EditorProfileClient({
 
           {user ? (
             <button
-              onClick={() => {
-                setIsContactModalOpen(true)
-                handleTrackLead()
-              }}
-              className="inline-block px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
+              onClick={handleContactClick}
+              disabled={isUnlocking}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-lime-400 hover:bg-lime-300 disabled:opacity-50 text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all"
             >
-              CONTACT ME ON WHATSAPP / INSTAGRAM →
+              {isUnlocking ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>VERIFYING ACCESS...</span>
+                </>
+              ) : (
+                <span>CONTACT ME ON WHATSAPP / INSTAGRAM →</span>
+              )}
             </button>
           ) : (
             <button
@@ -536,6 +588,18 @@ export default function EditorProfileClient({
           </div>
         </div>
       )}
+
+      {/* RAZORPAY PAYWALL MODAL */}
+      <PaywallModal
+        isOpen={isPaywallModalOpen}
+        onClose={() => setIsPaywallModalOpen(false)}
+        editorId={editor.user_id || editor.id || editor.handle}
+        editorName={editor.full_name || editor.name || 'Editor'}
+        onPaymentSuccess={(newPhone) => {
+          if (newPhone) setUnlockedPhone(newPhone)
+          setIsContactModalOpen(true)
+        }}
+      />
     </div>
   )
 }
