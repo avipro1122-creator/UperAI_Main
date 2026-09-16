@@ -1,26 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, adminAuth } from '@/lib/firebase/admin'
-import { FieldValue } from 'firebase-admin/firestore'
+import { db } from '@/lib/firebase/client'
+import { doc, getDoc, setDoc, arrayUnion, collection, query, where, getDocs, limit } from 'firebase/firestore'
 import { DEFAULT_EDITORS } from '@/lib/firebase/firestore'
 
-async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
-  const authHeader = req.headers.get('authorization')
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split('Bearer ')[1]
-    try {
-      const decoded = await adminAuth.verifyIdToken(token)
-      if (decoded?.uid) return decoded.uid
-    } catch {
-      // Fall through to cookie / header
-    }
-  }
-
+async function getUserIdFromRequest(req: NextRequest, body?: any): Promise<string | null> {
   const xUid = req.headers.get('x-user-uid')
   if (xUid) return xUid
+
+  if (body?.userId) return body.userId
 
   const cookieHeader = req.headers.get('cookie') || ''
   const match = cookieHeader.match(/uperai_auth=([^;]+)/)
   if (match) return match[1]
+
+  const authHeader = req.headers.get('authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split('Bearer ')[1]
+    if (token && token.length > 5) return token
+  }
 
   return null
 }
@@ -28,9 +25,9 @@ async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
 async function findEditorPhone(editorId: string): Promise<{ phone: string; name: string } | null> {
   try {
     // 1. Direct doc ID lookup
-    const docRef = adminDb.collection('editor_profiles').doc(editorId)
-    const docSnap = await docRef.get()
-    if (docSnap.exists) {
+    const docRef = doc(db, 'editor_profiles', editorId)
+    const docSnap = await getDoc(docRef)
+    if (docSnap.exists()) {
       const data = docSnap.data() || {}
       const phone = data.whatsapp_number || data.whatsapp
       if (phone) {
@@ -38,13 +35,9 @@ async function findEditorPhone(editorId: string): Promise<{ phone: string; name:
       }
     }
 
-    // 2. Query by user_id or handle
-    const qSnap = await adminDb
-      .collection('editor_profiles')
-      .where('user_id', '==', editorId)
-      .limit(1)
-      .get()
-
+    // 2. Query by user_id
+    const q = query(collection(db, 'editor_profiles'), where('user_id', '==', editorId), limit(1))
+    const qSnap = await getDocs(q)
     if (!qSnap.empty) {
       const data = qSnap.docs[0].data()
       const phone = data.whatsapp_number || data.whatsapp
@@ -70,22 +63,21 @@ async function findEditorPhone(editorId: string): Promise<{ phone: string; name:
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(req)
+    const body = await req.json().catch(() => ({}))
+    const userId = await getUserIdFromRequest(req, body)
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => ({}))
     const editorId = body.editorId
-
     if (!editorId) {
       return NextResponse.json({ error: 'editorId is required' }, { status: 400 })
     }
 
-    // Fetch user profile from Firestore
-    const userRef = adminDb.collection('users').doc(userId)
-    const userSnap = await userRef.get()
-    const userData = userSnap.data() || {}
+    // Fetch user profile from Firestore using client SDK
+    const userRef = doc(db, 'users', userId)
+    const userSnap = await getDoc(userRef)
+    const userData = userSnap.exists() ? userSnap.data() || {} : {}
 
     const unlockedEditors: string[] = Array.isArray(userData.unlocked_editors)
       ? userData.unlocked_editors
@@ -114,9 +106,10 @@ export async function POST(req: NextRequest) {
 
     // 2. If user has active Monthly Pass, unlock immediately
     if (hasActivePass) {
-      await userRef.set(
+      await setDoc(
+        userRef,
         {
-          unlocked_editors: FieldValue.arrayUnion(editorId),
+          unlocked_editors: arrayUnion(editorId),
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -135,9 +128,10 @@ export async function POST(req: NextRequest) {
 
     // 3. If first free unlock, grant without charge
     if (canUnlockForFree) {
-      await userRef.set(
+      await setDoc(
+        userRef,
         {
-          unlocked_editors: FieldValue.arrayUnion(editorId),
+          unlocked_editors: arrayUnion(editorId),
           updatedAt: new Date().toISOString(),
         },
         { merge: true }

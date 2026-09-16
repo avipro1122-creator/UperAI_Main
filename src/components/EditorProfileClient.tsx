@@ -280,6 +280,7 @@ export default function EditorProfileClient({
         },
         body: JSON.stringify({
           editorId: editor.user_id || editor.id || editor.handle,
+          userId: user.uid,
         }),
       })
 
@@ -295,11 +296,11 @@ export default function EditorProfileClient({
         setIsContactModalOpen(true)
         handleTrackLead()
       } else {
-        setIsContactModalOpen(true)
+        setIsPaywallModalOpen(true)
       }
     } catch (err) {
       console.error('Failed to unlock contact:', err)
-      setIsContactModalOpen(true)
+      setIsPaywallModalOpen(true)
     } finally {
       setIsUnlocking(false)
     }
