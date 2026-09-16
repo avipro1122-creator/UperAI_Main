@@ -5,7 +5,7 @@ import { doc, setDoc, addDoc, collection, arrayUnion } from 'firebase/firestore'
 
 export async function POST(req: NextRequest) {
   try {
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || 'TJj0c3r54qlS8aDzGDW5UxTH'
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || 'fZIPa8fYX941JlaSWnE5U0ew'
 
     const body = await req.json().catch(() => ({}))
     const {
