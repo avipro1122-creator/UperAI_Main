@@ -91,7 +91,7 @@ export default function HowItWorksSection() {
               <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-lime-400 shrink-0" />
                 <span className="text-[11px] font-semibold text-zinc-300">
-                  100% Free for Creators
+                  3 Free Contacts Included
                 </span>
               </div>
             </div>
