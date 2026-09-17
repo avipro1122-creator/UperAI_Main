@@ -9,6 +9,7 @@ interface PaywallModalProps {
   onClose: () => void
   editorId?: string
   editorName?: string
+  freeLimit?: number
   onPaymentSuccess?: (unlockedPhone?: string) => void
 }
 
@@ -33,6 +34,7 @@ export default function PaywallModal({
   onClose,
   editorId,
   editorName = 'Editor',
+  freeLimit = 3,
   onPaymentSuccess,
 }: PaywallModalProps) {
   const { user } = useAuth()
@@ -162,7 +164,7 @@ export default function PaywallModal({
         {/* Header Badge */}
         <div className="space-y-2 text-center pt-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[11px] font-bold text-amber-400 uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" /> 1 Free Contact Used
+            <Sparkles className="w-3.5 h-3.5" /> {freeLimit} Free Contacts Used
           </div>
           <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">
             Unlock Unlimited Editor Contacts

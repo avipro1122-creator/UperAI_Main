@@ -89,7 +89,8 @@ export async function POST(req: NextRequest) {
         userData.pass_expires_at &&
         new Date(userData.pass_expires_at).getTime() > Date.now()
     )
-    const canUnlockForFree = unlockedEditors.length < 1
+    const FREE_LIMIT = 3
+    const canUnlockForFree = unlockedEditors.length < FREE_LIMIT
 
     // 1. If already unlocked in the past, return phone directly
     if (isAlreadyUnlocked) {
@@ -101,6 +102,8 @@ export async function POST(req: NextRequest) {
         editorName: editorData?.name,
         hasActivePass,
         unlockedCount: unlockedEditors.length,
+        freeLimit: FREE_LIMIT,
+        freeRemaining: hasActivePass ? 'unlimited' : Math.max(0, FREE_LIMIT - unlockedEditors.length),
       })
     }
 
@@ -123,10 +126,12 @@ export async function POST(req: NextRequest) {
         editorName: editorData?.name,
         hasActivePass: true,
         unlockedCount: unlockedEditors.length + 1,
+        freeLimit: FREE_LIMIT,
+        freeRemaining: 'unlimited',
       })
     }
 
-    // 3. If first free unlock, grant without charge
+    // 3. If within free unlock quota (up to 3 free), grant without charge
     if (canUnlockForFree) {
       await setDoc(
         userRef,
@@ -138,23 +143,29 @@ export async function POST(req: NextRequest) {
       )
 
       const editorData = await findEditorPhone(editorId)
+      const currentCount = unlockedEditors.length + 1
+      const freeRemaining = Math.max(0, FREE_LIMIT - currentCount)
+
       return NextResponse.json({
         success: true,
         status: 'free_unlocked',
         phone: editorData?.phone,
         editorName: editorData?.name,
         hasActivePass: false,
-        unlockedCount: 1,
-        message: 'First editor unlocked for free!',
+        unlockedCount: currentCount,
+        freeLimit: FREE_LIMIT,
+        freeRemaining,
+        message: `${currentCount} of ${FREE_LIMIT} free contacts unlocked! (${freeRemaining} remaining)`,
       })
     }
 
-    // 4. Free unlock used & no active pass -> Trigger Paywall (HTTP 402)
+    // 4. Free unlock quota used & no active pass -> Trigger Paywall (HTTP 402)
     return NextResponse.json(
       {
         error: 'PAYWALL_REQUIRED',
         freeUsed: true,
-        message: 'You have used your 1 free contact. Get the Monthly Pass for unlimited access.',
+        freeLimit: FREE_LIMIT,
+        message: `You have used your ${FREE_LIMIT} free contacts. Get the Monthly Pass for unlimited access.`,
         unlockedCount: unlockedEditors.length,
         hasActivePass: false,
       },

@@ -142,6 +142,7 @@ export default function EditorProfileClient({
   const [copied, setCopied] = useState(false)
   const [isPaywallModalOpen, setIsPaywallModalOpen] = useState(false)
   const [unlockedPhone, setUnlockedPhone] = useState<string | null>(null)
+  const [unlockRemaining, setUnlockRemaining] = useState<number | null>(null)
   const [isUnlocking, setIsUnlocking] = useState(false)
 
   useEffect(() => {
@@ -293,6 +294,9 @@ export default function EditorProfileClient({
 
       if (data.success && data.phone) {
         setUnlockedPhone(data.phone)
+        if (typeof data.freeRemaining === 'number') {
+          setUnlockRemaining(data.freeRemaining)
+        }
         setIsContactModalOpen(true)
         handleTrackLead()
       } else {
@@ -465,8 +469,8 @@ export default function EditorProfileClient({
           <h3 className="text-2xl font-black font-display">LET'S CREATE SOMETHING GREAT!</h3>
           <p className="text-xs text-zinc-400 max-w-md mx-auto">
             {user
-              ? 'Have a project in mind? Connect directly with this editor.'
-              : 'Sign in to access direct WhatsApp and Instagram contacts to hire verified editors.'}
+              ? 'Have a project in mind? Connect directly with this editor (3 free contacts included).'
+              : 'Sign in to access 3 free direct WhatsApp contacts to hire verified editors.'}
           </p>
 
           {user ? (
@@ -518,6 +522,11 @@ export default function EditorProfileClient({
               </span>
               <h3 className="text-xl font-black text-white pt-2">{editor.full_name || editor.name}</h3>
               <p className="text-zinc-400 text-xs">Reach out directly via WhatsApp or Instagram</p>
+              {typeof unlockRemaining === 'number' && (
+                <p className="text-[11px] font-semibold text-lime-400 pt-1">
+                  {unlockRemaining} of 3 free contacts remaining
+                </p>
+              )}
             </div>
 
             {/* WhatsApp Contact Box */}
@@ -596,6 +605,7 @@ export default function EditorProfileClient({
         onClose={() => setIsPaywallModalOpen(false)}
         editorId={editor.user_id || editor.id || editor.handle}
         editorName={editor.full_name || editor.name || 'Editor'}
+        freeLimit={3}
         onPaymentSuccess={(newPhone) => {
           if (newPhone) setUnlockedPhone(newPhone)
           setIsContactModalOpen(true)
