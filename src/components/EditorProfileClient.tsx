@@ -9,6 +9,7 @@ import { getEditorPortfolioItems } from '@/lib/firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { collection, addDoc } from 'firebase/firestore'
 import PaywallModal from '@/components/PaywallModal'
+import { trackFunnelEvent } from '@/lib/telemetry'
 
 function getGoogleDriveEmbedUrl(url: string): string | null {
   if (url.includes('16CSkbkvGddJODiCZ6tECVCxSH8bKkAaY') || url.includes('1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa')) {
@@ -68,7 +69,10 @@ function ShowreelPlayer({ media }: { media: any }) {
   }
 
   return (
-    <div className={containerClass}>
+    <div
+      className={containerClass}
+      onClick={() => trackFunnelEvent('showreel_play', { mediaType: media.type, url: media.url })}
+    >
       {media.type === 'drive' && (
         <iframe
           src={media.embedUrl}
@@ -264,6 +268,12 @@ export default function EditorProfileClient({
   }
 
   const handleContactClick = async () => {
+    trackFunnelEvent('contact_click', {
+      editorId: editor.user_id || editor.id || editor.handle,
+      editorName: editor.full_name || editor.name,
+      userId: user?.uid,
+    })
+
     if (!user) {
       loginWithGoogle()
       return
@@ -288,6 +298,10 @@ export default function EditorProfileClient({
       const data = await res.json()
 
       if (res.status === 402 || data.error === 'PAYWALL_REQUIRED') {
+        trackFunnelEvent('paywall_hit', {
+          editorId: editor.user_id || editor.id || editor.handle,
+          userId: user.uid,
+        })
         setIsPaywallModalOpen(true)
         return
       }

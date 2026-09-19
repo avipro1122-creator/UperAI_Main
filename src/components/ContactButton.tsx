@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { MessageCircle, Instagram, ExternalLink, Lock } from 'lucide-react'
 import { normalizeIndianPhone } from '@/lib/phone'
+import { trackFunnelEvent } from '@/lib/telemetry'
 
 interface ContactButtonProps {
   editorId: string
@@ -13,6 +14,7 @@ interface ContactButtonProps {
 }
 
 function logClick(editorId: string) {
+  trackFunnelEvent('contact_click', { editorId })
   // Fire-and-forget — never blocks navigation
   fetch('/api/contact-click', {
     method: 'POST',

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/firebase/client'
-import { doc, getDoc, setDoc, arrayUnion, collection, query, where, getDocs, limit } from 'firebase/firestore'
+import { doc, getDoc, setDoc, arrayUnion, collection, query, where, getDocs, limit, increment } from 'firebase/firestore'
 import { DEFAULT_EDITORS } from '@/lib/firebase/firestore'
 
 async function getUserIdFromRequest(req: NextRequest, body?: any): Promise<string | null> {
@@ -160,6 +160,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Free unlock quota used & no active pass -> Trigger Paywall (HTTP 402)
+    try {
+      const funnelDoc = doc(db, 'site_stats', 'funnel')
+      setDoc(funnelDoc, { paywall_hit_count: increment(1) }, { merge: true }).catch(() => {})
+    } catch {
+      // Non-blocking
+    }
+
     return NextResponse.json(
       {
         error: 'PAYWALL_REQUIRED',

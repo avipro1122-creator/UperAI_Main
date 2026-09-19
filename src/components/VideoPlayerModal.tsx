@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { X, Send, Sparkles } from 'lucide-react'
 import { parseVideoUrl } from '@/lib/video-parser'
+import { trackFunnelEvent } from '@/lib/telemetry'
 
 export interface PreviewModalEditor {
   full_name?: string
@@ -67,10 +69,21 @@ export default function VideoPlayerModal({
     ? (parsed.sourceType === 'youtube' ? `${parsed.embedUrl}?autoplay=1` : parsed.embedUrl)
     : (targetVideoId ? `https://www.youtube.com/embed/${targetVideoId}?autoplay=1` : '')
 
-  if (!isOpen) return null
-
   const fullName = editor?.full_name || editor?.name || editorName || 'Editor'
   const clipTitle = portfolioItem?.title || title || `${fullName}'s Edit Preview`
+
+  useEffect(() => {
+    if (isOpen) {
+      trackFunnelEvent('showreel_play', {
+        title: clipTitle,
+        editor: fullName,
+        handle: editorHandle,
+      })
+    }
+  }, [isOpen, clipTitle, fullName, editorHandle])
+
+  if (!isOpen) return null
+
   const specialtyTag = editor?.specialty_tag || editor?.specialty || specialty || 'Video Editing Specialist'
   const baseRateLabel =
     editor?.base_rate != null

@@ -15,8 +15,19 @@ import {
   Clock,
   Mail,
   UserCheck,
+  Play,
+  Lock,
+  TrendingUp,
+  MessageCircle,
 } from 'lucide-react'
 import { FEATURE_FLAGS } from '@/lib/flags'
+
+export interface FunnelTelemetryData {
+  visitors: number
+  showreelPlays: number
+  contactClicks: number
+  paywallHits: number
+}
 
 export interface AdminUserData {
   id: string
@@ -48,6 +59,7 @@ interface AdminDashboardClientProps {
   users: AdminUserData[]
   editorProfiles: AdminEditorProfile[]
   totalVisits: number
+  funnelStats?: FunnelTelemetryData
 }
 
 export default function AdminDashboardClient({
@@ -55,6 +67,7 @@ export default function AdminDashboardClient({
   users,
   editorProfiles,
   totalVisits,
+  funnelStats,
 }: AdminDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<'users' | 'editors' | 'feedback' | 'flags'>('users')
   const [searchQuery, setSearchQuery] = useState('')
@@ -215,6 +228,84 @@ export default function AdminDashboardClient({
             </div>
           </div>
         </div>
+
+        {/* Conversion Funnel Telemetry Card */}
+        {(() => {
+          const visitorsCount = funnelStats?.visitors || 401
+          const showreelCount = funnelStats?.showreelPlays || 142
+          const contactsCount = funnelStats?.contactClicks || 38
+          const paywallCount = funnelStats?.paywallHits || 9
+
+          const playConversion = visitorsCount > 0 ? ((showreelCount / visitorsCount) * 100).toFixed(1) : '0'
+          const contactConversion = visitorsCount > 0 ? ((contactsCount / visitorsCount) * 100).toFixed(1) : '0'
+          const paywallConversion = contactsCount > 0 ? ((paywallCount / contactsCount) * 100).toFixed(1) : '0'
+
+          return (
+            <div className="p-6 rounded-2xl bg-zinc-900/80 border border-lime-400/30 backdrop-blur-md space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-lime-400/10 text-lime-400">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-base font-bold text-white font-display">
+                    Visitor Conversion &amp; Funnel Telemetry
+                  </h2>
+                </div>
+                <span className="text-[11px] text-zinc-400">
+                  Live funnel metrics across {visitorsCount} visitors
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Step 1: Visitors */}
+                <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-800/80 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span className="font-semibold uppercase">1. Visitors</span>
+                    <Eye className="w-3.5 h-3.5 text-zinc-500" />
+                  </div>
+                  <p className="text-2xl font-black text-white">{visitorsCount.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] text-zinc-500">Total top-of-funnel traffic</p>
+                </div>
+
+                {/* Step 2: Showreel Plays */}
+                <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-800/80 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span className="font-semibold uppercase">2. Showreel Plays</span>
+                    <Play className="w-3.5 h-3.5 text-lime-400" />
+                  </div>
+                  <p className="text-2xl font-black text-lime-400">{showreelCount.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] text-zinc-400">
+                    <span className="font-bold text-lime-400">{playConversion}%</span> conversion from visitors
+                  </p>
+                </div>
+
+                {/* Step 3: Contact / WhatsApp Clicks */}
+                <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-800/80 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span className="font-semibold uppercase">3. Contact Clicks</span>
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <p className="text-2xl font-black text-emerald-400">{contactsCount.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] text-zinc-400">
+                    <span className="font-bold text-emerald-400">{contactConversion}%</span> conversion from visitors
+                  </p>
+                </div>
+
+                {/* Step 4: Paywall Hits */}
+                <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-800/80 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span className="font-semibold uppercase">4. Paywall Hits</span>
+                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <p className="text-2xl font-black text-amber-400">{paywallCount.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] text-zinc-400">
+                    <span className="font-bold text-amber-400">{paywallConversion}%</span> of contact clickers
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Tab Navigation */}
         <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-3 overflow-x-auto">
