@@ -3,7 +3,6 @@ import HeroSection from '@/components/HeroSection'
 import HowItWorksSection from '@/components/HowItWorksSection'
 import MarketplaceFeed from '@/components/MarketplaceFeed'
 import JoinCommunitySection from '@/components/JoinCommunitySection'
-import ConciergeStickyBar from '@/components/ConciergeStickyBar'
 import JsonLd from '@/components/JsonLd'
 import { getPublicEditors, DEFAULT_EDITORS } from '@/lib/firebase/firestore'
 import { parseVideoUrl } from '@/lib/video-parser'
@@ -168,9 +167,6 @@ export default async function HomePage() {
 
       {/* 4. Join Community Section */}
       <JoinCommunitySection />
-
-      {/* 5. Fast-Track Concierge Matching Sticky Bar */}
-      <ConciergeStickyBar />
     </div>
   )
 }
