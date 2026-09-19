@@ -410,7 +410,7 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                             <span className="text-zinc-300 truncate max-w-[110px]">
                               {editor.format_tag || 'Shorts / Reels'}
                             </span>
-                            <span className="font-extrabold text-lime-400 font-mono">
+                            <span className="text-base font-extrabold text-lime-400 font-mono">
                               {rateLabel}
                             </span>
                           </div>

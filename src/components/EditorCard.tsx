@@ -185,7 +185,7 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           )}
 
           <p
-            className={`text-xs font-black font-mono tracking-tight shrink-0 ${hasRate ? 'text-emerald-600' : 'text-neutral-400'}`}
+            className={`font-black font-mono tracking-tight shrink-0 ${hasRate ? 'text-lg sm:text-xl text-emerald-600' : 'text-xs text-neutral-400'}`}
           >
             {rateLabel}
           </p>

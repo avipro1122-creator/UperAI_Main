@@ -410,7 +410,12 @@ export default function EditorProfileClient({
               </a>
             )}
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">HELLO!! I'M {editor?.full_name?.toUpperCase() || editor?.name?.toUpperCase() || 'EDITOR'}</h1>
+          <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">
+            <span className="text-black">HELLO!! I&apos;M </span>
+            <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent drop-shadow-sm">
+              {editor?.full_name?.toUpperCase() || editor?.name?.toUpperCase() || 'EDITOR'}
+            </span>
+          </h1>
           <p className="font-bold text-sm opacity-90">Verified Indian Video Editor • High Impact Showreels</p>
         </div>
 
