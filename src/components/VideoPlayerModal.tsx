@@ -1,9 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import { X, Send, Sparkles } from 'lucide-react'
+import { X, Send, Sparkles, ExternalLink } from 'lucide-react'
 import { parseVideoUrl } from '@/lib/video-parser'
-import { trackFunnelEvent } from '@/lib/telemetry'
 
 export interface PreviewModalEditor {
   full_name?: string
@@ -45,6 +43,19 @@ export interface VideoPlayerModalProps {
   portfolioItem?: PreviewModalPortfolioItem
 }
 
+function GoogleDriveIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 87.3 78" fill="none">
+      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
+      <path d="M43.65 25 29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.55h27.5z" fill="#00AC47"/>
+      <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.9 10.2z" fill="#EA4335"/>
+      <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.85 0H34.45c-1.65 0-3.2.4-4.55 1.2z" fill="#00832D"/>
+      <path d="m59.8 49-13.75-24H18.7L32.45 49z" fill="#2684FC"/>
+      <path d="m73.4 49-13.6-24H32.45l13.75 24z" fill="#FFBA00"/>
+    </svg>
+  )
+}
+
 export default function VideoPlayerModal({
   isOpen,
   onClose,
@@ -64,26 +75,16 @@ export default function VideoPlayerModal({
   const targetVideoUrl = editor?.youtubeUrl || portfolioItem?.video_url || portfolioItem?.youtube_url || targetVideoId || ''
   
   const parsed = parseVideoUrl(targetVideoUrl)
+  const isDrive = parsed?.sourceType === 'drive' || /drive\.google\.com|docs\.google\.com/i.test(targetVideoUrl)
   
   const embedSrc = parsed
     ? (parsed.sourceType === 'youtube' ? `${parsed.embedUrl}?autoplay=1` : parsed.embedUrl)
     : (targetVideoId ? `https://www.youtube.com/embed/${targetVideoId}?autoplay=1` : '')
 
-  const fullName = editor?.full_name || editor?.name || editorName || 'Editor'
-  const clipTitle = portfolioItem?.title || title || `${fullName}'s Edit Preview`
-
-  useEffect(() => {
-    if (isOpen) {
-      trackFunnelEvent('showreel_play', {
-        title: clipTitle,
-        editor: fullName,
-        handle: editorHandle,
-      })
-    }
-  }, [isOpen, clipTitle, fullName, editorHandle])
-
   if (!isOpen) return null
 
+  const fullName = editor?.full_name || editor?.name || editorName || 'Editor'
+  const clipTitle = portfolioItem?.title || title || `${fullName}'s Edit Preview`
   const specialtyTag = editor?.specialty_tag || editor?.specialty || specialty || 'Video Editing Specialist'
   const baseRateLabel =
     editor?.base_rate != null
@@ -108,16 +109,47 @@ export default function VideoPlayerModal({
         </button>
 
         {/* Video Player Column */}
-        <div className="flex-1 bg-black flex flex-col justify-center min-h-[260px] sm:min-h-[360px] p-2">
-          <div className={`relative w-full ${isVertical ? 'aspect-[9/16] max-h-[75vh] mx-auto' : 'aspect-video'}`}>
-            <iframe
-              src={embedSrc}
-              title={clipTitle}
-              className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          </div>
+        <div className="flex-1 bg-zinc-950 flex flex-col justify-center min-h-[260px] sm:min-h-[360px] p-4">
+          {isDrive ? (
+            <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-md mx-auto py-8">
+              <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center p-3.5 shadow-2xl">
+                <GoogleDriveIcon className="w-10 h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-950/80 border border-blue-800/50 text-[11px] font-bold text-blue-400 uppercase tracking-wide">
+                  <GoogleDriveIcon className="w-3.5 h-3.5" />
+                  Google Drive Portfolio
+                </span>
+                <h4 className="text-xl font-black text-white">{fullName}&apos;s Shared Works</h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Access high-resolution project files, client edits, raw footage, and full showreels shared on Google Drive.
+                </p>
+              </div>
+              <a
+                href={targetVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm rounded-xl transition-all shadow-xl hover:shadow-blue-500/25 active:scale-95 group"
+              >
+                <GoogleDriveIcon className="w-4 h-4" />
+                <span>Click to View Drive Portfolio</span>
+                <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </a>
+              <span className="text-[11px] text-zinc-500">
+                Opens directly in Google Drive with instant access to all folders & files
+              </span>
+            </div>
+          ) : (
+            <div className={`relative w-full ${isVertical ? 'aspect-[9/16] max-h-[75vh] mx-auto' : 'aspect-video'}`}>
+              <iframe
+                src={embedSrc}
+                title={clipTitle}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          )}
         </div>
 
         {/* Sidebar Info & CTA */}

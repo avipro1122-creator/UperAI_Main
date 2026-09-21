@@ -15,12 +15,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -71,7 +66,7 @@ export default function Navbar() {
           {activeRole === 'EDITOR' ? '+ List your work' : 'Browse Editors'}
         </Link>
 
-        {!mounted || loading ? (
+        {loading ? (
           <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />
         ) : !user ? (
           <button
@@ -179,9 +174,7 @@ export default function Navbar() {
 
       {/* MOBILE CONTROLS */}
       <div className="flex md:hidden items-center gap-2">
-        {!mounted || loading ? (
-          <div className="w-7 h-7 rounded-full bg-zinc-800 animate-pulse" />
-        ) : !user ? (
+        {!user ? (
           <button
             onClick={loginWithGoogle}
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-95"

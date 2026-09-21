@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { ArrowUpRight, Sparkles, Play, CheckCircle2, ShieldCheck, Eye, Zap } from 'lucide-react'
@@ -131,6 +132,20 @@ export default function HeroSection({ featured }: HeroSectionProps) {
   return (
     <>
       <section className="relative w-full border-b border-zinc-800/60 overflow-hidden bg-[#080c0e]">
+        {/* Festive Lord Ganesha Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none select-none">
+          <Image
+            src="/hero-ganesha-temple.jpg"
+            alt="Lord Ganesha Festive Background"
+            fill
+            priority
+            className="object-cover object-[75%_center] sm:object-right lg:object-right opacity-95"
+            sizes="100vw"
+          />
+          {/* Subtle gradient overlays for text readability and smooth transition into dark theme */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#060a0c]/90 via-[#060a0c]/50 to-transparent sm:from-[#060a0c]/80 sm:via-transparent sm:to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-zinc-950/90 pointer-events-none" />
+        </div>
 
         {/* Ambient background glows */}
         <div className="absolute top-1/4 -left-10 w-64 sm:w-96 h-64 sm:h-96 ambient-glow-lime pointer-events-none blur-3xl opacity-15 max-w-full z-0" />

@@ -32,7 +32,7 @@ export async function generateMetadata(
   const title = `${name} (${headline}) — Hire Video Editor`
   const description = `Hire ${name} on UperAI starting at ₹${Number(rate).toLocaleString()} / video. Audition real showreels, turnaround in ${editor.turnaround_time || '48 Hours'}, and connect directly on WhatsApp.`
   const canonicalUrl = `https://www.uperai.in/editors/${editor.handle || target}`
-  const ogImageUrl = `https://www.uperai.in/editors/${editor.handle || target}/opengraph-image`
+  const avatarUrl = editor.avatar_url || editor.preview_img || 'https://www.uperai.in/icon.svg'
 
   return {
     title,
@@ -47,10 +47,10 @@ export async function generateMetadata(
       type: 'profile',
       images: [
         {
-          url: ogImageUrl,
-          width: 1200,
-          height: 630,
-          alt: `${name} - Verified Video Editor Portfolio on UperAI`,
+          url: avatarUrl,
+          width: 800,
+          height: 800,
+          alt: `${name} - Video Editor Portfolio`,
         },
       ],
     },
@@ -58,7 +58,7 @@ export async function generateMetadata(
       card: 'summary_large_image',
       title: `${title} | UperAI`,
       description,
-      images: [ogImageUrl],
+      images: [avatarUrl],
     },
   }
 }

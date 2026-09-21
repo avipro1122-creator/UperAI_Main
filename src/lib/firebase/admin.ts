@@ -13,6 +13,8 @@ function formatPrivateKey(key?: string) {
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'uperai-ed941'
 let app: App
 
+let hasAdminCredentials = false
+
 if (!getApps().length) {
   const localKeyPath = path.join(process.cwd(), 'serviceAccountKey.json')
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
@@ -25,6 +27,7 @@ if (!getApps().length) {
         projectId,
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       })
+      hasAdminCredentials = true
     } catch (e) {
       console.error('Error reading serviceAccountKey.json:', e)
       app = initializeApp({ projectId })
@@ -37,6 +40,7 @@ if (!getApps().length) {
         projectId,
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       })
+      hasAdminCredentials = true
     } catch (e) {
       console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY JSON:', e)
       app = initializeApp({ projectId })
@@ -50,14 +54,17 @@ if (!getApps().length) {
       }),
       storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     })
+    hasAdminCredentials = true
   } else {
     app = initializeApp({ projectId })
+    hasAdminCredentials = false
   }
 } else {
   app = getApps()[0]
+  hasAdminCredentials = true
 }
 
 export const adminAuth = getAuth(app)
-export const adminDb = getFirestore(app)
-export const adminStorage = getStorage(app)
+export const adminDb = hasAdminCredentials ? getFirestore(app) : (null as any)
+export const adminStorage = hasAdminCredentials ? getStorage(app) : (null as any)
 export default app

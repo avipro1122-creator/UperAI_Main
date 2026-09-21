@@ -17,7 +17,6 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import EditorCard, { EditorCardData } from '@/components/EditorCard'
-import ConciergeStickyBar from '@/components/ConciergeStickyBar'
 
 const VideoPlayerModal = dynamic(() => import('@/components/VideoPlayerModal'), { ssr: false })
 
@@ -309,9 +308,6 @@ export default function MarketplaceFeed({
         specialty={videoModal.specialty}
         rate={videoModal.rate}
       />
-
-      {/* Fast-Track Concierge Matching Sticky Bar */}
-      <ConciergeStickyBar />
     </section>
   )
 }

@@ -50,11 +50,6 @@ export const metadata: Metadata = {
   other: {
     'google-adsense-account': 'ca-pub-9701077184398829',
   },
-  icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
-  },
   openGraph: {
     title: 'UperAI — Hire Verified Indian Video Editors | Rates Upfront in INR',
     description:

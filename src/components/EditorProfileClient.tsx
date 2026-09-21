@@ -2,31 +2,181 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Instagram, Video, ExternalLink, Loader2, Sparkles } from 'lucide-react'
+import { Instagram, Video, ExternalLink, Loader2, Sparkles, Globe, Maximize2, X, Laptop, Smartphone } from 'lucide-react'
 import TestimonialsSection from '@/components/TestimonialsSection'
 import { useAuth } from '@/context/AuthContext'
 import { getEditorPortfolioItems } from '@/lib/firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { collection, addDoc } from 'firebase/firestore'
 import PaywallModal from '@/components/PaywallModal'
-import { trackFunnelEvent } from '@/lib/telemetry'
 
-function getGoogleDriveEmbedUrl(url: string): string | null {
+function GoogleDriveIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 87.3 78" fill="none">
+      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
+      <path d="M43.65 25 29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.55h27.5z" fill="#00AC47"/>
+      <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.9 10.2z" fill="#EA4335"/>
+      <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.85 0H34.45c-1.65 0-3.2.4-4.55 1.2z" fill="#00832D"/>
+      <path d="m59.8 49-13.75-24H18.7L32.45 49z" fill="#2684FC"/>
+      <path d="m73.4 49-13.6-24H32.45l13.75 24z" fill="#FFBA00"/>
+    </svg>
+  )
+}
+
+function parseDriveMedia(url: string): { type: 'drive'; isFolder: boolean; id: string; embedUrl: string | null; url: string } | null {
+  if (!/drive\.google\.com|docs\.google\.com/i.test(url)) return null
+
+  const cleanUrl = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`
+
   if (url.includes('16CSkbkvGddJODiCZ6tECVCxSH8bKkAaY') || url.includes('1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa')) {
-    return 'https://drive.google.com/file/d/1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa/preview'
+    return {
+      type: 'drive',
+      isFolder: false,
+      id: '1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa',
+      embedUrl: 'https://drive.google.com/file/d/1IydmaQ1n0zznXmI8Vfy3EmyzdO3Hyrsa/preview',
+      url: cleanUrl,
+    }
   }
-  const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/)
-  return match ? `https://drive.google.com/file/d/${match[1]}/preview` : null
+
+  // Check for Drive Folder
+  const folderMatch = cleanUrl.match(/(?:drive\.google\.com\/(?:drive\/(?:u\/\d+\/)?folders\/|folderview\?id=))([a-zA-Z0-9_-]+)/i)
+  if (folderMatch && folderMatch[1]) {
+    return {
+      type: 'drive',
+      isFolder: true,
+      id: folderMatch[1],
+      embedUrl: `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#grid`,
+      url: cleanUrl,
+    }
+  }
+
+  // Check for Drive File
+  const fileMatch = cleanUrl.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=))([a-zA-Z0-9_-]+)/i)
+  if (fileMatch && fileMatch[1]) {
+    return {
+      type: 'drive',
+      isFolder: false,
+      id: fileMatch[1],
+      embedUrl: `https://drive.google.com/file/d/${fileMatch[1]}/preview`,
+      url: cleanUrl,
+    }
+  }
+
+  return {
+    type: 'drive',
+    isFolder: true,
+    id: '',
+    embedUrl: null,
+    url: cleanUrl,
+  }
 }
 
 function getAspectClass(media: any): string {
   if (media.type === 'youtube') return media.isVertical ? 'aspect-[9/16]' : 'aspect-video'
   if (media.type === 'vimeo') return 'aspect-video'
+  if (media.type === 'drive') return media.isFolder ? 'aspect-auto' : 'aspect-video'
+  if (media.type === 'website' || media.type === 'unknown') return 'aspect-[16/10] min-h-[340px]'
   return 'aspect-[9/16]'
+}
+
+function DrivePreview({ media }: { media: any }) {
+  const driveUrl = media.rawUrl || media.url
+  return (
+    <div className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-900 via-zinc-900/95 to-zinc-950 border border-zinc-800 p-8 sm:p-10 flex flex-col items-center justify-center text-center space-y-6 shadow-2xl" suppressHydrationWarning>
+      {/* Drive Icon with glow */}
+      <div className="w-16 h-16 rounded-2xl bg-zinc-800/80 border border-white/10 flex items-center justify-center p-3.5 shadow-xl">
+        <GoogleDriveIcon className="w-10 h-10" />
+      </div>
+
+      <div className="space-y-2 max-w-md">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-950/80 border border-blue-800/50 text-[11px] font-bold text-blue-400 uppercase tracking-wide">
+          <GoogleDriveIcon className="w-3.5 h-3.5" />
+          Google Drive Portfolio
+        </div>
+        <h3 className="text-xl sm:text-2xl font-black text-white">
+          Editor&apos;s Google Drive Portfolio
+        </h3>
+        <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+          Google Drive requires your Google account to view. Click below to open directly in Google Drive in one click:
+        </p>
+      </div>
+
+      <a
+        href={driveUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2.5 px-8 py-4 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-2xl transition-all shadow-xl hover:shadow-blue-500/30 active:scale-95 group"
+      >
+        <GoogleDriveIcon className="w-5 h-5" />
+        <span>Open Drive Portfolio (1-Click) ↗</span>
+      </a>
+
+      <span className="text-[11px] text-zinc-500">
+        Opens in a new tab for instant Google account selection
+      </span>
+    </div>
+  )
+}
+
+function WebsitePreview({ media }: { media: any }) {
+  if (/drive\.google\.com|docs\.google\.com/i.test(media.url || '')) {
+    return <DrivePreview media={media} />
+  }
+
+  const hostname = (() => {
+    try {
+      return new URL(media.url).hostname.replace(/^www\./, '')
+    } catch {
+      return media.url
+    }
+  })()
+
+  return (
+    <div className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-900 via-zinc-900/95 to-zinc-950 border border-zinc-800 p-8 flex flex-col items-center justify-center text-center space-y-5 shadow-2xl">
+      <div className="w-16 h-16 rounded-2xl bg-zinc-800/80 border border-white/10 flex items-center justify-center p-3.5 shadow-xl">
+        <Globe className="w-9 h-9 text-lime-400" />
+      </div>
+
+      <div className="space-y-2 max-w-md">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-lime-950/80 border border-lime-800/50 text-[11px] font-bold text-lime-400 uppercase tracking-wide">
+          <Globe className="w-3.5 h-3.5" />
+          {hostname}
+        </div>
+        <h3 className="text-xl font-black text-white">
+          External Portfolio Website
+        </h3>
+        <p className="text-xs text-zinc-400 leading-relaxed font-mono truncate max-w-sm">
+          {media.url}
+        </p>
+      </div>
+
+      <a
+        href={media.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2.5 px-8 py-4 bg-lime-400 hover:bg-lime-300 text-black font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-xl hover:shadow-lime-400/25 active:scale-95 group"
+      >
+        <span>Open Portfolio Website (1-Click)</span>
+        <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+      </a>
+
+      <span className="text-[11px] text-zinc-500">
+        Opens external portfolio in a new tab
+      </span>
+    </div>
+  )
 }
 
 function ShowreelPlayer({ media }: { media: any }) {
   const containerClass = `relative w-full ${getAspectClass(media)} rounded-xl overflow-hidden bg-black/60 border border-white/10`
+
+  if (media.type === 'drive' || /drive\.google\.com|docs\.google\.com/i.test(media.url || '')) {
+    return <DrivePreview media={media} />
+  }
+
+  if (media.type === 'website' || media.type === 'unknown') {
+    return <WebsitePreview media={media} />
+  }
 
   if (media.type === 'instagram') {
     return (
@@ -36,7 +186,7 @@ function ShowreelPlayer({ media }: { media: any }) {
             src={`https://www.instagram.com/reel/${media.id}/embed/`}
             className="w-full h-full border-0"
             scrolling="no"
-            allowTransparency
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
             title="Instagram Reel Preview"
           />
         </div>
@@ -52,37 +202,8 @@ function ShowreelPlayer({ media }: { media: any }) {
     )
   }
 
-  if (media.type === 'unknown') {
-    return (
-      <div className={`${containerClass} flex flex-col items-center justify-center p-4 text-center space-y-2`}>
-        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">External Portfolio Link</span>
-        <a
-          href={media.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
-        >
-          Open Portfolio Website ↗
-        </a>
-      </div>
-    )
-  }
-
   return (
-    <div
-      className={containerClass}
-      onClick={() => trackFunnelEvent('showreel_play', { mediaType: media.type, url: media.url })}
-    >
-      {media.type === 'drive' && (
-        <iframe
-          src={media.embedUrl}
-          loading="lazy"
-          title="Google Drive Video Preview"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          className="w-full h-full rounded-xl border-0"
-        />
-      )}
+    <div className={containerClass}>
 
       {media.type === 'youtube' && (
         <iframe
@@ -148,6 +269,11 @@ export default function EditorProfileClient({
   const [unlockedPhone, setUnlockedPhone] = useState<string | null>(null)
   const [unlockRemaining, setUnlockRemaining] = useState<number | null>(null)
   const [isUnlocking, setIsUnlocking] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     async function refreshItems() {
@@ -268,12 +394,6 @@ export default function EditorProfileClient({
   }
 
   const handleContactClick = async () => {
-    trackFunnelEvent('contact_click', {
-      editorId: editor.user_id || editor.id || editor.handle,
-      editorName: editor.full_name || editor.name,
-      userId: user?.uid,
-    })
-
     if (!user) {
       loginWithGoogle()
       return
@@ -298,10 +418,6 @@ export default function EditorProfileClient({
       const data = await res.json()
 
       if (res.status === 402 || data.error === 'PAYWALL_REQUIRED') {
-        trackFunnelEvent('paywall_hit', {
-          editorId: editor.user_id || editor.id || editor.handle,
-          userId: user.uid,
-        })
         setIsPaywallModalOpen(true)
         return
       }
@@ -357,9 +473,16 @@ export default function EditorProfileClient({
       }
     }
 
-    const driveEmbedUrl = getGoogleDriveEmbedUrl(cleanUrl)
-    if (driveEmbedUrl) {
-      return { type: 'drive', embedUrl: driveEmbedUrl, url: cleanUrl }
+    if (/drive\.google\.com|docs\.google\.com/i.test(cleanUrl)) {
+      const driveMedia = parseDriveMedia(cleanUrl)
+      if (driveMedia) return driveMedia
+      return {
+        type: 'drive',
+        isFolder: /\/folders\/|folderview/i.test(cleanUrl),
+        id: '',
+        embedUrl: null,
+        url: cleanUrl,
+      }
     }
 
     if (/dropbox\.com\/s\//i.test(cleanUrl)) {
@@ -377,7 +500,11 @@ export default function EditorProfileClient({
       return { type: 'direct', id: cleanUrl, directUrl: cleanUrl, url: cleanUrl }
     }
 
-    return { type: 'unknown', url: cleanUrl }
+    let finalUrl = cleanUrl
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = `https://${finalUrl}`
+    }
+    return { type: 'website', url: finalUrl }
   }
 
   const rawShowreelUrls = [
@@ -437,20 +564,44 @@ export default function EditorProfileClient({
         <div className="space-y-4">
           <h2 className="text-xl font-black text-lime-400 font-display">Featured Work & Showreels ({parsedVideos.length})</h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
+          <div className={`grid ${parsedVideos.length === 1 && (parsedVideos[0].type === 'website' || (parsedVideos[0].type === 'drive' && (parsedVideos[0] as any)?.isFolder)) ? 'grid-cols-1 max-w-2xl mx-auto' : parsedVideos.length === 1 ? 'grid-cols-1 max-w-3xl mx-auto' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'} gap-6 items-start`}>
             {parsedVideos.length > 0 ? (
-              parsedVideos.map((media: any, index: number) => (
-                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase">Showreel #{index + 1}</span>
-                    <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2 py-0.5 rounded-full uppercase">
-                      {media.type}
-                    </span>
-                  </div>
+              parsedVideos.map((media: any, index: number) => {
+                const isDrive = media.type === 'drive' || /drive\.google\.com|docs\.google\.com/i.test(media.url || '')
+                const isWebsite = !isDrive && (media.type === 'website' || media.type === 'unknown')
+                return (
+                  <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl" suppressHydrationWarning>
+                    <div className="flex items-center justify-between" suppressHydrationWarning>
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase" suppressHydrationWarning>
+                        {isDrive
+                          ? 'Google Drive Portfolio'
+                          : isWebsite
+                            ? 'Portfolio Website'
+                            : `Showreel #${index + 1}`}
+                      </span>
+                      {isWebsite && (
+                        <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                          <Globe className="w-2.5 h-2.5 text-lime-400" />
+                          WEBSITE
+                        </span>
+                      )}
+                      {isDrive && (
+                        <span className="text-[10px] font-bold text-blue-400 bg-blue-950/80 border border-blue-800/50 px-2 py-0.5 rounded-full uppercase flex items-center gap-1.5">
+                          <GoogleDriveIcon className="w-3 h-3" />
+                          GOOGLE DRIVE
+                        </span>
+                      )}
+                      {!isWebsite && !isDrive && (
+                        <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2 py-0.5 rounded-full uppercase">
+                          {media.type}
+                        </span>
+                      )}
+                    </div>
 
-                  <ShowreelPlayer media={media} />
-                </div>
-              ))
+                    <ShowreelPlayer media={media} />
+                  </div>
+                )
+              })
             ) : (
               <div className="col-span-3 py-8 text-center text-zinc-500 text-xs bg-zinc-900 border border-zinc-800 rounded-2xl">
                 No showreels linked yet.
@@ -475,7 +626,7 @@ export default function EditorProfileClient({
           </div>
           <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
             <p className="text-xs text-blue-200 uppercase tracking-wider">BASE RATE</p>
-            <p className="text-xl text-yellow-300 font-black mt-1">₹{Number(editor.base_rate || 1500).toLocaleString()} / Video</p>
+            <p className="text-xl text-yellow-300 font-black mt-1" suppressHydrationWarning>₹{Number(editor.base_rate || 1500).toLocaleString('en-IN')} / Video</p>
           </div>
           <div className="bg-blue-600 rounded-2xl p-5 text-center font-bold shadow-lg">
             <p className="text-xs text-blue-200 uppercase tracking-wider">TURNAROUND</p>
@@ -486,13 +637,13 @@ export default function EditorProfileClient({
         {/* Contact CTA Block (Gated Behind Login) */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
           <h3 className="text-2xl font-black font-display">LET'S CREATE SOMETHING GREAT!</h3>
-          <p className="text-xs text-zinc-400 max-w-md mx-auto">
-            {user
+          <p className="text-xs text-zinc-400 max-w-md mx-auto" suppressHydrationWarning>
+            {mounted && user
               ? 'Have a project in mind? Connect directly with this editor (3 free contacts included).'
               : 'Sign in to access 3 free direct WhatsApp contacts to hire verified editors.'}
           </p>
 
-          {user ? (
+          {mounted && user ? (
             <button
               onClick={handleContactClick}
               disabled={isUnlocking}
