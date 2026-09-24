@@ -132,19 +132,19 @@ export default function HeroSection({ featured }: HeroSectionProps) {
   return (
     <>
       <section className="relative w-full border-b border-zinc-800/60 overflow-hidden bg-[#080c0e]">
-        {/* Festive Lord Ganesha Background */}
+        {/* Cinematic Video Editor Workspace Background */}
         <div className="absolute inset-0 z-0 pointer-events-none select-none">
           <Image
-            src="/hero-ganesha-temple.jpg"
-            alt="Lord Ganesha Festive Background"
+            src="/hero-workspace.jpg"
+            alt="Cinematic Video Editing Workspace Background"
             fill
             priority
-            className="object-cover object-[75%_center] sm:object-right lg:object-right opacity-95"
+            className="object-cover object-center opacity-90"
             sizes="100vw"
           />
           {/* Subtle gradient overlays for text readability and smooth transition into dark theme */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#060a0c]/90 via-[#060a0c]/50 to-transparent sm:from-[#060a0c]/80 sm:via-transparent sm:to-transparent pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-zinc-950/90 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#060a0c]/90 via-[#060a0c]/60 to-transparent sm:from-[#060a0c]/80 sm:via-[#060a0c]/30 sm:to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-zinc-950/95 pointer-events-none" />
         </div>
 
         {/* Ambient background glows */}
