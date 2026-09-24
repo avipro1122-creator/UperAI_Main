@@ -2,6 +2,8 @@
 
 import { X, Send, Sparkles, ExternalLink } from 'lucide-react'
 import { parseVideoUrl } from '@/lib/video-parser'
+import ProfileVideoPlayer from '@/components/ProfileVideoPlayer'
+import { formatGoogleDrivePreviewUrl } from '@/lib/gdrive'
 
 export interface PreviewModalEditor {
   full_name?: string
@@ -110,7 +112,9 @@ export default function VideoPlayerModal({
 
         {/* Video Player Column */}
         <div className="flex-1 bg-zinc-950 flex flex-col justify-center min-h-[260px] sm:min-h-[360px] p-4">
-          {isDrive ? (
+          {isDrive && formatGoogleDrivePreviewUrl(targetVideoUrl) ? (
+            <ProfileVideoPlayer videoUrl={targetVideoUrl} title={clipTitle} />
+          ) : isDrive ? (
             <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-md mx-auto py-8">
               <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center p-3.5 shadow-2xl">
                 <GoogleDriveIcon className="w-10 h-10" />

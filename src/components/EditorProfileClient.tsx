@@ -9,6 +9,8 @@ import { getEditorPortfolioItems } from '@/lib/firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { collection, addDoc } from 'firebase/firestore'
 import PaywallModal from '@/components/PaywallModal'
+import ProfileVideoPlayer from '@/components/ProfileVideoPlayer'
+import { formatGoogleDrivePreviewUrl } from '@/lib/gdrive'
 
 function GoogleDriveIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -171,6 +173,10 @@ function ShowreelPlayer({ media }: { media: any }) {
   const containerClass = `relative w-full ${getAspectClass(media)} rounded-xl overflow-hidden bg-black/60 border border-white/10`
 
   if (media.type === 'drive' || /drive\.google\.com|docs\.google\.com/i.test(media.url || '')) {
+    const targetUrl = media.url || media.rawUrl || (media.id ? `https://drive.google.com/file/d/${media.id}/view` : '')
+    if (!media.isFolder && formatGoogleDrivePreviewUrl(targetUrl)) {
+      return <ProfileVideoPlayer videoUrl={targetUrl} />
+    }
     return <DrivePreview media={media} />
   }
 
@@ -508,16 +514,19 @@ export default function EditorProfileClient({
   }
 
   const rawShowreelUrls = [
+    editor?.videoUrl,
+    editor?.video_url,
+    editor?.video_url1,
+    editor?.video_url2,
+    editor?.video_url3,
+    editor?.raw_video_url,
     editor?.youtube_url1,
     editor?.youtube_url,
     editor?.youtube_url2,
     editor?.youtube_url3,
     editor?.showreel_url,
-    editor?.video_url,
-    editor?.video_url1,
-    editor?.video_url2,
-    editor?.video_url3,
-    ...(Array.isArray(portfolioItems) ? portfolioItems.map((pi: any) => pi?.youtube_url || pi?.video_url || pi?.url) : []),
+    editor?.profile?.videoUrl,
+    ...(Array.isArray(portfolioItems) ? portfolioItems.map((pi: any) => pi?.youtube_url || pi?.video_url || pi?.url || pi?.videoUrl) : []),
   ].filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
 
   const uniqueShowreelUrls = Array.from(new Set(rawShowreelUrls))
@@ -603,8 +612,8 @@ export default function EditorProfileClient({
                 )
               })
             ) : (
-              <div className="col-span-3 py-8 text-center text-zinc-500 text-xs bg-zinc-900 border border-zinc-800 rounded-2xl">
-                No showreels linked yet.
+              <div className="col-span-3">
+                <ProfileVideoPlayer videoUrl={editor?.videoUrl || editor?.video_url || editor?.raw_video_url} />
               </div>
             )}
           </div>

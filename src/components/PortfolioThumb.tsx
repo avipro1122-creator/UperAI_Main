@@ -2,7 +2,7 @@
 
 import { Play, VideoOff, HardDrive } from 'lucide-react'
 import { youtubeEmbedUrl } from '@/lib/youtube'
-import { parseVideoUrl } from '@/lib/video-parser'
+import { parseVideoUrl, formatGoogleDrivePreviewUrl } from '@/lib/video-parser'
 import { resolveThumbnailUrl } from '@/lib/thumbnail-resolver'
 
 export interface PortfolioThumbItem {
@@ -24,8 +24,9 @@ interface Props {
 
 // Thumbnail by default; click swaps to youtube-nocookie or gdrive preview iframe.
 export default function PortfolioThumb({ item, isPlaying, onPlay }: Props) {
+  const drivePreview = formatGoogleDrivePreviewUrl(item.youtube_url || item.video_id)
   const parsed = parseVideoUrl(item.youtube_url || item.video_id)
-  const isDrive = parsed?.sourceType === 'drive' || (!item.thumbnail_url && !item.title && parsed?.sourceType !== 'instagram')
+  const isDrive = Boolean(drivePreview) || parsed?.sourceType === 'drive' || (!item.thumbnail_url && !item.title && parsed?.sourceType !== 'instagram')
   const isInstagram = parsed?.sourceType === 'instagram'
   const aspectClass = (item.is_short || parsed?.isShortsUrl || isInstagram) ? 'aspect-[9/16]' : 'aspect-video'
 
@@ -41,7 +42,7 @@ export default function PortfolioThumb({ item, isPlaying, onPlay }: Props) {
     )
   }
 
-  const embedSrc = parsed?.embedUrl || (isDrive
+  const embedSrc = drivePreview || parsed?.embedUrl || (isDrive
     ? `https://drive.google.com/file/d/${item.video_id}/preview`
     : youtubeEmbedUrl(item.video_id))
 
@@ -53,8 +54,10 @@ export default function PortfolioThumb({ item, isPlaying, onPlay }: Props) {
             src={embedSrc}
             title={item.title ?? 'Video player'}
             className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow={isDrive ? 'autoplay; fullscreen' : 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'}
             allowFullScreen
+            loading="lazy"
+            sandbox={isDrive ? 'allow-scripts allow-same-origin allow-popups' : undefined}
           />
         ) : (
           <button

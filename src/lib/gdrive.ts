@@ -4,6 +4,36 @@ export interface ParsedDriveUrl {
 }
 
 /**
+ * Transforms a Google Drive video URL into an embeddable preview URL.
+ * Extracts the file ID matching /file/d/([a-zA-Z0-9_-]+)
+ * and returns https://drive.google.com/file/d/${fileId}/preview.
+ * Handles fallback or invalid URLs gracefully without crashing.
+ */
+export function formatGoogleDrivePreviewUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') return null
+  try {
+    const trimmed = url.trim()
+    if (!trimmed) return null
+
+    // Extract file ID matching /file/d/([a-zA-Z0-9_-]+)
+    const match = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
+    if (match && match[1]) {
+      return `https://drive.google.com/file/d/${match[1]}/preview`
+    }
+
+    // Also support ?id= query parameter if it is a Drive URL
+    const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/)
+    if (idMatch && idMatch[1] && (trimmed.includes('drive.google.com') || trimmed.includes('docs.google.com'))) {
+      return `https://drive.google.com/file/d/${idMatch[1]}/preview`
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Parses Google Drive File ID out of common link formats:
  * - https://drive.google.com/file/d/FILE_ID/view
  * - https://drive.google.com/file/d/FILE_ID/preview

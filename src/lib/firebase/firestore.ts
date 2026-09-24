@@ -37,6 +37,7 @@ export interface FirestoreEditorProfile {
   youtube_url3?: string
   showreel_url?: string
   video_url?: string
+  videoUrl?: string
   video_url1?: string
   video_url2?: string
   video_url3?: string
@@ -70,6 +71,31 @@ export interface FirestorePortfolioItem {
 
 // Built-in Verified Editors (Always available with real video thumbnails)
 export const DEFAULT_EDITORS: FirestoreEditorProfile[] = [
+  {
+    id: 'test-preview',
+    user_id: 'test-preview-uid',
+    full_name: 'Alex Rivera',
+    name: 'Alex Rivera',
+    handle: 'test-preview',
+    headline: 'Senior Commercial & Showreel Editor',
+    specialty_tag: 'Google Drive Showreel',
+    base_rate: 1500,
+    min_rate: 1500,
+    max_rate: 3500,
+    currency: 'INR',
+    turnaround_time: '24 Hours',
+    whatsapp: '919016047119',
+    whatsapp_number: '919016047119',
+    videoUrl: 'https://drive.google.com/file/d/1-Dwxc2_fc_wFYr3rI7KCYH5RNQDUw5d-/view',
+    video_url: 'https://drive.google.com/file/d/1-Dwxc2_fc_wFYr3rI7KCYH5RNQDUw5d-/view',
+    youtube_url: 'https://drive.google.com/file/d/1-Dwxc2_fc_wFYr3rI7KCYH5RNQDUw5d-/view',
+    youtube_url1: 'https://drive.google.com/file/d/1-Dwxc2_fc_wFYr3rI7KCYH5RNQDUw5d-/view',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    bio: 'Professional video editor with experience in commercial, YouTube, and narrative editing.',
+    software: ['Premiere Pro', 'After Effects', 'DaVinci Resolve'],
+    open_to_work: true,
+    is_hidden: false,
+  },
   {
     id: 'BnffOxVehGg2UukQSHTBKGHaot73',
     user_id: 'BnffOxVehGg2UukQSHTBKGHaot73',

@@ -1,5 +1,7 @@
 import { parseYoutubeUrl } from '@/lib/youtube'
-import { parseDriveUrl } from '@/lib/gdrive'
+import { parseDriveUrl, formatGoogleDrivePreviewUrl } from '@/lib/gdrive'
+
+export { formatGoogleDrivePreviewUrl }
 
 export type VideoSourceType = 'youtube' | 'instagram' | 'drive' | 'vimeo' | 'other'
 
