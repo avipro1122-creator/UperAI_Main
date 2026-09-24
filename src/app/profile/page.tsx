@@ -255,7 +255,14 @@ export default function ProfilePage() {
 
       // Update user role to EDITOR
       const userRef = doc(db, 'users', uid)
-      await setDoc(userRef, { role: 'EDITOR', handle: cleanHandle, name: cleanName, updatedAt: new Date().toISOString() }, { merge: true })
+      await setDoc(userRef, {
+        role: 'EDITOR',
+        handle: cleanHandle,
+        name: cleanName,
+        phoneNumber: whatsappNumber.trim() || null,
+        whatsapp: whatsappNumber.trim() || null,
+        updatedAt: new Date().toISOString()
+      }, { merge: true })
       setActiveRole('EDITOR')
 
       setProfileDocId(uid)

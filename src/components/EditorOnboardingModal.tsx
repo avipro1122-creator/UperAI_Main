@@ -188,7 +188,14 @@ export default function EditorOnboardingModal({ isOpen, onClose }: EditorOnboard
       await setDoc(editorRef, payload, { merge: true })
 
       const userRef = doc(db, 'users', uid)
-      await setDoc(userRef, { role: 'EDITOR', handle: cleanHandle, name: cleanName, updatedAt: new Date().toISOString() }, { merge: true })
+      await setDoc(userRef, {
+        role: 'EDITOR',
+        handle: cleanHandle,
+        name: cleanName,
+        phoneNumber: whatsapp.trim(),
+        whatsapp: whatsapp.trim(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true })
       setActiveRole('EDITOR')
 
       setSuccess(true)

@@ -15,6 +15,8 @@ import {
   Clock,
   Mail,
   UserCheck,
+  Phone,
+  MessageCircle,
 } from 'lucide-react'
 import { FEATURE_FLAGS } from '@/lib/flags'
 
@@ -23,6 +25,7 @@ export interface AdminUserData {
   uid: string
   name: string
   email: string
+  phone?: string | null
   role: 'CREATOR' | 'EDITOR' | string
   photoURL?: string | null
   createdAt?: string | null
@@ -31,6 +34,8 @@ export interface AdminUserData {
 
 export interface AdminEditorProfile {
   id: string
+  userId?: string | null
+  email?: string | null
   name: string
   handle?: string | null
   headline?: string | null
@@ -74,6 +79,7 @@ export default function AdminDashboardClient({
         !q ||
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
+        (u.phone && u.phone.toLowerCase().includes(q)) ||
         u.uid.toLowerCase().includes(q)
       return matchesRole && matchesSearch
     })
@@ -91,6 +97,20 @@ export default function AdminDashboardClient({
         (e.specialty && e.specialty.toLowerCase().includes(q))
     )
   }, [editorProfiles, searchQuery])
+
+  const formatDisplayPhone = (phone?: string | null) => {
+    if (!phone) return '—'
+    const trimmed = phone.trim()
+    const digits = trimmed.replace(/\D/g, '')
+    if (digits.length === 10) {
+      return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`
+    }
+    if (digits.length === 12 && digits.startsWith('91')) {
+      const local = digits.slice(2)
+      return `+91 ${local.slice(0, 5)} ${local.slice(5)}`
+    }
+    return trimmed
+  }
 
   const formatDate = (isoString?: string | null) => {
     if (!isoString) return '—'
@@ -276,7 +296,7 @@ export default function AdminDashboardClient({
                 <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search by name, email, or UID..."
+                  placeholder="Search by name, email, phone, or UID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-lime-400/60 focus:ring-1 focus:ring-lime-400/30"
@@ -326,6 +346,7 @@ export default function AdminDashboardClient({
                     <tr>
                       <th className="px-6 py-4 font-semibold">User</th>
                       <th className="px-6 py-4 font-semibold">Email</th>
+                      <th className="px-6 py-4 font-semibold">Phone</th>
                       <th className="px-6 py-4 font-semibold">Role</th>
                       <th className="px-6 py-4 font-semibold">Signed Up</th>
                       <th className="px-6 py-4 font-semibold">UID</th>
@@ -334,7 +355,7 @@ export default function AdminDashboardClient({
                   <tbody className="divide-y divide-zinc-800/60">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 text-sm">
+                        <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 text-sm">
                           No users found matching your search.
                         </td>
                       </tr>
@@ -372,6 +393,33 @@ export default function AdminDashboardClient({
                                 <Mail className="w-3.5 h-3.5 text-zinc-500" />
                                 <span>{u.email || '—'}</span>
                               </div>
+                            </td>
+
+                            {/* Phone */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {u.phone ? (
+                                <div className="flex items-center gap-2 text-zinc-300">
+                                  <Phone className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                  <a
+                                    href={`tel:${u.phone.replace(/[^\d+]/g, '')}`}
+                                    className="font-mono text-xs text-zinc-200 hover:text-white transition-colors"
+                                    title="Click to call"
+                                  >
+                                    {formatDisplayPhone(u.phone)}
+                                  </a>
+                                  <a
+                                    href={`https://wa.me/${u.phone.replace(/\D/g, '').length === 10 ? `91${u.phone.replace(/\D/g, '')}` : u.phone.replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+                                    title="Open WhatsApp chat"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="text-zinc-600 text-xs font-mono">—</span>
+                              )}
                             </td>
 
                             {/* Role Badge */}

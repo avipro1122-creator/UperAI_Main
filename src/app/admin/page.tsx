@@ -105,7 +105,7 @@ async function getAuthenticatedAdminEmail(
 async function fetchUsersList(): Promise<AdminUserData[]> {
   try {
     const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users?key=${FIREBASE_API_KEY}`,
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users?pageSize=300&key=${FIREBASE_API_KEY}`,
       { cache: 'no-store' }
     )
     if (!res.ok) return []
@@ -119,6 +119,15 @@ async function fetchUsersList(): Promise<AdminUserData[]> {
         uid: parsed.uid || parsed.id || '',
         name: parsed.displayName || parsed.name || parsed.fullName || 'Anonymous User',
         email: parsed.email || '',
+        phone:
+          parsed.phone ||
+          parsed.phoneNumber ||
+          parsed.phone_number ||
+          parsed.whatsapp ||
+          parsed.whatsapp_number ||
+          parsed.mobile ||
+          parsed.contact ||
+          null,
         role: (parsed.role || 'CREATOR').toUpperCase(),
         photoURL: parsed.photoURL || parsed.avatar_url || null,
         createdAt: parsed.createdAt || d.createTime || null,
@@ -137,7 +146,7 @@ async function fetchUsersList(): Promise<AdminUserData[]> {
 async function fetchEditorProfilesList(): Promise<AdminEditorProfile[]> {
   try {
     const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/editor_profiles?key=${FIREBASE_API_KEY}`,
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/editor_profiles?pageSize=300&key=${FIREBASE_API_KEY}`,
       { cache: 'no-store' }
     )
     if (!res.ok) return []
@@ -148,12 +157,14 @@ async function fetchEditorProfilesList(): Promise<AdminEditorProfile[]> {
       const parsed = parseFirestoreDoc(d)
       return {
         id: parsed.id || parsed.user_id || '',
+        userId: parsed.user_id || parsed.id || '',
+        email: parsed.email || null,
         name: parsed.full_name || parsed.name || parsed.display_name || 'Editor',
         handle: parsed.handle || null,
         headline: parsed.headline || null,
         specialty: parsed.specialty_tag || null,
         baseRate: Number(parsed.base_rate) || Number(parsed.min_rate) || null,
-        whatsapp: parsed.whatsapp_number || parsed.whatsapp || null,
+        whatsapp: parsed.whatsapp_number || parsed.whatsapp || parsed.phone || parsed.phoneNumber || null,
         youtubeUrl: parsed.youtube_url || parsed.youtube_url1 || null,
         isOpenToWork: parsed.open_to_work ?? true,
         isHidden: parsed.is_hidden ?? false,
@@ -188,10 +199,36 @@ export default async function AdminPage() {
   }
 
   // 3. LAYER 3: Read-Only Data Retrieval
-  const [users, editorProfiles] = await Promise.all([
+  const [usersRaw, editorProfiles] = await Promise.all([
     fetchUsersList(),
     fetchEditorProfilesList(),
   ])
+
+  // Build a phone lookup map from editor profiles
+  const editorPhoneMap = new Map<string, string>()
+  for (const ep of editorProfiles) {
+    const phone = ep.whatsapp
+    if (phone) {
+      if (ep.id) editorPhoneMap.set(ep.id, phone)
+      if (ep.userId) editorPhoneMap.set(ep.userId, phone)
+      if (ep.email) editorPhoneMap.set(ep.email.toLowerCase(), phone)
+    }
+  }
+
+  // Cross-reference users with phone numbers from user records or linked editor profile
+  const users = usersRaw.map((u) => {
+    const phone =
+      u.phone ||
+      editorPhoneMap.get(u.uid) ||
+      editorPhoneMap.get(u.id) ||
+      (u.email ? editorPhoneMap.get(u.email.toLowerCase()) : null) ||
+      null
+
+    return {
+      ...u,
+      phone,
+    }
+  })
 
   // Total recorded visit baseline
   const totalVisits = 1420 + users.length * 15

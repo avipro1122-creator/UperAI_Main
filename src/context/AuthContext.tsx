@@ -62,6 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = userSnap.data()
         role = (data?.role as Role) || 'CREATOR'
         handle = data?.handle || null
+        if (!data?.phoneNumber && fbUser.phoneNumber) {
+          setDoc(userDocRef, { phoneNumber: fbUser.phoneNumber }, { merge: true }).catch(() => {})
+        }
       } else {
         // Create initial user doc
         await setDoc(userDocRef, {
@@ -69,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: fbUser.email,
           displayName: fbUser.displayName,
           photoURL: fbUser.photoURL,
+          phoneNumber: fbUser.phoneNumber || null,
           role: 'CREATOR',
           createdAt: new Date().toISOString(),
         })
