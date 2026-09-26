@@ -137,12 +137,17 @@ export default function BillingDashboardClient() {
         amount: checkoutData.amount,
         currency: checkoutData.currency || 'INR',
         name: 'UperAI',
-        description: `${checkoutData.packageName} Subscription`,
+        description: `${checkoutData.packageName} - Unlimited Contacts`,
         prefill: {
           name: user.displayName || user.name || '',
           email: user.email || '',
         },
         theme: { color: '#a3e635' },
+        modal: {
+          ondismiss: function () {
+            setActionLoading(null)
+          },
+        },
         handler: async function (response: any) {
           try {
             setActionLoading('verifying')
@@ -165,7 +170,7 @@ export default function BillingDashboardClient() {
 
             const verifyData = await verifyRes.json()
             if (verifyRes.ok && verifyData.success) {
-              showToast(`🎉 Upgraded to ${checkoutData.packageName}!`, 'success')
+              showToast(`🎉 Activated ${checkoutData.packageName}!`, 'success')
               await fetchData()
             } else {
               showToast(verifyData.error || 'Payment verification failed', 'error')
@@ -178,11 +183,11 @@ export default function BillingDashboardClient() {
         },
       }
 
-      // Attach either subscription_id or order_id
-      if (checkoutData.subscriptionId) {
-        options.subscription_id = checkoutData.subscriptionId
-      } else if (checkoutData.orderId) {
+      // Prioritize order_id for standard checkout (UPI/cards)
+      if (checkoutData.orderId) {
         options.order_id = checkoutData.orderId
+      } else if (checkoutData.subscriptionId) {
+        options.subscription_id = checkoutData.subscriptionId
       }
 
       const rzp = new (window as any).Razorpay(options)
@@ -485,18 +490,18 @@ export default function BillingDashboardClient() {
         </div>
       </section>
 
-      {/* SECTION 2: PACKAGE BROWSING & UPGRADE GRID */}
+      {/* SECTION 2: CREATOR MONTHLY PASS TIER */}
       <section className="space-y-6">
-        <div>
-          <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-lime-400" /> Available Plans & Upgrades
+        <div className="text-center sm:text-left">
+          <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center justify-center sm:justify-start gap-2">
+            <Zap className="w-3.5 h-3.5 text-lime-400" /> Creator Pass Upgrade
           </h2>
           <p className="text-xs text-zinc-500 mt-1">
-            Choose the plan that suits your creative production volume. Instant activation via Razorpay.
+            Unlock unlimited direct WhatsApp and phone access to every verified video editor on UperAI.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="max-w-lg mx-auto">
           {PRICING_PLANS.filter((p) => p.id !== 'free_starter').map((plan) => {
             const isCurrent = currentPlanId === plan.id && isPaidActive && !isCanceledPending
             const isUpgrading = actionLoading === plan.id
@@ -504,36 +509,30 @@ export default function BillingDashboardClient() {
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 bg-zinc-900/80 border ${
-                  plan.popular
-                    ? 'border-lime-400/50 shadow-[0_0_35px_rgba(163,230,53,0.12)]'
-                    : 'border-white/10 hover:border-white/20'
-                }`}
+                className="relative rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 bg-zinc-900/90 border border-lime-400/50 shadow-[0_0_40px_rgba(163,230,53,0.12)] space-y-6"
               >
                 {/* Popular Badge */}
-                {plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 bg-lime-400 text-black font-black text-[10px] uppercase tracking-wider rounded-full shadow-lg">
-                    {plan.badge}
-                  </div>
-                )}
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 bg-lime-400 text-black font-black text-[10px] uppercase tracking-wider rounded-full shadow-lg">
+                  Popular &bull; Full Access
+                </div>
 
                 <div className="space-y-4">
                   {/* Title & Description */}
                   <div>
-                    <h3 className="text-xl font-black text-white uppercase tracking-tight">{plan.name}</h3>
-                    <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{plan.description}</p>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tight">{plan.name}</h3>
+                    <p className="text-xs text-zinc-400 mt-1">{plan.description}</p>
                   </div>
 
                   {/* Price */}
-                  <div className="flex items-baseline gap-1 py-2">
-                    <span className="text-3xl sm:text-4xl font-black text-white">₹{plan.priceInr}</span>
-                    <span className="text-xs text-zinc-400 font-semibold">/ month</span>
+                  <div className="flex items-baseline gap-1 py-1">
+                    <span className="text-4xl sm:text-5xl font-black text-white">₹{plan.priceInr}</span>
+                    <span className="text-sm text-zinc-400 font-semibold">/ month</span>
                   </div>
 
                   <div className="h-px bg-white/[0.08]" />
 
                   {/* Features list */}
-                  <ul className="space-y-2.5 text-xs text-zinc-300">
+                  <ul className="space-y-3 text-xs text-zinc-300">
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2.5">
                         <Check className="w-4 h-4 text-lime-400 shrink-0 mt-0.5" />
@@ -544,24 +543,20 @@ export default function BillingDashboardClient() {
                 </div>
 
                 {/* CTA Action */}
-                <div className="pt-6">
+                <div className="space-y-3 pt-2">
                   {isCurrent ? (
                     <button
                       disabled
-                      className="w-full py-3.5 bg-zinc-800 text-zinc-400 font-extrabold text-xs uppercase tracking-wider rounded-xl cursor-default flex items-center justify-center gap-2 border border-white/5"
+                      className="w-full py-4 bg-zinc-800 text-zinc-400 font-extrabold text-xs uppercase tracking-wider rounded-2xl cursor-default flex items-center justify-center gap-2 border border-white/5"
                     >
                       <CheckCircle2 className="w-4 h-4 text-lime-400" />
-                      <span>Current Plan</span>
+                      <span>Current Plan &bull; Active</span>
                     </button>
                   ) : (
                     <button
                       onClick={() => handleUpgrade(plan.id)}
                       disabled={Boolean(actionLoading)}
-                      className={`w-full py-3.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl active:scale-[0.98] ${
-                        plan.popular
-                          ? 'bg-lime-400 hover:bg-lime-300 text-black'
-                          : 'bg-white hover:bg-zinc-200 text-black'
-                      }`}
+                      className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-2xl active:scale-[0.99] bg-lime-400 hover:bg-lime-300 text-black"
                     >
                       {isUpgrading ? (
                         <>
@@ -576,6 +571,10 @@ export default function BillingDashboardClient() {
                       )}
                     </button>
                   )}
+
+                  <p className="text-[11px] text-center text-zinc-500">
+                    Secure payment powered by Razorpay &bull; UPI (GPay/PhonePe), Cards & NetBanking
+                  </p>
                 </div>
               </div>
             )
