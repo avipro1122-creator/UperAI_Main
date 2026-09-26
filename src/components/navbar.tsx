@@ -251,6 +251,15 @@ export default function Navbar() {
               Switch to {activeRole === 'CREATOR' ? 'Editor Mode' : 'Creator Mode'}
             </button>
 
+            {/* Subscription & Billing Link */}
+            <Link
+              href="/settings/billing"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block w-full py-3 bg-zinc-900/90 hover:bg-zinc-800 text-white hover:text-lime-400 font-bold rounded-xl text-center border border-white/10 active:scale-[0.99] transition-all"
+            >
+              💳 Subscription & Billing
+            </Link>
+
             {activeRole === 'EDITOR' ? (
               <Link
                 href="/profile"
