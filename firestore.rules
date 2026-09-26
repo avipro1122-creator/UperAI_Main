@@ -1,0 +1,165 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // =========================================================================
+    // COLLECTION: editor_reviews
+    // Doc ID format: ${editorId}_${userId}
+    // =========================================================================
+    match /editor_reviews/{reviewId} {
+      // 1. Reads are public — anyone can view ratings
+      allow read: if true;
+
+      // 2. Create rules:
+      //    - Must be authenticated
+      //    - Doc ID must strictly match ${editorId}_${request.auth.uid}
+      //    - userId field must strictly match request.auth.uid
+      //    - Editor cannot rate their own profile (editorId != request.auth.uid)
+      //    - rating must be an integer between 1 and 5
+      allow create: if isAuthenticated()
+        && reviewId == request.resource.data.editorId + '_' + request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.editorId != request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.editorId is string
+        && request.resource.data.editorId.size() > 0
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string;
+
+      // 3. Update rules:
+      //    - Can only update own review
+      //    - Doc ID and userId must remain bound to request.auth.uid
+      //    - Cannot change editorId or createdAt
+      //    - rating must be an integer between 1 and 5
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && reviewId == request.resource.data.editorId + '_' + request.auth.uid
+        && request.resource.data.editorId == resource.data.editorId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.updatedAt is string;
+
+      // 4. Delete rules: only the reviewer can delete their own review
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // COLLECTION: editor_profiles
+    // =========================================================================
+    match /editor_profiles/{editorId} {
+      allow read: if true;
+
+      // Helper function to check if the caller is the editor profile owner
+      function isEditorOwner() {
+        return isAuthenticated() && (
+          request.auth.uid == editorId ||
+          (('user_id' in resource.data) && resource.data.user_id == request.auth.uid)
+        );
+      }
+
+      // Profile updates:
+      // 1. Profile owner can update any of their profile fields.
+      // 2. An authenticated reviewer can update ONLY rating_avg, rating_count, and updatedAt.
+      allow update: if isAuthenticated() && (
+        isEditorOwner()
+        ||
+        (
+          !isEditorOwner() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating_avg', 'rating_count', 'updatedAt']) &&
+          request.resource.data.rating_avg is number &&
+          request.resource.data.rating_avg >= 1 &&
+          request.resource.data.rating_avg <= 5 &&
+          request.resource.data.rating_count is int &&
+          request.resource.data.rating_count >= 1
+        )
+      );
+
+      allow create: if isAuthenticated()
+        && (request.auth.uid == editorId || request.resource.data.user_id == request.auth.uid);
+
+      allow delete: if isAuthenticated()
+        && (request.auth.uid == editorId || resource.data.user_id == request.auth.uid);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email.lower() == 'avipro1122@gmail.com' ||
+        request.auth.token.email.lower() == 'karan@uperai.in'
+      );
+    }
+
+    // =========================================================================
+    // COLLECTION: users
+    // =========================================================================
+    match /users/{userId} {
+      // Users can only read their own document (or admin)
+      allow read: if isOwner(userId) || isAdmin();
+
+      // On creation, users cannot set active subscription state
+      allow create: if isOwner(userId)
+        && (!('subscriptionStatus' in request.resource.data) || request.resource.data.subscriptionStatus == 'free')
+        && (!('subscriptionExpiresAt' in request.resource.data) || request.resource.data.subscriptionExpiresAt == null);
+
+      // On update, users cannot tamper with subscription status or expiration.
+      // Additionally, free users cannot expand unlockedEditorIds past 3.
+      allow update: if isAdmin() || (
+        isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['subscriptionStatus', 'subscriptionExpiresAt', 'has_active_pass', 'pass_expires_at'])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['unlockedEditorIds', 'unlocked_editors'])
+          || (resource.data.subscriptionStatus == 'active' && resource.data.subscriptionExpiresAt != null && resource.data.subscriptionExpiresAt > request.time)
+          || (
+            (!('unlockedEditorIds' in request.resource.data) || request.resource.data.unlockedEditorIds.size() <= 3)
+            && (!('unlocked_editors' in request.resource.data) || request.resource.data.unlocked_editors.size() <= 3)
+          )
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // COLLECTION: portfolio_items
+    // =========================================================================
+    match /portfolio_items/{itemId} {
+      allow read: if true;
+      allow create: if isAuthenticated()
+        && (request.auth.uid == request.resource.data.editor_id || isOwner(request.resource.data.editor_id));
+      allow update, delete: if isAuthenticated()
+        && (request.auth.uid == resource.data.editor_id || isOwner(resource.data.editor_id));
+    }
+
+    // =========================================================================
+    // COLLECTION: contact_clicks (Telemetry / Lead Tracking)
+    // =========================================================================
+    match /contact_clicks/{clickId} {
+      allow read: if false; // Admin / server-side only
+      allow create: if true; // Public lead click tracking
+      allow update, delete: if false;
+    }
+
+    // =========================================================================
+    // COLLECTION: payments (Razorpay Transaction Logs)
+    // =========================================================================
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated()
+        && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.creator_id);
+      allow write: if false; // Server-side webhook / verification route only
+    }
+
+  }
+}

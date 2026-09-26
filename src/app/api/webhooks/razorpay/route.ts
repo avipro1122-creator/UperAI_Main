@@ -38,9 +38,9 @@ export async function POST(req: NextRequest) {
 
       const userId = notes.userId || notes.user_id
       const googleSub = notes.google_sub || notes.googleSub
-      const packageId: PackageTier = notes.packageId || 'creator_pro'
-      const packageName = notes.packageName || 'Creator Pro'
-      const priceInr = Number(notes.priceInr || 499)
+      const packageId: PackageTier = notes.packageId || 'creator_monthly'
+      const packageName = notes.packageName || 'Creator Monthly Pass'
+      const priceInr = Number(notes.priceInr || 199)
 
       const currentPeriodEnd = sub.current_end
         ? new Date(sub.current_end * 1000).toISOString()
@@ -69,9 +69,9 @@ export async function POST(req: NextRequest) {
       if (userId) {
         await upsertUserSubscription({
           userId,
-          packageId: notes.packageId || 'creator_pro',
-          packageName: notes.packageName || 'Creator Pro',
-          priceInr: Number(notes.priceInr || 499),
+          packageId: notes.packageId || 'creator_monthly',
+          packageName: notes.packageName || 'Creator Monthly Pass',
+          priceInr: Number(notes.priceInr || 199),
           status: 'canceled',
           cancelAtCycleEnd: false,
           canceledAt: new Date().toISOString(),
@@ -86,9 +86,9 @@ export async function POST(req: NextRequest) {
       if (userId) {
         await upsertUserSubscription({
           userId,
-          packageId: notes.packageId || 'creator_pro',
-          packageName: notes.packageName || 'Creator Pro',
-          priceInr: Number(notes.priceInr || 499),
+          packageId: notes.packageId || 'creator_monthly',
+          packageName: notes.packageName || 'Creator Monthly Pass',
+          priceInr: Number(notes.priceInr || 199),
           status: 'halted',
           razorpaySubscriptionId: sub.id,
         })
@@ -101,9 +101,9 @@ export async function POST(req: NextRequest) {
       if (userId && notes.subscriptionId) {
         await upsertUserSubscription({
           userId,
-          packageId: notes.packageId || 'creator_pro',
-          packageName: notes.packageName || 'Creator Pro',
-          priceInr: Number(notes.priceInr || 499),
+          packageId: notes.packageId || 'creator_monthly',
+          packageName: notes.packageName || 'Creator Monthly Pass',
+          priceInr: Number(notes.priceInr || 199),
           status: 'past_due',
           razorpaySubscriptionId: notes.subscriptionId,
         })
@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
         const pkgId: PackageTier = notes.packageId || 'creator_monthly'
         const pkgName = notes.packageName || 'Creator Monthly Pass'
         const price = Number(notes.priceInr || 199)
+        const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
         await upsertUserSubscription({
           userId,
@@ -125,6 +126,8 @@ export async function POST(req: NextRequest) {
           packageName: pkgName,
           priceInr: price,
           status: 'active',
+          currentPeriodStart: new Date().toISOString(),
+          currentPeriodEnd,
           razorpaySubscriptionId: notes.subscriptionId || null,
           razorpayCustomerId: payment.customer_id || null,
         })

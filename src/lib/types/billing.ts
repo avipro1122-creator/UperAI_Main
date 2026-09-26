@@ -1,5 +1,7 @@
 export type SubscriptionStatus =
+  | 'free'
   | 'active'
+  | 'expired'
   | 'canceled'
   | 'past_due'
   | 'halted'
@@ -29,6 +31,9 @@ export interface UserSubscription {
   packageId: PackageTier
   packageName: string
   status: SubscriptionStatus
+  subscriptionStatus: 'free' | 'active' | 'expired'
+  subscriptionExpiresAt?: string | null
+  unlockedEditorIds?: string[]
   billingFrequency: 'monthly'
   priceInr: number
   currency: 'INR'
@@ -41,6 +46,8 @@ export interface UserSubscription {
   razorpayCustomerId?: string | null
   razorpayPlanId?: string | null
   unlockedContactsCount?: number
+  freeLimit?: number
+  freeRemaining?: number | 'unlimited'
 }
 
 export interface InvoiceItem {

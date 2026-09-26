@@ -24,6 +24,8 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { PRICING_PLANS } from '@/lib/constants/pricing'
 import { UserSubscription, InvoiceItem, PackageTier } from '@/lib/types/billing'
+import { db } from '@/lib/firebase/client'
+import { doc, onSnapshot } from 'firebase/firestore'
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -99,6 +101,81 @@ export default function BillingDashboardClient() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Live Firestore subscription listener for instant state sync
+  useEffect(() => {
+    if (!user?.uid) return
+
+    const userDocRef = doc(db, 'users', user.uid)
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() || {}
+          const rawExp = data.subscriptionExpiresAt || data.pass_expires_at
+          let expDate: Date | null = null
+          if (rawExp) {
+            if (typeof rawExp.toDate === 'function') expDate = rawExp.toDate()
+            else if (typeof rawExp.seconds === 'number') expDate = new Date(rawExp.seconds * 1000)
+            else {
+              const parsed = new Date(rawExp)
+              if (!isNaN(parsed.getTime())) expDate = parsed
+            }
+          }
+          const now = new Date()
+          const isExpired = expDate ? expDate.getTime() < now.getTime() : false
+          const canonicalStatus: 'free' | 'active' | 'expired' = data.subscriptionStatus
+            ? data.subscriptionStatus === 'active' && isExpired
+              ? 'expired'
+              : data.subscriptionStatus
+            : data.has_active_pass
+            ? isExpired
+              ? 'expired'
+              : 'active'
+            : 'free'
+
+          const unlockedList = Array.isArray(data.unlockedEditorIds)
+            ? data.unlockedEditorIds
+            : Array.isArray(data.unlocked_editors)
+            ? data.unlocked_editors
+            : []
+
+          const planName = canonicalStatus === 'active' ? 'Creator Pass' : 'Free Starter'
+          const expiresIso = expDate ? expDate.toISOString() : null
+
+          setSubscription((prev) => ({
+            id: data.subscription_id || prev?.id || `sub_${user.uid}`,
+            userId: user.uid,
+            googleSub: data.google_sub || prev?.googleSub,
+            email: data.email || prev?.email,
+            packageId: canonicalStatus === 'active' ? 'creator_monthly' : 'free_starter',
+            packageName: planName,
+            status: (canonicalStatus as any) || 'free',
+            subscriptionStatus: canonicalStatus,
+            subscriptionExpiresAt: expiresIso,
+            unlockedEditorIds: unlockedList,
+            unlockedContactsCount: unlockedList.length,
+            freeLimit: 3,
+            freeRemaining: canonicalStatus === 'active' ? 'unlimited' : Math.max(0, 3 - unlockedList.length),
+            billingFrequency: 'monthly',
+            priceInr: canonicalStatus === 'active' ? 199 : 0,
+            currency: 'INR',
+            currentPeriodEnd: expiresIso,
+            nextBillingDate: expiresIso,
+            cancelAtCycleEnd: Boolean(data.cancel_at_cycle_end),
+            canceledAt: data.canceled_at || null,
+            razorpaySubscriptionId: data.subscription_id || prev?.razorpaySubscriptionId || null,
+            razorpayCustomerId: data.razorpay_customer_id || prev?.razorpayCustomerId || null,
+          }))
+        }
+      },
+      (err) => {
+        console.warn('[Billing UI] Firestore snapshot error:', err)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user?.uid])
 
   // Handle Upgrade or Subscribe click
   const handleUpgrade = async (packageId: PackageTier) => {
@@ -257,9 +334,14 @@ export default function BillingDashboardClient() {
     }
   }
 
-  const currentPlanId = subscription?.packageId || 'free_starter'
+  const isSubscriptionActive =
+    subscription?.subscriptionStatus === 'active' ||
+    (Boolean(subscription?.status === 'active') && (subscription?.priceInr ?? 0) > 0)
+
+  const isExpired = subscription?.subscriptionStatus === 'expired'
   const isCanceledPending = Boolean(subscription?.cancelAtCycleEnd)
-  const isPaidActive = subscription && subscription.priceInr > 0 && subscription.status === 'active'
+  const isPaidActive = isSubscriptionActive
+  const currentPlanId = isSubscriptionActive ? 'creator_monthly' : 'free_starter'
 
   const formattedPeriodEnd = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-IN', {
@@ -371,7 +453,11 @@ export default function BillingDashboardClient() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <h3 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
-                      {subscription?.packageName || 'Free Starter'}
+                      {isSubscriptionActive
+                        ? 'CREATOR PASS — ACTIVE'
+                        : isExpired
+                        ? 'CREATOR PASS — EXPIRED'
+                        : 'FREE STARTER'}
                     </h3>
 
                     {/* Status Pill */}
@@ -379,17 +465,13 @@ export default function BillingDashboardClient() {
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                         <Clock className="w-3.5 h-3.5" /> Pending Cancellation
                       </span>
-                    ) : subscription?.status === 'active' && subscription.priceInr > 0 ? (
+                    ) : isSubscriptionActive ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-lime-400/15 text-lime-400 border border-lime-400/30 shadow-[0_0_12px_rgba(163,230,53,0.2)]">
                         <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse" /> Active
                       </span>
-                    ) : subscription?.status === 'past_due' ? (
+                    ) : isExpired ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                        <BadgeAlert className="w-3.5 h-3.5" /> Past Due
-                      </span>
-                    ) : subscription?.status === 'halted' ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-red-500/15 text-red-400 border border-red-500/30">
-                        <X className="w-3.5 h-3.5" /> Halted
+                        <BadgeAlert className="w-3.5 h-3.5" /> Expired
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-white/10">
@@ -399,9 +481,11 @@ export default function BillingDashboardClient() {
                   </div>
 
                   <p className="text-xs text-zinc-400 max-w-xl leading-relaxed">
-                    {isPaidActive
+                    {isSubscriptionActive
                       ? 'You have unlimited access to verified editors with 0% platform commission and direct WhatsApp connections.'
-                      : 'You are on the Free Starter plan with 3 direct editor contacts. Upgrade anytime to unlock unlimited connections.'}
+                      : isExpired
+                      ? 'Your Creator Pass has expired. Renew your pass anytime to unlock unlimited direct WhatsApp connections.'
+                      : `You are on the Free Starter plan with 3 direct editor contacts. (${subscription?.unlockedContactsCount ?? 0} of 3 free contacts unlocked)`}
                   </p>
                 </div>
 
@@ -409,7 +493,7 @@ export default function BillingDashboardClient() {
                 <div className="text-left sm:text-right shrink-0 bg-white/[0.03] sm:bg-transparent p-3 sm:p-0 rounded-2xl border border-white/5 sm:border-0">
                   <div className="flex items-baseline sm:justify-end gap-1">
                     <span className="text-3xl sm:text-4xl font-black text-white">
-                      ₹{subscription?.priceInr || 0}
+                      ₹{isSubscriptionActive ? subscription?.priceInr || 199 : 0}
                     </span>
                     <span className="text-xs text-zinc-400 font-semibold">/ month</span>
                   </div>
@@ -503,7 +587,7 @@ export default function BillingDashboardClient() {
 
         <div className="max-w-lg mx-auto">
           {PRICING_PLANS.filter((p) => p.id !== 'free_starter').map((plan) => {
-            const isCurrent = currentPlanId === plan.id && isPaidActive && !isCanceledPending
+            const isCurrent = isSubscriptionActive && !isCanceledPending
             const isUpgrading = actionLoading === plan.id
 
             return (

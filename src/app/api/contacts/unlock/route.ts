@@ -74,25 +74,73 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'editorId is required' }, { status: 400 })
     }
 
-    // Fetch user profile from Firestore using client SDK
+    // Fetch user profile from Firestore
     const userRef = doc(db, 'users', userId)
     const userSnap = await getDoc(userRef)
     const userData = userSnap.exists() ? userSnap.data() || {} : {}
 
-    const unlockedEditors: string[] = Array.isArray(userData.unlocked_editors)
+    // Canonical unlocked editor IDs array
+    const unlockedEditorIds: string[] = Array.isArray(userData.unlockedEditorIds)
+      ? userData.unlockedEditorIds
+      : Array.isArray(userData.unlocked_editors)
       ? userData.unlocked_editors
       : []
 
-    const isAlreadyUnlocked = unlockedEditors.includes(editorId)
-    const hasActivePass = Boolean(
-      userData.has_active_pass &&
-        userData.pass_expires_at &&
-        new Date(userData.pass_expires_at).getTime() > Date.now()
-    )
-    const FREE_LIMIT = 3
-    const canUnlockForFree = unlockedEditors.length < FREE_LIMIT
+    // Parse expiration
+    let expiresAtDate: Date | null = null
+    const rawExp = userData.subscriptionExpiresAt || userData.pass_expires_at
+    if (rawExp) {
+      if (typeof rawExp.toDate === 'function') {
+        expiresAtDate = rawExp.toDate()
+      } else if (typeof rawExp.seconds === 'number') {
+        expiresAtDate = new Date(rawExp.seconds * 1000)
+      } else if (rawExp instanceof Date) {
+        expiresAtDate = rawExp
+      } else {
+        const parsed = new Date(rawExp)
+        if (!isNaN(parsed.getTime())) expiresAtDate = parsed
+      }
+    }
 
-    // 1. If already unlocked in the past, return phone directly
+    const now = new Date()
+    const isExpired = expiresAtDate ? expiresAtDate.getTime() < now.getTime() : false
+    const isActiveSubscriber =
+      (userData.subscriptionStatus === 'active' || userData.has_active_pass === true) &&
+      !isExpired
+
+    const FREE_LIMIT = 3
+    const isAlreadyUnlocked = unlockedEditorIds.includes(editorId)
+    const canUnlockForFree = unlockedEditorIds.length < FREE_LIMIT
+
+    // 1. If active subscriber: full access to every editor profile, no limit
+    if (isActiveSubscriber) {
+      if (!isAlreadyUnlocked) {
+        await setDoc(
+          userRef,
+          {
+            unlockedEditorIds: arrayUnion(editorId),
+            unlocked_editors: arrayUnion(editorId),
+            updatedAt: now.toISOString(),
+          },
+          { merge: true }
+        )
+      }
+
+      const editorData = await findEditorPhone(editorId)
+      return NextResponse.json({
+        success: true,
+        status: 'active_pass',
+        phone: editorData?.phone,
+        editorName: editorData?.name,
+        hasActivePass: true,
+        subscriptionStatus: 'active',
+        unlockedCount: isAlreadyUnlocked ? unlockedEditorIds.length : unlockedEditorIds.length + 1,
+        freeLimit: FREE_LIMIT,
+        freeRemaining: 'unlimited',
+      })
+    }
+
+    // 2. Already unlocked in the past under free tier: allow
     if (isAlreadyUnlocked) {
       const editorData = await findEditorPhone(editorId)
       return NextResponse.json({
@@ -100,50 +148,28 @@ export async function POST(req: NextRequest) {
         status: 'already_unlocked',
         phone: editorData?.phone,
         editorName: editorData?.name,
-        hasActivePass,
-        unlockedCount: unlockedEditors.length,
+        hasActivePass: false,
+        subscriptionStatus: userData.subscriptionStatus || (isExpired ? 'expired' : 'free'),
+        unlockedCount: unlockedEditorIds.length,
         freeLimit: FREE_LIMIT,
-        freeRemaining: hasActivePass ? 'unlimited' : Math.max(0, FREE_LIMIT - unlockedEditors.length),
+        freeRemaining: Math.max(0, FREE_LIMIT - unlockedEditorIds.length),
       })
     }
 
-    // 2. If user has active Monthly Pass, unlock immediately
-    if (hasActivePass) {
-      await setDoc(
-        userRef,
-        {
-          unlocked_editors: arrayUnion(editorId),
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      )
-
-      const editorData = await findEditorPhone(editorId)
-      return NextResponse.json({
-        success: true,
-        status: 'pass_unlocked',
-        phone: editorData?.phone,
-        editorName: editorData?.name,
-        hasActivePass: true,
-        unlockedCount: unlockedEditors.length + 1,
-        freeLimit: FREE_LIMIT,
-        freeRemaining: 'unlimited',
-      })
-    }
-
-    // 3. If within free unlock quota (up to 3 free), grant without charge
+    // 3. Array length < 3 and not yet unlocked: allow, push editorId, increment count
     if (canUnlockForFree) {
       await setDoc(
         userRef,
         {
+          unlockedEditorIds: arrayUnion(editorId),
           unlocked_editors: arrayUnion(editorId),
-          updatedAt: new Date().toISOString(),
+          updatedAt: now.toISOString(),
         },
         { merge: true }
       )
 
       const editorData = await findEditorPhone(editorId)
-      const currentCount = unlockedEditors.length + 1
+      const currentCount = unlockedEditorIds.length + 1
       const freeRemaining = Math.max(0, FREE_LIMIT - currentCount)
 
       return NextResponse.json({
@@ -152,6 +178,7 @@ export async function POST(req: NextRequest) {
         phone: editorData?.phone,
         editorName: editorData?.name,
         hasActivePass: false,
+        subscriptionStatus: userData.subscriptionStatus || 'free',
         unlockedCount: currentCount,
         freeLimit: FREE_LIMIT,
         freeRemaining,
@@ -159,17 +186,17 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // 4. Free unlock quota used & no active pass -> Trigger Paywall (HTTP 402)
+    // 4. Array length >= 3 and editorId not yet unlocked: return 403 { reason: "subscription_required" }
     return NextResponse.json(
       {
-        error: 'PAYWALL_REQUIRED',
-        freeUsed: true,
+        reason: 'subscription_required',
+        error: 'Subscription required. You have unlocked all 3 free editor contacts.',
         freeLimit: FREE_LIMIT,
-        message: `You have used your ${FREE_LIMIT} free contacts. Get the Monthly Pass for unlimited access.`,
-        unlockedCount: unlockedEditors.length,
+        unlockedCount: unlockedEditorIds.length,
         hasActivePass: false,
+        redirect: '/billing',
       },
-      { status: 402 }
+      { status: 403 }
     )
   } catch (err: any) {
     console.error('[Unlock Contact Error]:', err)

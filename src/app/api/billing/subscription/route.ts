@@ -24,10 +24,17 @@ export async function GET(req: NextRequest) {
         const { razorpay } = getRazorpayClient()
         const liveSub: any = await razorpay.subscriptions.fetch(subscription.razorpaySubscriptionId)
         if (liveSub) {
-          subscription.status = liveSub.status
+          if (liveSub.status === 'active') {
+            subscription.status = 'active'
+            subscription.subscriptionStatus = 'active'
+          } else if (liveSub.status === 'cancelled' || liveSub.status === 'expired') {
+            subscription.status = 'expired'
+            subscription.subscriptionStatus = 'expired'
+          }
           if (liveSub.current_end) {
             subscription.currentPeriodEnd = new Date(liveSub.current_end * 1000).toISOString()
             subscription.nextBillingDate = subscription.currentPeriodEnd
+            subscription.subscriptionExpiresAt = subscription.currentPeriodEnd
           }
           if (liveSub.cancel_at_cycle_end) {
             subscription.cancelAtCycleEnd = true
@@ -43,7 +50,13 @@ export async function GET(req: NextRequest) {
       subscription: subscription || {
         packageId: 'free_starter',
         packageName: 'Free Starter',
-        status: 'active',
+        status: 'free',
+        subscriptionStatus: 'free',
+        subscriptionExpiresAt: null,
+        unlockedEditorIds: [],
+        unlockedContactsCount: 0,
+        freeLimit: 3,
+        freeRemaining: 3,
         billingFrequency: 'monthly',
         priceInr: 0,
         currency: 'INR',

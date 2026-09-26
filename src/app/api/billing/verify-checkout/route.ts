@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       razorpay_signature,
       userId,
       googleSub,
-      packageId = 'creator_pro',
+      packageId = 'creator_monthly',
     } = body
 
     if (!razorpay_payment_id || !razorpay_signature) {
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Resolve plan info
-    const plan = PRICING_PLANS.find((p) => p.id === (packageId as PackageTier)) || PRICING_PLANS[2]
+    const plan = PRICING_PLANS.find((p) => p.id === (packageId as PackageTier)) || PRICING_PLANS[1]
     const resolvedUserId = userId || req.headers.get('x-user-uid') || 'anonymous'
 
     const now = new Date()
