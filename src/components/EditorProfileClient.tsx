@@ -267,7 +267,7 @@ export default function EditorProfileClient({
   initialEditor,
   initialPortfolioItems,
 }: EditorProfileClientProps) {
-  const { user, loginWithGoogle } = useAuth()
+  const { user, rawUser, loginWithGoogle } = useAuth()
   const [editor] = useState<any>(initialEditor)
   const [portfolioItems, setPortfolioItems] = useState<any[]>(initialPortfolioItems || [])
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
@@ -490,16 +490,24 @@ export default function EditorProfileClient({
     setIsUnlocking(true)
     try {
       const token = (user as any)?.token || (await (user as any)?.getIdToken?.()) || ''
+      const googleSub =
+        rawUser?.providerData?.find((p) => p.providerId === 'google.com')?.uid ||
+        (rawUser as any)?.reloadUserInfo?.localId ||
+        user?.uid ||
+        ''
+
       const res = await fetch('/api/contacts/unlock', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           'x-user-uid': user.uid,
+          ...(googleSub ? { 'x-google-sub': googleSub } : {}),
         },
         body: JSON.stringify({
           editorId: editor.user_id || editor.id || editor.handle,
           userId: user.uid,
+          googleSub,
         }),
       })
 

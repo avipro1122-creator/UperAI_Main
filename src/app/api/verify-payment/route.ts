@@ -133,6 +133,8 @@ export async function POST(req: NextRequest) {
       try {
         const userRef = doc(db, 'users', resolvedUserId)
         const updateData: Record<string, any> = {
+          subscriptionStatus: 'active',
+          subscriptionExpiresAt: expiresAt,
           has_active_pass: true,
           pass_plan: 'monthly',
           pass_purchased_at: now.toISOString(),
