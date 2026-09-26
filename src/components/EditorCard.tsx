@@ -21,6 +21,8 @@ export interface EditorCardData {
   specialty?: string | null
   softwareTags?: string[]
   raw_video_url?: string | null
+  rating_avg?: number | null
+  rating_count?: number | null
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -136,10 +138,18 @@ export default function EditorCard({ editor }: { editor: EditorCardData }) {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-neutral-900 truncate leading-tight group-hover:text-black transition-colors flex items-center gap-1.5">
-              <span>{editor.name || 'Editor'}</span>
+              <span className="truncate">{editor.name || 'Editor'}</span>
               <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 bg-amber-50 text-amber-800 border border-amber-200/80">
+                <span className="text-amber-500">★</span>
+                <span>
+                  {editor.rating_count && editor.rating_count > 0 && editor.rating_avg != null
+                    ? `${Number(editor.rating_avg).toFixed(1)} (${editor.rating_count})`
+                    : 'New'}
+                </span>
+              </span>
             </p>
             {cleanHandle && (
               <span

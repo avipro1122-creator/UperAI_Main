@@ -37,8 +37,12 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="max-w-sm mx-auto px-4 py-24 text-center text-zinc-500 text-sm">
-          Loading sign in...
+        <div className="max-w-sm mx-auto px-4 py-24">
+          <div className="subtle-panel p-8 rounded-2xl inner-border text-center space-y-6 animate-pulse">
+            <div className="h-6 w-40 bg-zinc-800 rounded mx-auto" />
+            <div className="h-4 w-56 bg-zinc-800/60 rounded mx-auto" />
+            <div className="h-10 bg-zinc-800 rounded-xl w-full" />
+          </div>
         </div>
       }
     >

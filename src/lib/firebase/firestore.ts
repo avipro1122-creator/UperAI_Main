@@ -50,6 +50,8 @@ export interface FirestoreEditorProfile {
   open_to_work?: boolean
   is_hidden?: boolean
   testimonials?: Testimonial[]
+  rating_avg?: number
+  rating_count?: number
   createdAt?: string
   updatedAt?: string
 }

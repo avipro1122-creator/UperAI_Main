@@ -66,8 +66,8 @@ export default function Navbar() {
           {activeRole === 'EDITOR' ? '+ List your work' : 'Browse Editors'}
         </Link>
 
-        {loading ? (
-          <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />
+        {loading && !user ? (
+          <div className="w-8 h-8 rounded-full bg-zinc-800/40 border border-white/5" />
         ) : !user ? (
           <button
             onClick={() => {
@@ -183,7 +183,9 @@ export default function Navbar() {
 
       {/* MOBILE CONTROLS */}
       <div className="flex md:hidden items-center gap-2">
-        {!user ? (
+        {loading && !user ? (
+          <div className="w-8 h-8 rounded-full bg-zinc-800/40 border border-white/5" />
+        ) : !user ? (
           <button
             onClick={loginWithGoogle}
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-lime-400 hover:bg-lime-300 text-zinc-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-95"

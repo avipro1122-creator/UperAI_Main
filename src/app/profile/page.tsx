@@ -365,8 +365,25 @@ export default function ProfilePage() {
         )}
 
         {loading ? (
-          <div className="py-20 text-center text-zinc-500 text-xs flex items-center justify-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading your profile settings...
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-pulse">
+            <div className="lg:col-span-7 space-y-6 bg-zinc-900/60 border border-white/5 rounded-3xl p-6 sm:p-7">
+              <div className="h-5 w-40 bg-zinc-800 rounded-lg" />
+              <div className="space-y-4">
+                <div className="h-10 bg-zinc-950/60 border border-zinc-800/60 rounded-xl" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="h-10 bg-zinc-950/60 border border-zinc-800/60 rounded-xl" />
+                  <div className="h-10 bg-zinc-950/60 border border-zinc-800/60 rounded-xl" />
+                </div>
+              </div>
+              <div className="h-5 w-48 bg-zinc-800 rounded-lg pt-4" />
+              <div className="h-20 bg-zinc-950/60 border border-zinc-800/60 rounded-xl" />
+              <div className="h-12 bg-zinc-800/60 rounded-xl w-36" />
+            </div>
+
+            <div className="hidden lg:block lg:col-span-5 bg-zinc-900/60 border border-white/5 rounded-3xl p-6 space-y-4">
+              <div className="h-5 w-32 bg-zinc-800 rounded-lg" />
+              <div className="aspect-[9/16] max-h-[380px] w-full bg-zinc-950/80 rounded-2xl border border-zinc-800/60" />
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

@@ -95,11 +95,15 @@ export function TestimonialCard({ testimonial }: TestimonialCardProps) {
 export interface TestimonialsSectionProps {
   testimonials?: Testimonial[] | null
   editorName?: string
+  ratingAvg?: number | null
+  ratingCount?: number | null
 }
 
 export default function TestimonialsSection({
   testimonials,
   editorName,
+  ratingAvg,
+  ratingCount,
 }: TestimonialsSectionProps) {
   if (!testimonials || !Array.isArray(testimonials) || testimonials.length === 0) {
     return null
@@ -118,10 +122,18 @@ export default function TestimonialsSection({
           </span>
         </h2>
 
-        <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2.5 py-1 rounded-full uppercase tracking-wider hidden sm:inline-flex items-center gap-1">
-          <ShieldCheck className="w-3 h-3" />
-          Verified Reviews
-        </span>
+        <div className="flex items-center gap-2">
+          {ratingCount != null && ratingCount > 0 && ratingAvg != null && (
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-950/80 border border-amber-800/50 px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+              <span>★</span>
+              <span>{Number(ratingAvg).toFixed(1)} / 5.0 ({ratingCount})</span>
+            </span>
+          )}
+          <span className="text-[10px] font-bold text-lime-400 bg-lime-950 border border-lime-800/50 px-2.5 py-1 rounded-full uppercase tracking-wider hidden sm:inline-flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3" />
+            Verified Reviews
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">

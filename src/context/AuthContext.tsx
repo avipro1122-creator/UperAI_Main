@@ -46,9 +46,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [rawUser, setRawUser] = useState<FirebaseUser | null>(null)
-  const [user, setUser] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [activeRole, setActiveRole] = useState<Role>('CREATOR')
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('uperai_user')
+        if (saved) return JSON.parse(saved)
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null
+  })
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('uperai_user')
+        if (saved) return false
+      } catch (e) {
+        // ignore
+      }
+    }
+    return true
+  })
+  const [activeRole, setActiveRole] = useState<Role>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedRole = localStorage.getItem('uperai_role') as Role
+        if (savedRole === 'CREATOR' || savedRole === 'EDITOR') return savedRole
+      } catch (e) {
+        // ignore
+      }
+    }
+    return 'CREATOR'
+  })
 
   const fetchUserData = useCallback(async (fbUser: FirebaseUser) => {
     try {
@@ -62,20 +92,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = userSnap.data()
         role = (data?.role as Role) || 'CREATOR'
         handle = data?.handle || null
+        const updates: Record<string, any> = {}
         if (!data?.phoneNumber && fbUser.phoneNumber) {
-          setDoc(userDocRef, { phoneNumber: fbUser.phoneNumber }, { merge: true }).catch(() => {})
+          updates.phoneNumber = fbUser.phoneNumber
+        }
+        if (!data?.createdAt) {
+          updates.createdAt = new Date().toISOString()
+        }
+        if (!data?.email && fbUser.email) {
+          updates.email = fbUser.email
+        }
+        if (!data?.displayName && fbUser.displayName) {
+          updates.displayName = fbUser.displayName
+        }
+        if (Object.keys(updates).length > 0) {
+          setDoc(userDocRef, updates, { merge: true }).catch(() => {})
         }
       } else {
-        // Create initial user doc
-        await setDoc(userDocRef, {
-          uid: fbUser.uid,
-          email: fbUser.email,
-          displayName: fbUser.displayName,
-          photoURL: fbUser.photoURL,
-          phoneNumber: fbUser.phoneNumber || null,
-          role: 'CREATOR',
-          createdAt: new Date().toISOString(),
-        })
+        // Create initial user doc with guaranteed safe fields
+        const safeName =
+          fbUser.displayName ||
+          (fbUser.email ? fbUser.email.split('@')[0] : 'User')
+        await setDoc(
+          userDocRef,
+          {
+            uid: fbUser.uid,
+            email: fbUser.email || '',
+            displayName: safeName,
+            photoURL: fbUser.photoURL || null,
+            phoneNumber: fbUser.phoneNumber || null,
+            role: 'CREATOR',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        )
       }
 
       const profile: UserProfile = {

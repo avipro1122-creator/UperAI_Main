@@ -17,6 +17,7 @@ import {
   UserCheck,
   Phone,
   MessageCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { FEATURE_FLAGS } from '@/lib/flags'
 
@@ -53,6 +54,8 @@ interface AdminDashboardClientProps {
   users: AdminUserData[]
   editorProfiles: AdminEditorProfile[]
   totalVisits: number
+  onRefresh?: () => void
+  isRefreshing?: boolean
 }
 
 export default function AdminDashboardClient({
@@ -60,6 +63,8 @@ export default function AdminDashboardClient({
   users,
   editorProfiles,
   totalVisits,
+  onRefresh,
+  isRefreshing = false,
 }: AdminDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<'users' | 'editors' | 'feedback' | 'flags'>('users')
   const [searchQuery, setSearchQuery] = useState('')
@@ -149,8 +154,20 @@ export default function AdminDashboardClient({
             </p>
           </div>
 
-          {/* Quick links */}
+          {/* Quick links & actions */}
           <div className="flex items-center gap-3 self-end sm:self-auto">
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="text-xs text-zinc-300 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 transition-colors disabled:opacity-50"
+                title="Refresh dashboard data"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-lime-400' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
+            )}
             <Link
               href="/"
               className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/60 transition-colors"

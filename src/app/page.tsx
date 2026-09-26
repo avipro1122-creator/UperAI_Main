@@ -93,6 +93,8 @@ function mapProfileToEditorCard(p: any): ExtendedEditorCardData {
     specialty: p.specialty_tag || p.headline || '',
     softwareTags: p.software || ['Premiere Pro', 'After Effects'],
     raw_video_url: rawVideoUrl || null,
+    rating_avg: p.rating_avg != null ? Number(p.rating_avg) : null,
+    rating_count: p.rating_count != null ? Number(p.rating_count) : 0,
   }
 }
 

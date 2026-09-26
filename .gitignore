@@ -11,3 +11,7 @@ service-account*.json
 *.tsbuildinfo
 
 .vercel
+
+.agents/
+.cursor/
+.snapshots/

@@ -70,6 +70,8 @@ export default async function DirectoryPage() {
         specialty: doc.specialty_tag || doc.headline || '',
         softwareTags: doc.software || ['Premiere Pro', 'After Effects'],
         raw_video_url: rawUrl || null,
+        rating_avg: doc.rating_avg != null ? Number(doc.rating_avg) : null,
+        rating_count: doc.rating_count != null ? Number(doc.rating_count) : 0,
       }
 
       return {

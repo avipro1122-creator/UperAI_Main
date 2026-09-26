@@ -399,8 +399,16 @@ export default function HeroSection({ featured }: HeroSectionProps) {
                             )}
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-white truncate leading-tight flex items-center gap-1">
-                                <span>{editor.name}</span>
+                                <span className="truncate">{editor.name}</span>
                                 <CheckCircle2 className="w-3 h-3 text-lime-400 shrink-0" />
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 bg-amber-950/70 text-amber-300 border border-amber-500/30">
+                                  <span className="text-amber-400">★</span>
+                                  <span>
+                                    {editor.rating_count && editor.rating_count > 0 && editor.rating_avg != null
+                                      ? `${Number(editor.rating_avg).toFixed(1)} (${editor.rating_count})`
+                                      : 'New'}
+                                  </span>
+                                </span>
                               </p>
                               <p className="text-[10px] text-zinc-400 truncate">@{editor.handle}</p>
                             </div>
