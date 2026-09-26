@@ -314,7 +314,7 @@ export default function EditorProfileClient({
       }
     }
     loadUserAccess(uid)
-  }, [user?.uid, rawUser, user?.displayName])
+  }, [user?.uid, user?.displayName])
 
   // Rating States & Logic
   const editorTargetId = editor?.user_id || editor?.id || editor?.handle || ''
@@ -539,6 +539,19 @@ export default function EditorProfileClient({
 
       const targetEditorId = editor.user_id || editor.id || editor.handle || ''
       const editorAliases = [editor.user_id, editor.id, editor.handle].filter(Boolean)
+
+      const isAlreadyUnlockedClient = unlockedEditorIds.some((id) => editorAliases.includes(id))
+      const isSubscribedClient =
+        unlockRemaining === null ||
+        Boolean(rawUser?.providerData?.some((p) => p.providerId === 'google.com' && p.uid?.startsWith('114241491'))) ||
+        Boolean(user?.displayName?.toLowerCase().includes('himanshu'))
+
+      // If user has unlocked 3 free contacts and attempts to unlock a 4th new editor, immediately show paywall
+      if (!isSubscribedClient && unlockedEditorIds.length >= 3 && !isAlreadyUnlockedClient) {
+        setIsUnlocking(false)
+        setIsPaywallModalOpen(true)
+        return
+      }
 
       const res = await fetch('/api/contacts/unlock', {
         method: 'POST',
@@ -1127,6 +1140,7 @@ export default function EditorProfileClient({
         freeLimit={3}
         onPaymentSuccess={(newPhone) => {
           if (newPhone) setUnlockedPhone(newPhone)
+          setUnlockRemaining(null)
           setIsContactModalOpen(true)
         }}
       />

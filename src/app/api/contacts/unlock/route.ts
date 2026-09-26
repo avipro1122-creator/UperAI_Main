@@ -27,6 +27,39 @@ async function logContactClickToDb(params: {
   }
 }
 
+async function fetchUserDocWithToken(userId: string, idToken?: string | null): Promise<Record<string, any>> {
+  if (!idToken) return {}
+  try {
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'uperai-ed941'
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    })
+    if (!res.ok) {
+      return {}
+    }
+    const json = await res.json()
+    const fields = json.fields || {}
+    const parsedData: Record<string, any> = {}
+
+    for (const [key, val] of Object.entries<any>(fields)) {
+      if (val.stringValue !== undefined) parsedData[key] = val.stringValue
+      else if (val.booleanValue !== undefined) parsedData[key] = val.booleanValue
+      else if (val.integerValue !== undefined) parsedData[key] = Number(val.integerValue)
+      else if (val.timestampValue !== undefined) parsedData[key] = val.timestampValue
+      else if (val.arrayValue?.values) {
+        parsedData[key] = val.arrayValue.values.map((v: any) => v.stringValue || v.integerValue || v)
+      }
+    }
+    return parsedData
+  } catch (err) {
+    console.warn('[Unlock Route] REST fetchUserDoc error:', err)
+    return {}
+  }
+}
+
 async function getUserIdFromRequest(req: NextRequest, body?: any): Promise<string | null> {
   const xUid = req.headers.get('x-user-uid')
   if (xUid) return xUid
@@ -108,6 +141,20 @@ export async function POST(req: NextRequest) {
       }
     } catch (readErr) {
       console.warn('[Unlock Route] Server Firestore read warning (handled gracefully):', readErr)
+    }
+
+    // If client SDK failed to read user doc, use Firebase REST API with user's ID token
+    const authHeader = req.headers.get('authorization')
+    const idToken = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null
+    if (idToken && (!userData.unlockedEditorIds || userData.unlockedEditorIds.length === 0)) {
+      try {
+        const tokenDoc = await fetchUserDocWithToken(userId, idToken)
+        if (tokenDoc && Object.keys(tokenDoc).length > 0) {
+          userData = { ...tokenDoc, ...userData }
+        }
+      } catch (restErr) {
+        console.warn('[Unlock Route] fetchUserDocWithToken warning:', restErr)
+      }
     }
 
     const googleSub =
