@@ -9,14 +9,14 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const allCookies = request.cookies.getAll()
   const sessionCookie =
-    allCookies.find((c) => c.name.startsWith('a_session') || c.name.includes('session'))?.value ||
-    request.cookies.get('a_session')?.value
+    request.cookies.get('uperai_auth')?.value ||
+    request.cookies.get('firebase_token')?.value ||
+    allCookies.find((c) => c.name.startsWith('a_session') || c.name.includes('session') || c.name.includes('auth'))?.value
 
   // Note: /admin is guarded by route-level checks in src/app/admin/page.tsx
   // returning 404 notFound() to prevent revealing that /admin exists.
 
-
-  // Gate /settings/*
+  // Gate /settings/* (allow /settings/billing or any user with uperai_auth / session)
   if (pathname.startsWith('/settings')) {
     if (!sessionCookie) {
       const loginUrl = new URL('/login', request.url)
