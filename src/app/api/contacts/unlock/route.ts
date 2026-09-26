@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/firebase/client'
-import { doc, getDoc, setDoc, arrayUnion, collection, query, where, getDocs, limit } from 'firebase/firestore'
+import { doc, getDoc, setDoc, arrayUnion, collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore'
 import { DEFAULT_EDITORS } from '@/lib/firebase/firestore'
 import { getUserSubscriptionRecord } from '@/lib/services/subscriptionService'
+
+async function logContactClickToDb(params: {
+  editorId: string
+  editorName: string
+  creatorId: string
+  creatorName: string
+  creatorEmail?: string | null
+  status: string
+}) {
+  try {
+    await addDoc(collection(db, 'contact_clicks'), {
+      editor_id: params.editorId,
+      editor_name: params.editorName,
+      creator_id: params.creatorId,
+      creator_name: params.creatorName,
+      creator_email: params.creatorEmail || null,
+      status: params.status,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.warn('[Unlock Route] contact_clicks telemetry warning:', err)
+  }
+}
 
 async function getUserIdFromRequest(req: NextRequest, body?: any): Promise<string | null> {
   const xUid = req.headers.get('x-user-uid')
@@ -175,6 +198,15 @@ export async function POST(req: NextRequest) {
       }
 
       const editorData = await findEditorPhone(editorId)
+      await logContactClickToDb({
+        editorId,
+        editorName: editorData?.name || 'Editor',
+        creatorId: userId,
+        creatorName: userData.displayName || userData.name || body.userName || 'Creator',
+        creatorEmail: userData.email || body.userEmail || null,
+        status: 'active_pass_unlock',
+      })
+
       return NextResponse.json({
         success: true,
         status: 'active_pass',
@@ -192,6 +224,15 @@ export async function POST(req: NextRequest) {
     // 2. Already unlocked in the past under free tier: allow
     if (isAlreadyUnlocked) {
       const editorData = await findEditorPhone(editorId)
+      await logContactClickToDb({
+        editorId,
+        editorName: editorData?.name || 'Editor',
+        creatorId: userId,
+        creatorName: userData.displayName || userData.name || body.userName || 'Creator',
+        creatorEmail: userData.email || body.userEmail || null,
+        status: 'already_unlocked_view',
+      })
+
       return NextResponse.json({
         success: true,
         status: 'already_unlocked',
@@ -226,6 +267,15 @@ export async function POST(req: NextRequest) {
       const newUnlockedIds = [...unlockedEditorIds, editorId]
       const currentCount = newUnlockedIds.length
       const freeRemaining = Math.max(0, FREE_LIMIT - currentCount)
+
+      await logContactClickToDb({
+        editorId,
+        editorName: editorData?.name || 'Editor',
+        creatorId: userId,
+        creatorName: userData.displayName || userData.name || body.userName || 'Creator',
+        creatorEmail: userData.email || body.userEmail || null,
+        status: 'free_tier_unlock',
+      })
 
       return NextResponse.json({
         success: true,

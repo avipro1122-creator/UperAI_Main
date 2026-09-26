@@ -495,29 +495,32 @@ export default function EditorProfileClient({
     `Hi ${editor.full_name || 'Editor'}, I saw your portfolio on UperAI and would like to discuss a video project with you.`
   )
   const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${whatsappMessage}` : '#'
-
-  const handleCopyNumber = () => {
-    if (!rawPhone) return
-    navigator.clipboard.writeText(displayPhone)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const handleTrackLead = async () => {
+  const handleTrackLead = async (action: string = 'contact_modal_unlocked') => {
     try {
       if (editor) {
         await addDoc(collection(db, 'contact_clicks'), {
           editor_id: editor.user_id || editor.id || 'unknown',
           editor_name: editor.full_name || editor.name || 'Editor',
-          creator_id: user?.uid || user?.$id || 'guest',
+          creator_id: user?.uid || (user as any)?.$id || 'guest',
           creator_name: user?.displayName || user?.name || 'Guest User',
+          creator_email: user?.email || null,
+          action,
           timestamp: new Date().toISOString(),
         })
       }
     } catch (e) {
-      console.log('Lead event logged')
+      console.warn('[Track Lead Warning]:', e)
     }
   }
+
+  const handleCopyNumber = () => {
+    if (!rawPhone) return
+    navigator.clipboard.writeText(displayPhone)
+    setCopied(true)
+    handleTrackLead('copy_phone_number')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
 
   const handleContactClick = async () => {
     if (!user) {
@@ -1072,6 +1075,7 @@ export default function EditorProfileClient({
                   href={instagramUrl!}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => handleTrackLead('instagram_profile_click')}
                   className="px-3.5 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center gap-1.5"
                 >
                   <span>Open IG</span>
@@ -1085,6 +1089,7 @@ export default function EditorProfileClient({
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => handleTrackLead('whatsapp_chat_click')}
                 className="block w-full py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs text-center rounded-xl uppercase tracking-wider shadow-lg transition-all"
               >
                 Open Chat on WhatsApp 💬
@@ -1095,6 +1100,7 @@ export default function EditorProfileClient({
                   href={instagramUrl!}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => handleTrackLead('instagram_dm_click')}
                   className="block w-full py-3 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:opacity-90 text-white font-extrabold text-xs text-center rounded-xl uppercase tracking-wider shadow-lg transition-all"
                 >
                   Send DM on Instagram 📷
