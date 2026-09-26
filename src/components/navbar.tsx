@@ -151,6 +151,15 @@ export default function Navbar() {
                     </div>
                   )}
 
+                  {/* Subscription & Billing Link */}
+                  <Link
+                    href="/settings/billing"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="block px-3 py-2 text-zinc-100 font-bold hover:text-lime-400 hover:bg-white/[0.06] rounded-xl transition-colors duration-150"
+                  >
+                    💳 Subscription & Billing
+                  </Link>
+
                   <button
                     onClick={toggleRole}
                     className="w-full text-left px-3 py-2.5 rounded-xl font-bold bg-zinc-800/60 hover:bg-zinc-800 border border-white/[0.06] hover:border-lime-400/30 text-lime-400 flex items-center justify-between transition-all duration-200 group"

@@ -1,0 +1,68 @@
+import { PricingPlan } from '@/lib/types/billing'
+
+export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: 'free_starter',
+    name: 'Free Starter',
+    priceInr: 0,
+    billingPeriod: 'monthly',
+    description: 'Perfect for creators just exploring editor portfolios and discovering talent.',
+    features: [
+      '3 Free verified editor contacts',
+      'Direct WhatsApp number viewing',
+      'Search & filter 100+ editors',
+      'Standard community support',
+    ],
+    ctaText: 'Current Plan',
+  },
+  {
+    id: 'creator_monthly',
+    name: 'Creator Monthly Pass',
+    priceInr: 199,
+    billingPeriod: 'monthly',
+    description: 'Direct, instant access to all verified Indian editors without limits.',
+    features: [
+      'Unlimited WhatsApp & direct phone access',
+      '0% Commission – Agree on your own rates',
+      'Direct access to all verified Indian editors',
+      'Instant 30-day activation',
+      'Email & WhatsApp priority support',
+    ],
+    ctaText: 'Get Monthly Pass',
+  },
+  {
+    id: 'creator_pro',
+    name: 'Creator Pro',
+    badge: 'Most Popular',
+    popular: true,
+    priceInr: 499,
+    billingPeriod: 'monthly',
+    description: 'For growing creators and channels looking for dedicated, top-tier video talent.',
+    features: [
+      'Everything in Creator Monthly Pass',
+      'Priority Concierge Editor Matchmaking',
+      'Fast-track editor quote replies (< 2 hrs)',
+      'Verified Creator badge on project briefs',
+      'Free portfolio quality reviews & brief assistance',
+      'Access to top 5% premium video editors',
+    ],
+    ctaText: 'Upgrade to Pro',
+    razorpayPlanId: 'plan_TgiQh8pvrs9Xsu',
+  },
+  {
+    id: 'enterprise',
+    name: 'Agency & Enterprise',
+    priceInr: 1499,
+    billingPeriod: 'monthly',
+    description: 'Full-service talent pipeline for creative agencies, media brands, and production teams.',
+    features: [
+      'Everything in Creator Pro',
+      'Multi-seat team account access (up to 5 team members)',
+      'Dedicated Talent Account Manager',
+      'Custom NDA & editor contract templates',
+      'Custom invoice & GST tax receipts',
+      '24/7 VIP Concierge hotline via WhatsApp',
+    ],
+    ctaText: 'Upgrade to Enterprise',
+  },
+]

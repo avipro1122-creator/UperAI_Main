@@ -226,6 +226,32 @@ export interface Database {
           }
         ]
       }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string | null
+          google_sub: string | null
+          email: string | null
+          package_id: string
+          package_name: string
+          status: string
+          billing_frequency: string
+          price_inr: number
+          currency: string
+          razorpay_customer_id: string | null
+          razorpay_subscription_id: string | null
+          razorpay_plan_id: string | null
+          current_period_start: string | null
+          current_period_end: string | null
+          cancel_at_cycle_end: boolean
+          canceled_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Partial<Database['public']['Tables']['subscriptions']['Row']>
+        Update: Partial<Database['public']['Tables']['subscriptions']['Row']>
+        Relationships: []
+      }
     }
     Views: {}
     Functions: {
