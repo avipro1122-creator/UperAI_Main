@@ -88,7 +88,10 @@ export default function RazorpayCheckoutButton({
 
       // 3. Configure Razorpay Standard Checkout options
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderData.key_id,
+        key:
+          orderData.key_id ||
+          process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+          'rzp_live_Tcpv1EI4JhhAJw',
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
         name,

@@ -81,7 +81,11 @@ export default function PaywallModal({
 
       // 3. Open Razorpay Checkout
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderData.key_id || orderData.keyId,
+        key:
+          orderData.key_id ||
+          orderData.keyId ||
+          process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+          'rzp_live_Tcpv1EI4JhhAJw',
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
         name: 'UperAI',
