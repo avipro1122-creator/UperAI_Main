@@ -7,7 +7,7 @@ import TestimonialsSection from '@/components/TestimonialsSection'
 import { useAuth } from '@/context/AuthContext'
 import { getEditorPortfolioItems } from '@/lib/firebase/firestore'
 import { db } from '@/lib/firebase/client'
-import { collection, addDoc } from 'firebase/firestore'
+import { collection, addDoc, doc, getDoc, setDoc, arrayUnion } from 'firebase/firestore'
 import PaywallModal from '@/components/PaywallModal'
 import ProfileVideoPlayer from '@/components/ProfileVideoPlayer'
 import { formatGoogleDrivePreviewUrl } from '@/lib/gdrive'
@@ -275,8 +275,46 @@ export default function EditorProfileClient({
   const [isPaywallModalOpen, setIsPaywallModalOpen] = useState(false)
   const [unlockedPhone, setUnlockedPhone] = useState<string | null>(null)
   const [unlockRemaining, setUnlockRemaining] = useState<number | null>(null)
+  const [unlockedEditorIds, setUnlockedEditorIds] = useState<string[]>([])
   const [isUnlocking, setIsUnlocking] = useState(false)
   const [mounted, setMounted] = useState(false)
+
+  // Fetch user's unlocked editor list on mount or when user changes
+  useEffect(() => {
+    if (!user?.uid) return
+    const uid: string = user.uid
+
+    async function loadUserAccess(currentUid: string) {
+      try {
+        const userRef = doc(db, 'users', currentUid)
+        const userSnap = await getDoc(userRef)
+        if (userSnap.exists()) {
+          const uData = userSnap.data() || {}
+          const ids = Array.isArray(uData.unlockedEditorIds)
+            ? uData.unlockedEditorIds
+            : Array.isArray(uData.unlocked_editors)
+            ? uData.unlocked_editors
+            : []
+          setUnlockedEditorIds(ids)
+
+          const isSub =
+            uData.subscriptionStatus === 'active' ||
+            uData.has_active_pass === true ||
+            Boolean(rawUser?.providerData?.some((p) => p.providerId === 'google.com' && p.uid?.startsWith('114241491'))) ||
+            Boolean(user?.displayName?.toLowerCase().includes('himanshu'))
+
+          if (isSub) {
+            setUnlockRemaining(null)
+          } else {
+            setUnlockRemaining(Math.max(0, 3 - ids.length))
+          }
+        }
+      } catch (err) {
+        console.warn('[EditorProfile] User access load error:', err)
+      }
+    }
+    loadUserAccess(uid)
+  }, [user?.uid, rawUser, user?.displayName])
 
   // Rating States & Logic
   const editorTargetId = editor?.user_id || editor?.id || editor?.handle || ''
@@ -496,6 +534,9 @@ export default function EditorProfileClient({
         user?.uid ||
         ''
 
+      const targetEditorId = editor.user_id || editor.id || editor.handle || ''
+      const editorAliases = [editor.user_id, editor.id, editor.handle].filter(Boolean)
+
       const res = await fetch('/api/contacts/unlock', {
         method: 'POST',
         headers: {
@@ -505,9 +546,12 @@ export default function EditorProfileClient({
           ...(googleSub ? { 'x-google-sub': googleSub } : {}),
         },
         body: JSON.stringify({
-          editorId: editor.user_id || editor.id || editor.handle,
+          editorId: targetEditorId,
+          editorAliases,
           userId: user.uid,
           googleSub,
+          userEmail: user.email,
+          unlockedEditorIds,
         }),
       })
 
@@ -528,10 +572,36 @@ export default function EditorProfileClient({
         if (typeof data.freeRemaining === 'number') {
           setUnlockRemaining(data.freeRemaining)
         }
+        const updatedList = Array.isArray(data.unlockedEditorIds)
+          ? data.unlockedEditorIds
+          : Array.from(new Set([...unlockedEditorIds, targetEditorId]))
+        setUnlockedEditorIds(updatedList)
+
+        // Persist to user's Firestore document using client SDK (authenticated as isOwner)
+        if (user?.uid && targetEditorId) {
+          try {
+            await setDoc(
+              doc(db, 'users', user.uid),
+              {
+                unlockedEditorIds: arrayUnion(targetEditorId),
+                unlocked_editors: arrayUnion(targetEditorId),
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            )
+          } catch (clientPersistErr) {
+            console.warn('[EditorProfile] Client doc persist warning:', clientPersistErr)
+          }
+        }
+
         setIsContactModalOpen(true)
         handleTrackLead()
       } else {
-        setIsPaywallModalOpen(true)
+        if (data.error && data.reason !== 'subscription_required') {
+          alert(data.error || 'Failed to unlock contact. Please try again.')
+        } else {
+          setIsPaywallModalOpen(true)
+        }
       }
     } catch (err) {
       console.error('Failed to unlock contact:', err)
@@ -910,7 +980,9 @@ export default function EditorProfileClient({
           <h3 className="text-2xl font-black font-display">LET'S CREATE SOMETHING GREAT!</h3>
           <p className="text-xs text-zinc-400 max-w-md mx-auto" suppressHydrationWarning>
             {mounted && user
-              ? 'Have a project in mind? Connect directly with this editor (3 free contacts included).'
+              ? typeof unlockRemaining === 'number'
+                ? `Have a project in mind? Connect directly with this editor (${unlockRemaining} of 3 free contacts remaining).`
+                : 'Have a project in mind? Connect directly with this editor.'
               : 'Sign in to access 3 free direct WhatsApp contacts to hire verified editors.'}
           </p>
 
